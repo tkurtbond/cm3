@@ -8,7 +8,9 @@
 
 % temporarily disable Grisu for C backend until problems investigated
 % C fails at runtime
-if equal (M3_BACKEND_MODE, "C")
+% LlvmIR (this fork) matches C: Grisu's single-precision path fails its
+% own assertions with either backend (IEEE.m3 NormalizedBoundaries_S).
+if equal (M3_BACKEND_MODE, "C") or equal (M3_BACKEND_MODE, "LlvmIR")
   include_dir("no_grisu")
 else
   include_dir("grisu")

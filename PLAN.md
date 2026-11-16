@@ -1,6 +1,7 @@
 # Plan: an LLVM backend for cm3 that emits textual LLVM IR
 
-Status: draft, 2026-11-16. Phases 0, 1 and 2 are done; Phase 3 is next.
+Status: draft, 2026-11-16. Phases 0, 1 and 2 are done; Phase 3 is done
+except `ex_stack`, which is deferred (see Phase 3).
 
 ## Goal
 
@@ -375,6 +376,67 @@ remains is atomics, `ex_stack`, the rarely emitted operations, the
 *Exit:* all of `p0`, `p1`, `p2` and `r0` match the C-backend baseline at
 both `-O0` and `-O2`. **`m3core` and `libm3` build with `LlvmIR`**, and
 the test suite still matches when linked against them.
+**Met 2026-11-16, except `ex_stack`.** Every configuration passes 291
+of 292 tests (293 runs), as in Phase 2; the one failure, p047, fails
+the same way with C:
+- tests at `-O2`, with the C-built libraries;
+- tests at `-O0`, with `m3core` and `libm3` built by `LlvmIR`;
+- tests at `-O2`, with `m3core` and `libm3` built by `LlvmIR` at `-O2`.
+
+```sh
+cd m3-sys/m3tests
+systemd-run --user --scope -q -p MemoryMax=16G -p MemorySwapMax=0 \
+  cm3 -DHTML -DM3_BACKEND_MODE=LlvmIR -DM3TESTS_OPTIMIZE
+```
+
+Phase 3 as built:
+- `-DM3TESTS_OPTIMIZE` (a small marked edit in
+  `m3-sys/m3tests/src/m3makefile`) builds each test with `cm3 -O`, for
+  any backend. Under `-O`, `compile_llvm_ir` runs `clang -O2`.
+- **`m3core` and `libm3`** (272 and 294 units) build with `LlvmIR` at
+  both levels, warning-for-warning like C. Fix needed:
+  `index_address` with a negative element size (String8, DragonInt) now
+  scales the index with `mul` instead of emitting `[-1 x i8]`.
+- **Grisu.** `m3core/src/float/Common/m3makefile` now uses `no_grisu`
+  for `LlvmIR` as well as C. Grisu's single-precision path fails its
+  own `<*ASSERT*>` (IEEE.m3, `NormalizedBoundaries_S`) with *either*
+  backend: the bug is in the source, not the backend. With Grisu,
+  p003, p040, p113 and p118 fail.
+- How the libraries were tested without touching the real install:
+  copy the install to a scratch prefix, build `m3core`/`libm3` with
+  `LlvmIR` *using the scratch prefix's `cm3`*, and ship there. A
+  package's `.M3SHIP` records absolute install paths at build time, so
+  a package built by the real `cm3` ships into the real install no
+  matter which `cm3 -ship` runs it. Check `.M3SHIP` before shipping.
+- **Atomics** (`store_ordered`, `load_ordered`, `exchange`,
+  `compare_exchange`, `fence`, `fetch_and_op`) map to LLVM's
+  `store atomic`, `load atomic`, `atomicrmw`, `cmpxchg` and `fence`.
+  Orders an instruction doesn't allow are weakened to the nearest
+  legal one, and a relaxed fence emits nothing. `compare_exchange`
+  follows the front end (`builtinAtomic/CompareSwap.mg`): s1 is the
+  *address* of `expected`, which is written only on failure. The C
+  backend leaves most of these as empty stubs.
+  Nothing upstream uses atomics: `m3core/src/atomic` is disabled, so
+  the builtin `Atomic*` interfaces have no exporter, and any program
+  that imports them (p226, which is commented out) fails cm3's
+  version-stamp check with every backend. They were tested by linking
+  a value-checking program by hand, with NULL stubs for the
+  `Atomic*_I3` functions: 26 checks over INTEGER, BOOLEAN, CHAR,
+  WIDECHAR, LONGINT, ADDRESS and REFANY pass at `-O0` and `-O2`. p226's
+  IR verifies. Front-end limits found on the way: an atomic call can't
+  be used directly as a boolean operand ("CallExpr.NotBoolean"), and
+  `AtomicLongint.FetchInc` with a LONGINT increment crashes the front end.
+- `init_label` and `init_offset` are no-ops, as in M3C and M3CG_LLVM:
+  only the old stack walker reads those words.
+- **Deferred: `ex_stack`** (`start_try`, `end_try`, `invoke_direct`,
+  `invoke_indirect`, `landing_pad`). It is off by default, and testing
+  it needs an `m3core` built with `M3_USE_STACK_WALKER`, which takes the
+  two-stage bootstrap in `README-ex_stack.md`. The lowering would be
+  `invoke` to a `landingpad` with `__gxx_personality_v0` that catches
+  `_M3Exc` (`RTStackC.c`). It is the `ex_stack` item in Phase 7, and
+  must be done before AMD64_LINUX switches its default exception
+  model to `ex_stack`.
+- Not yet run: the `c*` and `x0` tests.
 
 ### Phase 4: self-hosting and performance
 

@@ -29,6 +29,7 @@ FROM M3CG IMPORT BitSize, ByteSize, Alignment, Frequency;
 FROM M3CG IMPORT Var, Proc, Label, BitOffset;
 FROM M3CG IMPORT Type, ZType, IType, MType, RType, AType;
 FROM M3CG IMPORT Sign, CompareOp, ConvertOp, RuntimeError;
+FROM M3CG IMPORT MemoryOrder, AtomicOp;  (* Phase 3 *)
 
 <*FATAL Wr.Failure, Thread.Alerted*>
 
@@ -261,6 +262,15 @@ TYPE
     pop_struct := pop_struct;
     pop_static_link := pop_static_link;
     load_static_link := load_static_link;
+    (* Phase 3 *)
+    init_label := init_label;
+    init_offset := init_offset;
+    store_ordered := store_ordered;
+    load_ordered := load_ordered;
+    exchange := exchange;
+    compare_exchange := compare_exchange;
+    fence := fence;
+    fetch_and_op := fetch_and_op;
   END;
 
 (*------------------------------------------------------------ targets ---*)
@@ -2349,6 +2359,15 @@ PROCEDURE index_address (u: U; t: IType; size: INTEGER) =
   VAR i := PopAs (u, t);  a := PopAs (u, Type.Addr);
   BEGIN
     IF size = 0 THEN Push (u, Type.Addr, a); RETURN END;
+    IF size < 0 THEN
+      (* Negative sizes occur (m3core's String8, DragonInt); an array
+         type can't have one, so scale the index instead. *)
+      Push (u, Type.Addr,
+            Instr (u, "getelementptr i8, ptr " & a & ", i64 "
+                        & Instr (u, "mul i64 " & Cvt (u, i, t, Type.Int64)
+                                      & ", " & Fmt.Int (size))));
+      RETURN;
+    END;
     Push (u, Type.Addr,
           Instr (u, "getelementptr [" & Fmt.Int (size) & " x i8], ptr " & a
                       & ", i64 " & Cvt (u, i, t, Type.Int64)));
@@ -2429,6 +2448,165 @@ PROCEDURE load_static_link (u: U; proc: Proc) =
       ELSE Push (u, Type.Addr, FrameOf (u, p.level - 1));
     END;
   END load_static_link;
+
+(*------------------------------------------------- Phase 3: static data ---*)
+
+PROCEDURE init_label (<*UNUSED*> u: U; <*UNUSED*> o: ByteOffset;
+                      <*UNUSED*> value: Label) =
+  (* Only the old stack walker reads these words.  Like the C back end
+     (M3C.m3) and M3CG_LLVM, leave them zero. *)
+  BEGIN
+  END init_label;
+
+PROCEDURE init_offset (<*UNUSED*> u: U; <*UNUSED*> o: ByteOffset;
+                       <*UNUSED*> value: Var) =
+  (* As init_label: frame offsets for the old stack walker. *)
+  BEGIN
+  END init_offset;
+
+(*----------------------------------------------------- Phase 3: atomics ---*)
+
+PROCEDURE Ordering (o: MemoryOrder): TEXT =
+  BEGIN
+    CASE o OF
+    | MemoryOrder.Relaxed        => RETURN "monotonic";
+    | MemoryOrder.Release        => RETURN "release";
+    | MemoryOrder.Acquire        => RETURN "acquire";
+    | MemoryOrder.AcquireRelease => RETURN "acq_rel";
+    | MemoryOrder.Sequential     => RETURN "seq_cst";
+    END;
+  END Ordering;
+
+PROCEDURE LoadOrdering (o: MemoryOrder): TEXT =
+  (* An atomic load can't be "release" or "acq_rel". *)
+  BEGIN
+    CASE o OF
+    | MemoryOrder.Release        => RETURN "monotonic";
+    | MemoryOrder.AcquireRelease => RETURN "acquire";
+    ELSE RETURN Ordering (o);
+    END;
+  END LoadOrdering;
+
+PROCEDURE StoreOrdering (o: MemoryOrder): TEXT =
+  (* An atomic store can't be "acquire" or "acq_rel". *)
+  BEGIN
+    CASE o OF
+    | MemoryOrder.Acquire        => RETURN "monotonic";
+    | MemoryOrder.AcquireRelease => RETURN "release";
+    ELSE RETURN Ordering (o);
+    END;
+  END StoreOrdering;
+
+PROCEDURE AtomicType (u: U; t: MType): Type =
+  (* The memory type the atomic instruction works on.  Integer
+     arithmetic on addresses goes through an integer of the same size. *)
+  BEGIN
+    IF IsFloat (t) THEN
+      Fatal (u, "atomic operation on a floating-point type");
+    END;
+    RETURN t;
+  END AtomicType;
+
+PROCEDURE AsMem (u: U; x: Operand; z: ZType; t: MType): TEXT =
+  (* Operand "x" converted to the memory type "t". *)
+  BEGIN
+    RETURN Cvt (u, Cvt (u, x.val, x.type, z), z, t);
+  END AsMem;
+
+PROCEDURE store_ordered (u: U; z: ZType; t: MType; order: MemoryOrder) =
+  (* Mem [s1.A].t := s0.z; pop (2) *)
+  VAR x := Pop (u);  a := PopAs (u, Type.Addr);  m := AtomicType (u, t);
+  BEGIN
+    Emit (u, "store atomic " & LType (m) & " " & AsMem (u, x, z, m)
+               & ", ptr " & a & " " & StoreOrdering (order) & ", align "
+               & Fmt.Int (NatAlign (m)));
+  END store_ordered;
+
+PROCEDURE load_ordered (u: U; t: MType; z: ZType; order: MemoryOrder) =
+  (* s0.z := Mem [s0.A].t *)
+  VAR a := PopAs (u, Type.Addr);  m := AtomicType (u, t);  r: TEXT;
+  BEGIN
+    r := Instr (u, "load atomic " & LType (m) & ", ptr " & a & " "
+                     & LoadOrdering (order) & ", align "
+                     & Fmt.Int (NatAlign (m)));
+    Push (u, z, Cvt (u, r, m, z));
+  END load_ordered;
+
+PROCEDURE exchange (u: U; t: MType; z: ZType; order: MemoryOrder) =
+  (* tmp := Mem [s1.A].t;  Mem [s1.A].t := s0.z;  s0.z := tmp;  pop *)
+  VAR x := Pop (u);  a := PopAs (u, Type.Addr);  m := AtomicType (u, t);
+      r: TEXT;
+  BEGIN
+    r := Instr (u, "atomicrmw xchg ptr " & a & ", " & LType (m) & " "
+                     & AsMem (u, x, z, m) & " " & Ordering (order)
+                     & ", align " & Fmt.Int (NatAlign (m)));
+    Push (u, z, Cvt (u, r, m, z));
+  END exchange;
+
+PROCEDURE compare_exchange (u: U; t: MType; z: ZType; r: IType;
+                            success, failure: MemoryOrder) =
+  (* As the front end (builtinAtomic/CompareSwap.mg) uses it: s2 is the
+     address of the variable, s1 the address of "expected", s0 the new
+     value.  If Mem [s2.A].t = Mem [s1.A].t, store s0 into Mem [s2.A];
+     otherwise store the value found into Mem [s1.A].  Replace the
+     three operands with the success flag, of type "r". *)
+  VAR x := Pop (u);  e := PopAs (u, Type.Addr);  a := PopAs (u, Type.Addr);
+      m := AtomicType (u, t);  lt := LType (m);
+      align := ", align " & Fmt.Int (NatAlign (m));
+      fail_order := failure;  old, cx, ok: TEXT;
+      fail_blk := NewBlock (u, "cxfail.");  done_blk := NewBlock (u, "cxdone.");
+  BEGIN
+    (* The failure ordering can't be "release" or "acq_rel". *)
+    IF fail_order = MemoryOrder.Release THEN
+      fail_order := MemoryOrder.Relaxed;
+    ELSIF fail_order = MemoryOrder.AcquireRelease THEN
+      fail_order := MemoryOrder.Acquire;
+    END;
+    old := Instr (u, "load " & lt & ", ptr " & e & align);
+    cx := Instr (u, "cmpxchg ptr " & a & ", " & lt & " " & old & ", "
+                      & lt & " " & AsMem (u, x, z, m) & " "
+                      & Ordering (success) & " " & Ordering (fail_order)
+                      & align);
+    ok := Instr (u, "extractvalue { " & lt & ", i1 } " & cx & ", 1");
+    EmitTerm (u, "br i1 " & ok & ", label %" & done_blk & ", label %"
+                   & fail_blk);
+    StartBlock (u, fail_blk);
+    Emit (u, "store " & lt & " "
+               & Instr (u, "extractvalue { " & lt & ", i1 } " & cx & ", 0")
+               & ", ptr " & e & align);
+    EmitTerm (u, "br label %" & done_blk);
+    StartBlock (u, done_blk);
+    Push (u, r, Instr (u, "zext i1 " & ok & " to " & LType (r)));
+  END compare_exchange;
+
+PROCEDURE fence (u: U; order: MemoryOrder) =
+  BEGIN
+    (* A relaxed fence has no effect, and LLVM rejects "fence monotonic". *)
+    IF order # MemoryOrder.Relaxed THEN
+      Emit (u, "fence " & Ordering (order));
+    END;
+  END fence;
+
+PROCEDURE fetch_and_op (u: U; op: AtomicOp; t: MType; z: ZType;
+                        order: MemoryOrder) =
+  (* tmp := Mem [s1.A].t;  Mem [s1.A].t := tmp op s0.z;  s1.z := tmp;
+     pop *)
+  CONST OpName = ARRAY AtomicOp OF TEXT {"add", "sub", "or", "and", "xor"};
+  VAR x := Pop (u);  a := PopAs (u, Type.Addr);  m := AtomicType (u, t);
+      v, r: TEXT;
+  BEGIN
+    IF m = Type.Addr THEN
+      (* atomicrmw arithmetic needs an integer type. *)
+      v := Cvt (u, Cvt (u, x.val, x.type, z), z, Type.Word64);
+      m := Type.Word64;
+    ELSE
+      v := AsMem (u, x, z, m);
+    END;
+    r := Instr (u, "atomicrmw " & OpName[op] & " ptr " & a & ", "
+                     & LType (m) & " " & v & " " & Ordering (order)
+                     & ", align " & Fmt.Int (NatAlign (m)));
+    Push (u, z, Cvt (u, r, m, z));
+  END fetch_and_op;
 
 BEGIN
 END M3LLVMIR.

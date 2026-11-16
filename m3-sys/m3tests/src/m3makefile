@@ -398,6 +398,10 @@ end
 if equal(M3_BACKEND_MODE, "LlvmIR")
   cm3opts = cm3opts & "-DM3_BACKEND_MODE=LlvmIR "
 end
+% "-DM3TESTS_OPTIMIZE" builds each test with "cm3 -O" (any backend).
+if defined("M3TESTS_OPTIMIZE")
+  cm3opts = cm3opts & "-O "
+end
 
 readonly proc run_test (class, group, uid, comment, should_run, cm3opts, runopts, probeForTargetSpecificFiles) is  local dir = "../src/" & group & "/" & uid
   FileRemoveRecursive(dir & "/" & BUILD_DIR)
