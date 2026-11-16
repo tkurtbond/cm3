@@ -9,7 +9,7 @@ INTERFACE M3LLVMIR;
 
 IMPORT M3CG, Wr;
 
-PROCEDURE New (wr: Wr.T): M3CG.T;
+PROCEDURE New (wr: Wr.T; debug := FALSE): M3CG.T;
 (* Return a code generator that writes LLVM IR for one unit to "wr".
    The IR is written when the unit ends (end_unit).  "Target" must
    already be initialized. *)

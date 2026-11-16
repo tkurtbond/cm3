@@ -24,6 +24,7 @@ MODULE M3LLVMIR;
 
 IMPORT Wr, TextWr, Text, Fmt, Stdio, Thread, TextRefTbl, Word;
 IMPORT M3CG, M3CG_Ops, M3CG_AssertFalse, M3ID, Target, TInt, TFloat;
+IMPORT M3LLVMIRDebug;  (* Phase 5 *)
 FROM M3CG IMPORT Name, ByteOffset, TypeUID, CallingConvention;
 FROM M3CG IMPORT BitSize, ByteSize, Alignment, Frequency;
 FROM M3CG IMPORT Var, Proc, Label, BitOffset;
@@ -48,6 +49,11 @@ TYPE
     owner    : LProc     := NIL;   (* for locals and parameters *)
     up_level : BOOLEAN   := FALSE; (* lives in owner's frame *)
     frame_off: INTEGER   := 0;
+    (* debug information (Phase 5) *)
+    m3name   : TEXT      := NIL;   (* NIL: no debug information *)
+    typeid   : TypeUID   := 0;
+    line     : INTEGER   := 0;
+    scope    : TEXT      := NIL;  (* its DILexicalBlock; NIL: the procedure *)
   END;
 
   LProc = Proc OBJECT
@@ -69,7 +75,18 @@ TYPE
     frame_used : BOOLEAN := FALSE;
     returns_twice : BOOLEAN := FALSE;  (* setjmp *)
     calls_setjmp  : BOOLEAN := FALSE;
+    (* debug information (Phase 5) *)
+    m3name     : TEXT := NIL;     (* the symbol, unquoted *)
+    ret_typeid : TypeUID := 0;
+    dbg_sp     : TEXT := NIL;     (* its DISubprogram, if any *)
+    dbg_file   : TEXT := NIL;     (* its DIFile *)
+    dbg_line   : INTEGER := 0;
+    dbg_vars   : VarList := NIL;  (* named locals and parameters *)
+    dbg_blocks : TextList := NIL; (* the open blocks, innermost first;
+                                     NIL entries have no DILexicalBlock *)
   END;
+
+  TextList = REF RECORD t: TEXT;  next: TextList END;
 
   VarList  = REF RECORD v: LVar;  next: VarList  END;
   ProcList = REF RECORD p: LProc; next: ProcList END;
@@ -127,6 +144,13 @@ TYPE
     init_vals   : TextWr.T;
     init_pos    := 0;
     init_n      := 0;
+
+    (* debug information (Phase 5); NIL if not wanted *)
+    dbg         : M3LLVMIRDebug.T := NIL;
+    unit_file   : TEXT := NIL;     (* the first source file *)
+    loc_line    := -1;             (* the cached location of Emit *)
+    loc_file    : TEXT := NIL;
+    loc         : TEXT := NIL;     (* ", !dbg !N" *)
   OVERRIDES
     next_label := next_label;
     set_error_handler := set_error_handler;
@@ -295,9 +319,10 @@ PROCEDURE DataLayout (): TEXT =
 
 (*--------------------------------------------------------- utilities ---*)
 
-PROCEDURE New (wr: Wr.T): M3CG.T =
+PROCEDURE New (wr: Wr.T; debug := FALSE): M3CG.T =
   VAR u := NEW (U, wr := wr);
   BEGIN
+    IF debug THEN u.dbg := M3LLVMIRDebug.New () END;
     u.globals := TextWr.New ();
     u.funcs := TextWr.New ();
     u.stack := NEW (REF ARRAY OF Operand, 32);
@@ -468,8 +493,48 @@ PROCEDURE Emit (u: U; instr: TEXT) =
       Fatal (u, "instruction outside a procedure: " & instr);
     END;
     IF u.terminated THEN StartBlock (u, NewBlock (u, "dead.")) END;
-    Wr.PutText (u.body, "  " & instr & Wr.EOL);
+    Wr.PutText (u.body, "  " & instr & Loc (u) & Wr.EOL);
   END Emit;
+
+PROCEDURE Loc (u: U): TEXT =
+  (* The "!dbg" attachment for the current source line, or "". *)
+  VAR p := u.cur_proc;  scope: TEXT;  line := u.source_line;
+  BEGIN
+    IF p = NIL OR p.dbg_sp = NIL THEN RETURN "" END;
+    IF line <= 0 THEN line := p.dbg_line END;
+    IF u.loc # NIL AND line = u.loc_line AND u.source_file = u.loc_file THEN
+      RETURN u.loc;
+    END;
+    scope := Scope (p);
+    IF u.source_file # NIL THEN
+      WITH f = M3LLVMIRDebug.File (u.dbg, u.source_file) DO
+        IF NOT Text.Equal (f, p.dbg_file) THEN
+          (* code from another file *)
+          scope := M3LLVMIRDebug.Node (u.dbg, "!DILexicalBlockFile(scope: "
+                                     & scope & ", file: " & f
+                                     & ", discriminator: 0)");
+        END;
+      END;
+    END;
+    u.loc_line := line;
+    u.loc_file := u.source_file;
+    u.loc := ", !dbg " & M3LLVMIRDebug.Node (u.dbg, "!DILocation(line: "
+                                             & Fmt.Int (line) & ", scope: "
+                                             & scope & ")");
+    RETURN u.loc;
+  END Loc;
+
+PROCEDURE Scope (p: LProc): TEXT =
+  (* The innermost debug scope open in "p": a DILexicalBlock or its
+     DISubprogram. *)
+  VAR l := p.dbg_blocks;
+  BEGIN
+    WHILE l # NIL DO
+      IF l.t # NIL THEN RETURN l.t END;
+      l := l.next;
+    END;
+    RETURN p.dbg_sp;
+  END Scope;
 
 PROCEDURE EmitTerm (u: U; instr: TEXT) =
   BEGIN
@@ -645,6 +710,9 @@ PROCEDURE end_unit (u: U) =
     Wr.PutText (wr, "attributes #0 = { uwtable \"frame-pointer\"=\"all\" }"
                       & Wr.EOL);
     Wr.PutText (wr, "attributes #1 = { returns_twice }" & Wr.EOL);
+    IF u.dbg # NIL AND u.unit_file # NIL THEN
+      M3LLVMIRDebug.Finish (u.dbg, wr, M3LLVMIRDebug.File (u.dbg, u.unit_file));
+    END;
     Wr.Flush (wr);
   END end_unit;
 
@@ -659,6 +727,7 @@ PROCEDURE export_unit (<*UNUSED*> u: U; <*UNUSED*> name: Name) =
 PROCEDURE set_source_file (u: U; file: TEXT) =
   BEGIN
     u.source_file := file;
+    IF u.unit_file = NIL THEN u.unit_file := file END;
   END set_source_file;
 
 PROCEDURE set_source_line (u: U; line: INTEGER) =
@@ -666,34 +735,32 @@ PROCEDURE set_source_line (u: U; line: INTEGER) =
     u.source_line := line;
   END set_source_line;
 
-(* Type declarations are for debug information, which this back end
-   does not produce yet. *)
+(* Type declarations are for debug information (M3LLVMIRDebug).
+   Method, exception and raises declarations are not described. *)
 
-<*NOWARN*>PROCEDURE declare_typename(self: U; typeid: TypeUID; name: Name) = BEGIN END declare_typename;
-<*NOWARN*>PROCEDURE declare_array(self: U; typeid, index_typeid, element_typeid: TypeUID; bit_size: BitSize; element_typename: Name) = BEGIN END declare_array;
-<*NOWARN*>PROCEDURE declare_open_array(self: U; typeid, element_typeid: TypeUID; bit_size: BitSize; element_typename: Name) = BEGIN END declare_open_array;
-<*NOWARN*>PROCEDURE declare_enum(self: U; typeid: TypeUID; n_elts: INTEGER; bit_size: BitSize) = BEGIN END declare_enum;
-<*NOWARN*>PROCEDURE declare_enum_elt(self: U; name: Name) = BEGIN END declare_enum_elt;
-<*NOWARN*>PROCEDURE declare_packed(self: U; typeid: TypeUID; bit_size: BitSize; base: TypeUID; base_typename: Name) = BEGIN END declare_packed;
-<*NOWARN*>PROCEDURE declare_record(self: U; typeid: TypeUID; bit_size: BitSize; n_fields: INTEGER) = BEGIN END declare_record;
-<*NOWARN*>PROCEDURE declare_field(self: U; name: Name; bit_offset: BitOffset; bit_size: BitSize; typeid: TypeUID; typename: Name) = BEGIN END declare_field;
-<*NOWARN*>PROCEDURE declare_set(self: U; t, domain: TypeUID; bit_size: BitSize; domain_typename: Name) = BEGIN END declare_set;
-<*NOWARN*>PROCEDURE declare_subrange(self: U; typeid, domain_typeid: TypeUID; READONLY min, max: Target.Int; bit_size: BitSize; domain_typename: Name) = BEGIN END declare_subrange;
-<*NOWARN*>PROCEDURE declare_pointer(self: U; typeid, target_typeid: TypeUID; brand: TEXT; traced: BOOLEAN; target_typename: Name) = BEGIN END declare_pointer;
-<*NOWARN*>PROCEDURE declare_indirect(self: U; typeid, target_typeid: TypeUID; target_typename: Name) = BEGIN END declare_indirect;
-<*NOWARN*>PROCEDURE declare_proctype(self: U; typeid: TypeUID; n_formals: INTEGER; result: TypeUID; n_raises: INTEGER; callingConvention: CallingConvention; result_typename: Name) = BEGIN END declare_proctype;
-<*NOWARN*>PROCEDURE declare_formal(self: U; name: Name; typeid: TypeUID; typename: Name) = BEGIN END declare_formal;
+<*NOWARN*>PROCEDURE declare_typename(self: U; typeid: TypeUID; name: Name) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.Typename (self.dbg, typeid, M3ID.ToText (name)) END; END declare_typename;
+<*NOWARN*>PROCEDURE declare_array(self: U; typeid, index_typeid, element_typeid: TypeUID; bit_size: BitSize; element_typename: Name) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.Array (self.dbg, typeid, index_typeid, element_typeid, bit_size) END; END declare_array;
+<*NOWARN*>PROCEDURE declare_open_array(self: U; typeid, element_typeid: TypeUID; bit_size: BitSize; element_typename: Name) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.OpenArray (self.dbg, typeid, element_typeid, bit_size) END; END declare_open_array;
+<*NOWARN*>PROCEDURE declare_enum(self: U; typeid: TypeUID; n_elts: INTEGER; bit_size: BitSize) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.Enum (self.dbg, typeid, n_elts, bit_size) END; END declare_enum;
+<*NOWARN*>PROCEDURE declare_enum_elt(self: U; name: Name) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.EnumElt (self.dbg, M3ID.ToText (name)) END; END declare_enum_elt;
+<*NOWARN*>PROCEDURE declare_packed(self: U; typeid: TypeUID; bit_size: BitSize; base: TypeUID; base_typename: Name) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.Packed (self.dbg, typeid, bit_size, base) END; END declare_packed;
+<*NOWARN*>PROCEDURE declare_record(self: U; typeid: TypeUID; bit_size: BitSize; n_fields: INTEGER) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.Record (self.dbg, typeid, bit_size, n_fields) END; END declare_record;
+<*NOWARN*>PROCEDURE declare_field(self: U; name: Name; bit_offset: BitOffset; bit_size: BitSize; typeid: TypeUID; typename: Name) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.Field (self.dbg, M3ID.ToText (name), bit_offset, bit_size, typeid) END; END declare_field;
+<*NOWARN*>PROCEDURE declare_set(self: U; t, domain: TypeUID; bit_size: BitSize; domain_typename: Name) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.Set (self.dbg, t, domain, bit_size) END; END declare_set;
+<*NOWARN*>PROCEDURE declare_subrange(self: U; typeid, domain_typeid: TypeUID; READONLY min, max: Target.Int; bit_size: BitSize; domain_typename: Name) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.Subrange (self.dbg, typeid, domain_typeid, min, max, bit_size) END; END declare_subrange;
+<*NOWARN*>PROCEDURE declare_pointer(self: U; typeid, target_typeid: TypeUID; brand: TEXT; traced: BOOLEAN; target_typename: Name) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.Pointer (self.dbg, typeid, target_typeid) END; END declare_pointer;
+<*NOWARN*>PROCEDURE declare_indirect(self: U; typeid, target_typeid: TypeUID; target_typename: Name) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.Indirect (self.dbg, typeid, target_typeid) END; END declare_indirect;
+<*NOWARN*>PROCEDURE declare_proctype(self: U; typeid: TypeUID; n_formals: INTEGER; result: TypeUID; n_raises: INTEGER; callingConvention: CallingConvention; result_typename: Name) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.ProcType (self.dbg, typeid, n_formals, result) END; END declare_proctype;
+<*NOWARN*>PROCEDURE declare_formal(self: U; name: Name; typeid: TypeUID; typename: Name) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.Formal (self.dbg, typeid) END; END declare_formal;
 <*NOWARN*>PROCEDURE declare_raises(self: U; name: Name) = BEGIN END declare_raises;
-<*NOWARN*>PROCEDURE declare_object(self: U; typeid, super_typeid: TypeUID; brand: TEXT; traced: BOOLEAN; n_fields, n_methods: INTEGER; field_size: BitSize; field_offset, method_offset : INTEGER; super_typename: Name) = BEGIN END declare_object;
+<*NOWARN*>PROCEDURE declare_object(self: U; typeid, super_typeid: TypeUID; brand: TEXT; traced: BOOLEAN; n_fields, n_methods: INTEGER; field_size: BitSize; field_offset, method_offset : INTEGER; super_typename: Name) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.Object (self.dbg, typeid, super_typeid, n_fields, field_size, field_offset) END; END declare_object;
 <*NOWARN*>PROCEDURE declare_method(self: U; name: Name; signature: TypeUID) = BEGIN END declare_method;
-<*NOWARN*>PROCEDURE declare_opaque(self: U; typeid, super_typeid: TypeUID) = BEGIN END declare_opaque;
-<*NOWARN*>PROCEDURE reveal_opaque(self: U; lhs_typeid, rhs_typeid: TypeUID) = BEGIN END reveal_opaque;
+<*NOWARN*>PROCEDURE declare_opaque(self: U; typeid, super_typeid: TypeUID) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.Opaque (self.dbg, typeid, super_typeid) END; END declare_opaque;
+<*NOWARN*>PROCEDURE reveal_opaque(self: U; lhs_typeid, rhs_typeid: TypeUID) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.Reveal (self.dbg, lhs_typeid, rhs_typeid) END; END reveal_opaque;
 <*NOWARN*>PROCEDURE declare_exception(self: U; name: Name; arg_typeid: TypeUID; raise_proc: BOOLEAN; base: Var; offset: INTEGER) = BEGIN END declare_exception;
-<*NOWARN*>PROCEDURE widechar_size(self: U; size: INTEGER) = BEGIN END widechar_size;
+<*NOWARN*>PROCEDURE widechar_size(self: U; size: INTEGER) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.WidecharSize (self.dbg, size) END; END widechar_size;
 <*NOWARN*>PROCEDURE set_runtime_proc(self: U; name: Name; proc: Proc) = BEGIN END set_runtime_proc;
 <*NOWARN*>PROCEDURE free_temp(self: U; var: Var) = BEGIN END free_temp;
-<*NOWARN*>PROCEDURE begin_block(self: U) = BEGIN END begin_block;
-<*NOWARN*>PROCEDURE end_block(self: U) = BEGIN END end_block;
 <*NOWARN*>PROCEDURE note_procedure_origin(self: U; proc: Proc) = BEGIN END note_procedure_origin;
 
 PROCEDURE comment (u: U; a, b, c, d: TEXT := NIL) =
@@ -768,9 +835,20 @@ PROCEDURE BindGlobal (u: U; v: LVar; byte_size: ByteSize;
       Wr.PutText (u.globals, v.name & " = " & Linkage (exported)
                                & "global [" & Fmt.Int (byte_size)
                                & " x i8] zeroinitializer, align "
-                               & Fmt.Int (MAX (alignment, 1)) & Wr.EOL);
+                               & Fmt.Int (MAX (alignment, 1))
+                               & DebugGlobals (u, v) & Wr.EOL);
     END;
   END BindGlobal;
+
+PROCEDURE DebugGlobals (u: U; v: LVar): TEXT =
+  (* The module's variables are fields of its data segment. *)
+  BEGIN
+    IF u.dbg = NIL OR v # u.module_data OR u.unit_file = NIL THEN
+      RETURN "";
+    END;
+    RETURN M3LLVMIRDebug.Globals (u.dbg, M3LLVMIRDebug.File (u.dbg,
+                                                             u.unit_file));
+  END DebugGlobals;
 
 PROCEDURE bind_segment (u: U; segment: Var; byte_size: ByteSize;
                         alignment: Alignment; type: Type;
@@ -854,7 +932,7 @@ PROCEDURE end_init (u: U; var: Var) =
                              & "global <{ " & TextWr.ToText (u.init_types)
                              & " }> <{ " & TextWr.ToText (u.init_vals)
                              & " }>, align " & Fmt.Int (MAX (v.align, 1))
-                             & Wr.EOL);
+                             & DebugGlobals (u, v) & Wr.EOL);
     u.init_target := NIL;
   END end_init;
 
@@ -899,6 +977,7 @@ PROCEDURE NewProc (u: U; name: Name; n_params: INTEGER;
                 return := return);
   BEGIN
     INC (u.next_proc);
+    p.m3name := M3ID.ToText (name);
     p.params := NEW (REF ARRAY OF LVar, MAX (n_params, 0));
     u.procs := NEW (ProcList, p := p, next := u.procs);
     u.decl_proc := p;
@@ -923,7 +1002,7 @@ PROCEDURE declare_procedure (u: U; name: Name; n_params: INTEGER;
                              return_type: Type; level: INTEGER;
                              <*UNUSED*> callingConvention: CallingConvention;
                              exported: BOOLEAN; parent: Proc;
-                             <*UNUSED*> return_typeid: TypeUID;
+                             return_typeid: TypeUID;
                              <*UNUSED*> return_typename: Name): Proc =
   VAR p: LProc;
   BEGIN
@@ -931,6 +1010,7 @@ PROCEDURE declare_procedure (u: U; name: Name; n_params: INTEGER;
     p := NewProc (u, name, n_params, return_type);
     p.exported := exported;
     p.level := level;
+    p.ret_typeid := return_typeid;
     RETURN p;
   END declare_procedure;
 
@@ -1000,9 +1080,9 @@ PROCEDURE NewLocal (u: U; kind: VarKind; byte_size: ByteSize;
     RETURN v;
   END NewLocal;
 
-PROCEDURE declare_local (u: U; <*UNUSED*> name: Name; byte_size: ByteSize;
+PROCEDURE declare_local (u: U; name: Name; byte_size: ByteSize;
                          alignment: Alignment; type: Type;
-                         <*UNUSED*> typeid: TypeUID;
+                         typeid: TypeUID;
                          in_memory, up_level: BOOLEAN;
                          <*UNUSED*> frequency: Frequency;
                          <*UNUSED*> typename: Name): Var =
@@ -1021,12 +1101,13 @@ PROCEDURE declare_local (u: U; <*UNUSED*> name: Name; byte_size: ByteSize;
     ELSE
       Fatal (u, "declare_local outside a procedure");
     END;
+    DebugVar (u, v, name, typeid);
     RETURN v;
   END declare_local;
 
-PROCEDURE declare_param (u: U; <*UNUSED*> name: Name; byte_size: ByteSize;
+PROCEDURE declare_param (u: U; name: Name; byte_size: ByteSize;
                          alignment: Alignment; type: Type;
-                         <*UNUSED*> typeid: TypeUID;
+                         typeid: TypeUID;
                          <*UNUSED*> in_memory: BOOLEAN; up_level: BOOLEAN;
                          <*UNUSED*> frequency: Frequency;
                          <*UNUSED*> typename: Name): Var =
@@ -1042,8 +1123,97 @@ PROCEDURE declare_param (u: U; <*UNUSED*> name: Name; byte_size: ByteSize;
     ELSE
       Fatal (u, "too many parameters for " & p.name);
     END;
+    IF NOT p.imported THEN DebugVar (u, v, name, typeid) END;
     RETURN v;
   END declare_param;
+
+PROCEDURE DebugVar (u: U; v: LVar; name: Name; typeid: TypeUID) =
+  (* Remember a named local or parameter for its DILocalVariable. *)
+  BEGIN
+    IF u.dbg = NIL OR name = M3ID.NoID OR v.owner = NIL THEN RETURN END;
+    v.m3name := M3ID.ToText (name);
+    v.typeid := typeid;
+    (* Variables declared before begin_procedure belong to its line. *)
+    IF u.cur_proc # NIL THEN v.line := u.source_line END;
+    (* Locals of a nested block (VAR ... BEGIN) belong to its scope. *)
+    IF u.cur_proc = v.owner AND v.owner.dbg_blocks # NIL THEN
+      v.scope := Scope (v.owner);
+    END;
+    v.owner.dbg_vars := NEW (VarList, v := v, next := v.owner.dbg_vars);
+  END DebugVar;
+
+PROCEDURE begin_block (u: U) =
+  (* A nested scope (Phase 5): its locals and code get a DILexicalBlock,
+     so that gdb tells apart variables of the same name. *)
+  VAR p := u.cur_proc;  b: TEXT := NIL;  line: INTEGER;
+  BEGIN
+    IF p = NIL THEN RETURN END;
+    IF p.dbg_sp # NIL THEN
+      line := MAX (u.source_line, p.dbg_line);
+      b := M3LLVMIRDebug.Node (u.dbg, "distinct !DILexicalBlock(scope: "
+                                 & Scope (p) & ", file: " & p.dbg_file
+                                 & ", line: " & Fmt.Int (line) & ")");
+      u.loc := NIL;
+    END;
+    p.dbg_blocks := NEW (TextList, t := b, next := p.dbg_blocks);
+  END begin_block;
+
+PROCEDURE end_block (u: U) =
+  VAR p := u.cur_proc;
+  BEGIN
+    IF p = NIL OR p.dbg_blocks = NIL THEN RETURN END;
+    p.dbg_blocks := p.dbg_blocks.next;
+    u.loc := NIL;
+  END end_block;
+
+PROCEDURE DebugProc (u: U; p: LProc) =
+  (* Reserve "p"'s DISubprogram, at the current source position. *)
+  VAR params: REF ARRAY OF TypeUID;
+  BEGIN
+    u.loc := NIL;
+    IF u.dbg = NIL OR u.source_file = NIL THEN RETURN END;
+    p.dbg_file := M3LLVMIRDebug.File (u.dbg, u.source_file);
+    p.dbg_line := u.source_line;
+    p.dbg_sp := M3LLVMIRDebug.Reserve (u.dbg);
+    params := NEW (REF ARRAY OF TypeUID, p.n_declared);
+    FOR i := 0 TO p.n_declared - 1 DO params[i] := p.params[i].typeid END;
+    M3LLVMIRDebug.Subprogram (u.dbg, p.dbg_sp, p.m3name, p.dbg_file,
+                              p.dbg_line, NOT p.exported, p.ret_typeid,
+                              params^);
+  END DebugProc;
+
+PROCEDURE DebugDeclares (u: U; p: LProc): TEXT =
+  (* The llvm.dbg.declare calls for "p"'s named variables. *)
+  VAR wr: TextWr.T;  l := p.dbg_vars;  v: LVar;  var, expr: TEXT;
+      arg: INTEGER;  scope: TEXT;
+  BEGIN
+    IF p.dbg_sp = NIL OR l = NIL THEN RETURN "" END;
+    wr := TextWr.New ();
+    WHILE l # NIL DO
+      v := l.v;
+      arg := 0;
+      FOR i := 0 TO p.n_declared - 1 DO
+        IF p.params[i] = v THEN arg := i + 1 END;
+      END;
+      var := M3LLVMIRDebug.Reserve (u.dbg);
+      expr := M3LLVMIRDebug.Reserve (u.dbg);
+      scope := v.scope;
+      IF scope = NIL THEN scope := p.dbg_sp END;
+      M3LLVMIRDebug.Variable (u.dbg, var, expr, v.m3name, arg, scope,
+                              p.dbg_file, MAX (v.line, p.dbg_line),
+                              v.typeid);
+      Wr.PutText (wr, "  call void @llvm.dbg.declare(metadata ptr " & v.name
+                        & ", metadata " & var & ", metadata " & expr
+                        & "), !dbg "
+                        & M3LLVMIRDebug.Node (u.dbg, "!DILocation(line: "
+                            & Fmt.Int (MAX (v.line, p.dbg_line))
+                            & ", scope: " & scope & ")") & Wr.EOL);
+      l := l.next;
+    END;
+    AddDecl (u, "@llvm.dbg.declare",
+             "declare void @llvm.dbg.declare(metadata, metadata, metadata)");
+    RETURN TextWr.ToText (wr);
+  END DebugDeclares;
 
 PROCEDURE declare_temp (u: U; byte_size: ByteSize; alignment: Alignment;
                         type: Type; <*UNUSED*> in_memory: BOOLEAN;
@@ -1068,6 +1238,7 @@ PROCEDURE begin_procedure (u: U; proc: Proc) =
     u.body := TextWr.New ();
     u.terminated := FALSE;
     u.sp := 0;
+    DebugProc (u, p);
     FOR i := 0 TO p.n_declared - 1 DO
       v := p.params[i];
       Alloca (u, v);
@@ -1091,7 +1262,7 @@ PROCEDURE begin_procedure (u: U; proc: Proc) =
   END begin_procedure;
 
 PROCEDURE end_procedure (u: U; proc: Proc) =
-  VAR p := NARROW (proc, LProc);  frame := "";  body: TEXT;
+  VAR p := NARROW (proc, LProc);  frame := "";  body, sp := "";
   BEGIN
     IF p # u.cur_proc THEN Fatal (u, "end_procedure does not match") END;
     IF NOT u.terminated THEN
@@ -1114,10 +1285,12 @@ PROCEDURE end_procedure (u: U; proc: Proc) =
       body := Replace (body, " = load ", " = load volatile ");
       body := Replace (body, "  store ", "  store volatile ");
     END;
+    IF p.dbg_sp # NIL THEN sp := " !dbg " & p.dbg_sp END;
     Wr.PutText (u.funcs, "define " & Linkage (p.exported)
-                           & Signature (p, TRUE) & " #0 {" & Wr.EOL
-                           & "entry:" & Wr.EOL & frame
+                           & Signature (p, TRUE) & " #0" & sp & " {"
+                           & Wr.EOL & "entry:" & Wr.EOL & frame
                            & TextWr.ToText (u.allocas)
+                           & DebugDeclares (u, p)
                            & body
                            & "}" & Wr.EOL & Wr.EOL);
     u.cur_proc := NIL;

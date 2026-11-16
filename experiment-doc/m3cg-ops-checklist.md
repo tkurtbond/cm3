@@ -36,33 +36,33 @@ test), `n/a` (deliberately not needed; say why in Notes).
 | Op | Decl | M3C | M3CG_LLVM | Status | Notes |
 |---|---|---|---|---|---|
 | `set_source_file` | [68](../m3-sys/m3middle/src/M3CG_Ops.i3#L68) | [3233](../m3-sys/m3back/src/M3C.m3#L3233) | [1533](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1533) | done | Used for source_filename. |
-| `set_source_line` | [69](../m3-sys/m3middle/src/M3CG_Ops.i3#L69) | [3249](../m3-sys/m3back/src/M3C.m3#L3249) | [1552](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1552) | done | Ignored until Phase 5 (debug info). |
+| `set_source_line` | [69](../m3-sys/m3middle/src/M3CG_Ops.i3#L69) | [3249](../m3-sys/m3back/src/M3C.m3#L3249) | [1552](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1552) | done | `!dbg` `DILocation` on each instruction (Phase 5). |
 
 ## debugging type declarations
 
 | Op | Decl | M3C | M3CG_LLVM | Status | Notes |
 |---|---|---|---|---|---|
-| `declare_typename` | [83](../m3-sys/m3middle/src/M3CG_Ops.i3#L83) | [3330](../m3-sys/m3back/src/M3C.m3#L3330) | [1578](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1578) | done | No-op: type info is only needed for debug info (Phase 5). |
-| `declare_array` | [89](../m3-sys/m3middle/src/M3CG_Ops.i3#L89) | [3349](../m3-sys/m3back/src/M3C.m3#L3349) | [1609](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1609) | done | No-op: type info is only needed for debug info (Phase 5). |
-| `declare_open_array` | [91](../m3-sys/m3middle/src/M3CG_Ops.i3#L91) | [3364](../m3-sys/m3back/src/M3C.m3#L3364) | [1619](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1619) | done | No-op: type info is only needed for debug info (Phase 5). |
-| `declare_enum` | [94](../m3-sys/m3middle/src/M3CG_Ops.i3#L94) | [3408](../m3-sys/m3back/src/M3C.m3#L3408) | [1629](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1629) | done | No-op: type info is only needed for debug info (Phase 5). |
-| `declare_enum_elt` | [98](../m3-sys/m3middle/src/M3CG_Ops.i3#L98) | [3444](../m3-sys/m3back/src/M3C.m3#L3444) | [1640](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1640) | done | No-op: type info is only needed for debug info (Phase 5). |
-| `declare_packed` | [101](../m3-sys/m3middle/src/M3CG_Ops.i3#L101) | [3482](../m3-sys/m3back/src/M3C.m3#L3482) | [1649](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1649) | done | No-op: type info is only needed for debug info (Phase 5). |
-| `declare_record` | [103](../m3-sys/m3middle/src/M3CG_Ops.i3#L103) | [3592](../m3-sys/m3back/src/M3C.m3#L3592) | [1659](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1659) | done | No-op: type info is only needed for debug info (Phase 5). |
-| `declare_field` | [108](../m3-sys/m3middle/src/M3CG_Ops.i3#L108) | [3625](../m3-sys/m3back/src/M3C.m3#L3625) | [1678](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1678) | done | No-op: type info is only needed for debug info (Phase 5). |
-| `declare_set` | [111](../m3-sys/m3middle/src/M3CG_Ops.i3#L111) | [3666](../m3-sys/m3back/src/M3C.m3#L3666) | [1696](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1696) | done | No-op: type info is only needed for debug info (Phase 5). |
-| `declare_subrange` | [113](../m3-sys/m3middle/src/M3CG_Ops.i3#L113) | [3718](../m3-sys/m3back/src/M3C.m3#L3718) | [1706](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1706) | done | No-op: type info is only needed for debug info (Phase 5). |
-| `declare_pointer` | [115](../m3-sys/m3middle/src/M3CG_Ops.i3#L115) | [3778](../m3-sys/m3back/src/M3C.m3#L3778) | [1725](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1725) | done | No-op: type info is only needed for debug info (Phase 5). |
-| `declare_indirect` | [118](../m3-sys/m3middle/src/M3CG_Ops.i3#L118) | [3795](../m3-sys/m3back/src/M3C.m3#L3795) | [1738](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1738) | done | No-op: type info is only needed for debug info (Phase 5). |
-| `declare_proctype` | [121](../m3-sys/m3middle/src/M3CG_Ops.i3#L121) | [3819](../m3-sys/m3back/src/M3C.m3#L3819) | [1747](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1747) | done | No-op: type info is only needed for debug info (Phase 5). |
-| `declare_formal` | [130](../m3-sys/m3middle/src/M3CG_Ops.i3#L130) | [3848](../m3-sys/m3back/src/M3C.m3#L3848) | [1770](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1770) | done | No-op: type info is only needed for debug info (Phase 5). |
-| `declare_raises` | [134](../m3-sys/m3middle/src/M3CG_Ops.i3#L134) | [3870](../m3-sys/m3back/src/M3C.m3#L3870) | [1781](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1781) | done | No-op: type info is only needed for debug info (Phase 5). |
-| `declare_object` | [138](../m3-sys/m3middle/src/M3CG_Ops.i3#L138) | [3884](../m3-sys/m3back/src/M3C.m3#L3884) | [1790](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1790) | done | No-op: type info is only needed for debug info (Phase 5). |
-| `declare_method` | [149](../m3-sys/m3middle/src/M3CG_Ops.i3#L149) | [3931](../m3-sys/m3back/src/M3C.m3#L3931) | [1828](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1828) | done | No-op: type info is only needed for debug info (Phase 5). |
-| `declare_opaque` | [152](../m3-sys/m3middle/src/M3CG_Ops.i3#L152) | [3943](../m3-sys/m3back/src/M3C.m3#L3943) | [1838](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1838) | done | No-op: type info is only needed for debug info (Phase 5). |
-| `reveal_opaque` | [157](../m3-sys/m3middle/src/M3CG_Ops.i3#L157) | [3956](../m3-sys/m3back/src/M3C.m3#L3956) | [1852](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1852) | done | No-op. |
-| `declare_exception` | [160](../m3-sys/m3middle/src/M3CG_Ops.i3#L160) | [3972](../m3-sys/m3back/src/M3C.m3#L3972) | [1872](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1872) | done | No-op: type info is only needed for debug info (Phase 5). |
-| `widechar_size` | [168](../m3-sys/m3middle/src/M3CG_Ops.i3#L168) | — | [1885](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1885) | done | No-op. |
+| `declare_typename` | [83](../m3-sys/m3middle/src/M3CG_Ops.i3#L83) | [3330](../m3-sys/m3back/src/M3C.m3#L3330) | [1578](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1578) | done | Debug info: names the DI type (Phase 5, `M3LLVMIRDebug`). |
+| `declare_array` | [89](../m3-sys/m3middle/src/M3CG_Ops.i3#L89) | [3349](../m3-sys/m3back/src/M3C.m3#L3349) | [1609](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1609) | done | Debug info: `DW_TAG_array_type` with a `DISubrange` (Phase 5). |
+| `declare_open_array` | [91](../m3-sys/m3middle/src/M3CG_Ops.i3#L91) | [3364](../m3-sys/m3back/src/M3C.m3#L3364) | [1619](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1619) | done | Debug info: array with `dataLocation`/`upperBound` expressions over the dope vector (Phase 5). |
+| `declare_enum` | [94](../m3-sys/m3middle/src/M3CG_Ops.i3#L94) | [3408](../m3-sys/m3back/src/M3C.m3#L3408) | [1629](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1629) | done | Debug info: `DW_TAG_enumeration_type` with an unsigned base type (Phase 5). |
+| `declare_enum_elt` | [98](../m3-sys/m3middle/src/M3CG_Ops.i3#L98) | [3444](../m3-sys/m3back/src/M3C.m3#L3444) | [1640](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1640) | done | Debug info: `DIEnumerator` (Phase 5). |
+| `declare_packed` | [101](../m3-sys/m3middle/src/M3CG_Ops.i3#L101) | [3482](../m3-sys/m3back/src/M3C.m3#L3482) | [1649](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1649) | done | Debug info: the base type; packed fields become bit fields (Phase 5). |
+| `declare_record` | [103](../m3-sys/m3middle/src/M3CG_Ops.i3#L103) | [3592](../m3-sys/m3back/src/M3C.m3#L3592) | [1659](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1659) | done | Debug info: `DW_TAG_structure_type`; typeid -1 records describe the module's globals (Phase 5). |
+| `declare_field` | [108](../m3-sys/m3middle/src/M3CG_Ops.i3#L108) | [3625](../m3-sys/m3back/src/M3C.m3#L3625) | [1678](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1678) | done | Debug info: `DW_TAG_member`, `DIFlagBitField` when not byte-aligned (Phase 5). |
+| `declare_set` | [111](../m3-sys/m3middle/src/M3CG_Ops.i3#L111) | [3666](../m3-sys/m3back/src/M3C.m3#L3666) | [1696](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1696) | done | Debug info: `DW_TAG_set_type` over enums and subranges (Phase 5). |
+| `declare_subrange` | [113](../m3-sys/m3middle/src/M3CG_Ops.i3#L113) | [3718](../m3-sys/m3back/src/M3C.m3#L3718) | [1706](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1706) | done | Debug info: `DW_TAG_subrange_type`; unsigned when min >= 0 (Phase 5). |
+| `declare_pointer` | [115](../m3-sys/m3middle/src/M3CG_Ops.i3#L115) | [3778](../m3-sys/m3back/src/M3C.m3#L3778) | [1725](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1725) | done | Debug info: `DW_TAG_pointer_type` (Phase 5). |
+| `declare_indirect` | [118](../m3-sys/m3middle/src/M3CG_Ops.i3#L118) | [3795](../m3-sys/m3back/src/M3C.m3#L3795) | [1738](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1738) | done | Debug info: VAR/large parameters get `DW_OP_deref` (Phase 5). |
+| `declare_proctype` | [121](../m3-sys/m3middle/src/M3CG_Ops.i3#L121) | [3819](../m3-sys/m3back/src/M3C.m3#L3819) | [1747](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1747) | done | Debug info: pointer to a `DISubroutineType` (Phase 5). |
+| `declare_formal` | [130](../m3-sys/m3middle/src/M3CG_Ops.i3#L130) | [3848](../m3-sys/m3back/src/M3C.m3#L3848) | [1770](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1770) | done | Debug info: a parameter type of the `DISubroutineType` (Phase 5). |
+| `declare_raises` | [134](../m3-sys/m3middle/src/M3CG_Ops.i3#L134) | [3870](../m3-sys/m3back/src/M3C.m3#L3870) | [1781](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1781) | done | No-op: RAISES isn't described in DWARF. |
+| `declare_object` | [138](../m3-sys/m3middle/src/M3CG_Ops.i3#L138) | [3884](../m3-sys/m3back/src/M3C.m3#L3884) | [1790](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1790) | done | Debug info: pointer to a class struct with `DW_TAG_inheritance` (Phase 5). |
+| `declare_method` | [149](../m3-sys/m3middle/src/M3CG_Ops.i3#L149) | [3931](../m3-sys/m3back/src/M3C.m3#L3931) | [1828](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1828) | done | No-op: methods aren't described yet. |
+| `declare_opaque` | [152](../m3-sys/m3middle/src/M3CG_Ops.i3#L152) | [3943](../m3-sys/m3back/src/M3C.m3#L3943) | [1838](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1838) | done | Debug info: an opaque type, resolved through `reveal_opaque` (Phase 5). |
+| `reveal_opaque` | [157](../m3-sys/m3middle/src/M3CG_Ops.i3#L157) | [3956](../m3-sys/m3back/src/M3C.m3#L3956) | [1852](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1852) | done | Debug info: maps the opaque type to its revelation (Phase 5). |
+| `declare_exception` | [160](../m3-sys/m3middle/src/M3CG_Ops.i3#L160) | [3972](../m3-sys/m3back/src/M3C.m3#L3972) | [1872](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1872) | done | No-op: exceptions aren't described. |
+| `widechar_size` | [168](../m3-sys/m3middle/src/M3CG_Ops.i3#L168) | — | [1885](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1885) | done | Debug info: the size of WIDECHAR (Phase 5). |
 
 ## runtime hooks
 
@@ -76,11 +76,11 @@ test), `n/a` (deliberately not needed; say why in Notes).
 |---|---|---|---|---|---|
 | `import_global` | [208](../m3-sys/m3middle/src/M3CG_Ops.i3#L208) | [4030](../m3-sys/m3back/src/M3C.m3#L4030) | [1933](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1933) | done |  |
 | `declare_segment` | [213](../m3-sys/m3middle/src/M3CG_Ops.i3#L213) | [4074](../m3-sys/m3back/src/M3C.m3#L4074) | [1958](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1958) | done |  |
-| `bind_segment` | [214](../m3-sys/m3middle/src/M3CG_Ops.i3#L214) | [4110](../m3-sys/m3back/src/M3C.m3#L4110) | [1992](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1992) | done |  |
+| `bind_segment` | [214](../m3-sys/m3middle/src/M3CG_Ops.i3#L214) | [4110](../m3-sys/m3back/src/M3C.m3#L4110) | [1992](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1992) | done | Debug info: `DIGlobalVariableExpression`s for the module's globals (Phase 5). |
 | `declare_global` | [222](../m3-sys/m3middle/src/M3CG_Ops.i3#L222) | [4135](../m3-sys/m3back/src/M3C.m3#L4135) | [2007](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2007) | done |  |
 | `declare_constant` | [229](../m3-sys/m3middle/src/M3CG_Ops.i3#L229) | [4162](../m3-sys/m3back/src/M3C.m3#L4162) | [2045](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2045) | done |  |
-| `declare_local` | [235](../m3-sys/m3middle/src/M3CG_Ops.i3#L235) | [5362](../m3-sys/m3back/src/M3C.m3#L5362) | [2098](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2098) | done | Up-level locals live in the `%frame` block (offset 8 on; offset 0 is the static link). |
-| `declare_param` | [258](../m3-sys/m3middle/src/M3CG_Ops.i3#L258) | [4986](../m3-sys/m3back/src/M3C.m3#L4986) | [2157](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2157) | done | Struct params arrive as `ptr` and are copied into a local; up-level params are copied into `%frame`. |
+| `declare_local` | [235](../m3-sys/m3middle/src/M3CG_Ops.i3#L235) | [5362](../m3-sys/m3back/src/M3C.m3#L5362) | [2098](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2098) | done | Up-level locals live in the `%frame` block (offset 8 on; offset 0 is the static link). Named locals get a `DILocalVariable` and `llvm.dbg.declare` (Phase 5). |
+| `declare_param` | [258](../m3-sys/m3middle/src/M3CG_Ops.i3#L258) | [4986](../m3-sys/m3back/src/M3C.m3#L4986) | [2157](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2157) | done | Struct params arrive as `ptr` and are copied into a local; up-level params are copied into `%frame`. Parameters get a `DILocalVariable` with `arg:` (Phase 5). |
 | `declare_temp` | [273](../m3-sys/m3middle/src/M3CG_Ops.i3#L273) | [5599](../m3-sys/m3back/src/M3C.m3#L5599) | [2197](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2197) | done |  |
 | `free_temp` | [279](../m3-sys/m3middle/src/M3CG_Ops.i3#L279) | [5611](../m3-sys/m3back/src/M3C.m3#L5611) | [2215](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2215) | done | No-op. |
 
@@ -104,10 +104,10 @@ test), `n/a` (deliberately not needed; say why in Notes).
 |---|---|---|---|---|---|
 | `import_procedure` | [350](../m3-sys/m3middle/src/M3CG_Ops.i3#L350) | [6061](../m3-sys/m3back/src/M3C.m3#L6061) | [2445](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2445) | done |  |
 | `declare_procedure` | [361](../m3-sys/m3middle/src/M3CG_Ops.i3#L361) | [6111](../m3-sys/m3back/src/M3C.m3#L6111) | [2493](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2493) | done | Nested procedures take the static link as a trailing `ptr %sl` parameter. |
-| `begin_procedure` | [376](../m3-sys/m3middle/src/M3CG_Ops.i3#L376) | [6213](../m3-sys/m3back/src/M3C.m3#L6213) | [2521](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2521) | done |  |
+| `begin_procedure` | [376](../m3-sys/m3middle/src/M3CG_Ops.i3#L376) | [6213](../m3-sys/m3back/src/M3C.m3#L6213) | [2521](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2521) | done | Debug info: the `DISubprogram` (Phase 5). |
 | `end_procedure` | [380](../m3-sys/m3middle/src/M3CG_Ops.i3#L380) | [6342](../m3-sys/m3back/src/M3C.m3#L6342) | [2698](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2698) | done |  |
-| `begin_block` | [384](../m3-sys/m3middle/src/M3CG_Ops.i3#L384) | [6355](../m3-sys/m3back/src/M3C.m3#L6355) | [2774](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2774) | done | No-op. |
-| `end_block` | [385](../m3-sys/m3middle/src/M3CG_Ops.i3#L385) | [6364](../m3-sys/m3back/src/M3C.m3#L6364) | [2780](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2780) | done | No-op. |
+| `begin_block` | [384](../m3-sys/m3middle/src/M3CG_Ops.i3#L384) | [6355](../m3-sys/m3back/src/M3C.m3#L6355) | [2774](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2774) | done | Opens a `DILexicalBlock` for the block's locals and code (Phase 5). |
+| `end_block` | [385](../m3-sys/m3middle/src/M3CG_Ops.i3#L385) | [6364](../m3-sys/m3back/src/M3C.m3#L6364) | [2780](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2780) | done | Closes the `DILexicalBlock`. |
 | `note_procedure_origin` | [388](../m3-sys/m3middle/src/M3CG_Ops.i3#L388) | [6373](../m3-sys/m3back/src/M3C.m3#L6373) | [2786](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2786) | done | No-op. |
 
 ## statements

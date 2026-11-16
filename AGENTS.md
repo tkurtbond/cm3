@@ -37,8 +37,8 @@ them, and keep edits to shared files (`Builder.m3`, `M3Backend.m3`,
 | `m3-sys/m3middle/src/M3CG_*.m3` | M3CG utilities: `M3CG_BinWr`/`M3CG_BinRd` (binary IR files), `M3CG_Wr`/`M3CG_Rd` (ASCII IR), `M3CG_Check` (stack/type checker), `M3CG_MultiPass` (record and replay), `M3CG_Tee`. |
 | `m3-sys/m3middle/src/Target.i3` | Target description and `M3BackendMode_t`, the enum of backend modes. |
 | `m3-sys/m3back/src/M3C.m3` | **The C backend** (about 8,300 lines). It is the default on AMD64_LINUX. It is the closest structural template for a text-emitting backend and the reference oracle for testing. |
-| `m3-sys/m3llvmir/src/M3LLVMIR.m3` | **This fork's backend** (backend mode `LlvmIR`): an M3CG_Ops subtype of `M3CG_AssertFalse` that writes textual `.ll`. Unimplemented operations fail with an assertion; progress is tracked in `experiment-doc/m3cg-ops-checklist.md`. |
-| `m3-sys/m3llir/` | Standalone driver: `m3llir [-a] [-t TARGET] [-o out.ll] in.mc` translates an M3CG file (`-a` for ASCII) to `.ll`. Handy with the IR corpus: `m3llir -a -t AMD64_LINUX X.mc.txt \| llvm-as -o /dev/null`. |
+| `m3-sys/m3llvmir/src/M3LLVMIR.m3` | **This fork's backend** (backend mode `LlvmIR`): an M3CG_Ops subtype of `M3CG_AssertFalse` that writes textual `.ll`. Unimplemented operations fail with an assertion; progress is tracked in `experiment-doc/m3cg-ops-checklist.md`. `M3LLVMIRDebug.m3` writes the DWARF debug metadata (Phase 5). |
+| `m3-sys/m3llir/` | Standalone driver: `m3llir [-a] [-g] [-t TARGET] [-o out.ll] in.mc` translates an M3CG file (`-a` for ASCII, `-g` for debug info) to `.ll`. Handy with the IR corpus: `m3llir -a -t AMD64_LINUX X.mc.txt \| llvm-as -o /dev/null`. |
 | `m3-sys/llvm/llvm22/src/M3CG_LLVM.m3` | **The existing LLVM backend** (about 7,100 lines, by Peter McKinna and Rodney Bates). It uses LLVM's C API through bindings in `llvm22bindings`, runs as a standalone `m3llvm` executable, and needs LLVM's libraries at build time. Use it as the main reference for *how to lower* M3CG to LLVM, but don't add dependencies on it. `llvm13/` and `llvm18/` are older copies. |
 | `m3-sys/cm3/src/Builder.m3` | The build driver: dispatches on backend mode (`CompileM3llvm`, `CompileLlc`, `RunM3Llvm`, `RunLlcBack`, and so on). |
 | `m3-sys/cm3/src/M3Backend.m3` | Constructs the in-process code generator for a backend mode (`M3C.New` for C). |
@@ -89,6 +89,10 @@ and installs into the prefix of the `cm3` it finds on `PATH`.
   `clang -x ir` on it. After editing `Unix.common`, reinstall the config
   (`concierge.py upgrade` does) or copy it to
   `/usr/local/sw/versions/cm3/git/bin/config/`.
+  `LlvmIR` emits debug information unless `-g0` is given, so its
+  programs can be debugged with gdb. The compile unit says Modula-2,
+  because gdb's Modula-3 support can't print sets or BOOLEANs; use
+  `p^`, `a[i]` and `r.f`, not `Color.Blue`.
 - A test package outside `m3tests` needs `import ("libm3")` in its
   `m3makefile`, or the front end can't find `RTHooks`.
 - Keep intermediate files and show the commands run: `cm3 -keep -commands`.

@@ -2077,7 +2077,8 @@ PROCEDURE Pass0_InitCodeGenerator (env: Env): M3CG.T =
         env.target_wr,
         env.object,
         env.sideIRName,
-        env.globals.m3backend_mode);
+        env.globals.m3backend_mode,
+        debug := env.source_unit.debug); (* LLVM IR backend *)
     END;
     RETURN env.cg;
   END Pass0_InitCodeGenerator;

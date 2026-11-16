@@ -1,7 +1,7 @@
 # Plan: an LLVM backend for cm3 that emits textual LLVM IR
 
-Status: draft, 2026-11-16. Phases 0, 1, 2 and 4 are done; Phase 3 is
-done except `ex_stack`, which is deferred (see Phase 3).
+Status: draft, 2026-11-16. Phases 0, 1, 2, 4 and 5 are done; Phase 3
+is done except `ex_stack`, which is deferred (see Phase 3).
 
 ## Goal
 
@@ -498,6 +498,73 @@ package set built, and the numbers recorded in `experiment-doc/`.
 
 *Exit:* a debug build of a `p`-test program can be stepped through, and
 its variables can be printed in gdb.
+
+**Phase 5 as built:**
+
+- *Exit met.* p034 (records, fixed arrays, open arrays) is built with
+  `LlvmIR` and run under gdb 17:
+  - line breakpoints, `next`, `step` and `bt` work;
+  - gdb prints records, 2-D arrays, `x1^` of open arrays, and the
+    loop variables;
+  - locals of the separate `VAR ... BEGIN` blocks that share a name
+    (`w1`, `x1`) resolve to the right block.
+
+  A larger test program, kept outside the tree, also covers:
+  - VAR record and open-array parameters;
+  - enumerations, sets (`{Red, Blue}`), BOOLEAN, CHAR and bit-packed
+    fields;
+  - objects with inheritance (`c^`, `c.radius`);
+  - module globals, and `finish` printing the returned value.
+- **Structure.** The new module `M3LLVMIRDebug` holds the metadata
+  writer.
+  - `M3LLVMIR` forwards the `declare_*` type operations to it.
+  - DI type nodes are made lazily, when a variable or procedure first
+    refers to a type, so recursive types work.
+  - Subprograms, variables and globals are defined at `end_unit`, after
+    the function bodies.
+- **What is emitted:**
+  - a `DICompileUnit` and a `DIFile` per source;
+  - a `DISubprogram` per defined procedure, with its signature;
+  - a `DILocation` on every instruction, and a `DILexicalBlock` per
+    `begin_block`;
+  - `llvm.dbg.declare` for named locals and parameters, with
+    `DW_OP_deref` for VAR and by-reference parameters;
+  - a `DIGlobalVariableExpression` for each field of the module's
+    global record.
+- **Types described:**
+  - basic types, subranges (unsigned when the minimum is at least 0),
+    and enumerations with an unsigned base type;
+  - arrays, open arrays (through `dataLocation` and `upperBound`
+    expressions on the dope vector), packed types and bit fields;
+  - records, sets, pointers, procedure types;
+  - objects and opaque types, as pointers to class structs with
+    `DW_TAG_inheritance`.
+- **The language is `DW_LANG_Modula2`.** gdb treats Modula-3 as a
+  minimal language: it can't print sets ("Unhandled type code"), and it
+  prints BOOLEAN and byte-sized subranges as C would. In Modula-2 mode,
+  sets, TRUE/FALSE and `POINTER TO` print properly, and `p^`, `a[i]`
+  and `r.f` parse. Qualified enumeration literals such as `Color.Blue`
+  don't parse.
+- **No `.debug_names`.** The compile unit sets `nameTableKind: None`.
+  ld.gold concatenates the per-unit tables instead of merging them, and
+  gdb then rejects the section with a warning.
+- **Switching it on.** Debug information follows cm3's `-g`/`-g0`.
+  Builder passes `env.source_unit.debug` to `M3Backend.Open`, and from
+  there to `M3LLVMIR.New`. This adds one marked parameter to each, and
+  `compile_llvm_ir` already gives clang `-g`. `m3llir -g` turns debug
+  information on in the standalone driver.
+- **Checked:**
+  - all corpus units pass `llvm-as` and `llvm-dwarfdump --verify` with
+    `-g`;
+  - m3tests with `-DM3_BACKEND_MODE=LlvmIR`, which now has debug
+    information on by default, still passes 292 of 293 (p047, as
+    before).
+- **Not done:**
+  - methods, exceptions and RAISES are not described;
+  - TEXT shows as an address;
+  - the front end's `_result` temporaries are visible as locals;
+  - the module body's `Main_M3` has no return type;
+  - lldb is untested.
 
 ### Phase 6: integration and CI
 

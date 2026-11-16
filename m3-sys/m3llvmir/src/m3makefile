@@ -6,5 +6,6 @@ import ("libm3")
 import ("m3middle")
 
 Module ("M3LLVMIR")
+Module ("M3LLVMIRDebug")  % Phase 5: debug information
 
 Library ("m3llvmir")

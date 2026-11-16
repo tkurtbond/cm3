@@ -1,11 +1,11 @@
 (* See the file COPYRIGHT for a full description. *)
 
-(* m3llir [-a] [-t TARGET] [-o OUTPUT] [INPUT]
+(* m3llir [-a] [-g] [-t TARGET] [-o OUTPUT] [INPUT]
 
    Read the M3CG IR of one unit (binary by default, ASCII with -a) from
    INPUT or standard input, and write it as textual LLVM IR to OUTPUT
    or standard output.  The target comes from -t, or else from the
-   TARGET in the cm3 configuration. *)
+   TARGET in the cm3 configuration.  -g adds debug information. *)
 
 MODULE Main;
 
@@ -16,6 +16,7 @@ IMPORT Thread, M3CG_Rd, M3CG_BinRd, MxConfig, Target, M3LLVMIR;
 
 VAR
   ascii   := FALSE;
+  debug   := FALSE;
   target  : TEXT := NIL;
   inName  : TEXT := NIL;
   outName : TEXT := NIL;
@@ -29,7 +30,7 @@ PROCEDURE Die (msg: TEXT) =
 
 PROCEDURE Usage () =
   BEGIN
-    Die ("usage: m3llir [-a] [-t TARGET] [-o OUTPUT] [INPUT]");
+    Die ("usage: m3llir [-a] [-g] [-t TARGET] [-o OUTPUT] [INPUT]");
   END Usage;
 
 PROCEDURE GetParams () =
@@ -39,6 +40,8 @@ PROCEDURE GetParams () =
       p := Params.Get (i);
       IF Text.Equal (p, "-a") THEN
         ascii := TRUE;
+      ELSIF Text.Equal (p, "-g") THEN
+        debug := TRUE;
       ELSIF Text.Equal (p, "-b") THEN
         ascii := FALSE;
       ELSIF Text.Equal (p, "-o") OR Text.Equal (p, "-t") THEN
@@ -81,7 +84,7 @@ PROCEDURE DoIt () =
     EXCEPT OSError.E =>
       Die ("cannot open " & inName & " or " & outName);
     END;
-    WITH cg = M3LLVMIR.New (wr) DO
+    WITH cg = M3LLVMIR.New (wr, debug) DO
       IF ascii
         THEN M3CG_Rd.Inhale (rd, cg);
         ELSE M3CG_BinRd.Inhale (rd, cg);

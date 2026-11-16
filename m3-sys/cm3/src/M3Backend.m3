@@ -44,7 +44,8 @@ PROCEDURE Open (library (* or program *): TEXT;
                 target_wr: Wr.T;
                 target_name (* Has suffix. *): TEXT;
                 f_ir_name (* Has suffix .ic or .mc *): TEXT;
-                backend_mode: Target.M3BackendMode_t
+                backend_mode: Target.M3BackendMode_t;
+                debug: BOOLEAN := FALSE (* LLVM IR backend *)
                ): M3CG.T =
   VAR cg: M3CG_Ops.Public := NIL;
   BEGIN
@@ -74,7 +75,7 @@ PROCEDURE Open (library (* or program *): TEXT;
 
     (* LLVM IR backend: m3llvmir writes textual LLVM IR. *)
     IF backend_mode = Target.M3BackendMode_t.LlvmIR THEN
-      RETURN TeeBinWr (M3LLVMIR.New (target_wr), f_ir_name);
+      RETURN TeeBinWr (M3LLVMIR.New (target_wr, debug), f_ir_name);
     END;
 
     (* LLVM backend: *)

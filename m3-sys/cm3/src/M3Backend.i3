@@ -14,7 +14,8 @@ PROCEDURE Open (library (* or program *): TEXT;
                 target_wr: Wr.T;
                 target_base_name (* Has suffix*): TEXT;
                 f_ir_name (* Has suffix .ic or .mc *): TEXT;
-                backend_mode: Target.M3BackendMode_t
+                backend_mode: Target.M3BackendMode_t;
+                debug: BOOLEAN := FALSE (* LLVM IR backend: emit debug info *)
                ): M3CG.T;
 
 PROCEDURE Close (cg: M3CG.T);
