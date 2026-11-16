@@ -196,6 +196,33 @@ if not defined("llvm_opt")
 
 end % if not defined("llvm_opt")
 
+% LLVM IR backend (M3_BACKEND_MODE = "LlvmIR"): cm3's m3llvmir code
+% generator writes textual LLVM IR (.ll), and compile_llvm_ir compiles
+% it to an object file with clang.  -Wno-override-module keeps clang
+% quiet when the module's target triple differs from its own default
+% spelling (for example x86_64-unknown-linux-gnu vs. -redhat-).
+
+if not defined("LLVM_IR_CC")
+  LLVM_IR_CC = "clang -fPIC -Wno-override-module"
+end
+
+if not defined("compile_llvm_ir")
+
+  proc compile_llvm_ir(source, object, optimize, debug) is
+      local args = [ ]
+      if optimize
+          args += m3back_optimize
+      else
+          args += "-O0"
+      end
+      if debug
+          args += "-g"
+      end
+      return try_exec ("@" & LLVM_IR_CC, args, "-c -x ir", source, "-o", object)
+  end % proc compile_llvm_ir
+
+end % if not defined("compile_llvm_ir")
+
 %--------------------------------------------------------------- C compiler ---
 % "compile_c" is called to compile C source files.  Note that this function
 % is only called if your program or library explicitly includes C source

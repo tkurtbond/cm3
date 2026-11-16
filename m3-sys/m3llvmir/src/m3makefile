@@ -1,0 +1,10 @@
+% m3llvmir: an M3CG back end that writes textual LLVM IR (.ll).
+% It does not link against LLVM; the .ll file is compiled by the
+% system's clang (see compile_llvm_ir in cminstall's Unix.common).
+
+import ("libm3")
+import ("m3middle")
+
+Module ("M3LLVMIR")
+
+Library ("m3llvmir")

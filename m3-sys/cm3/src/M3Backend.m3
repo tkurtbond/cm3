@@ -9,6 +9,7 @@ MODULE M3Backend;
 IMPORT Text, Thread, Wr;
 
 IMPORT M3C;
+IMPORT M3LLVMIR; (* LLVM IR backend *)
 IMPORT LLGen; (* Could be a dummy.  See the m3makefile. *) 
 IMPORT M3CG, Msg, Utils, NTObjFile, M3x86, M3ObjFile;
 IMPORT M3CG_BinWr, M3CG_Ops, M3CG_Tee, M3ID;
@@ -69,6 +70,11 @@ PROCEDURE Open (library (* or program *): TEXT;
       | Thread.Alerted =>
           Msg.FatalError (NIL, "unable to write IR file: ", f_ir_name);
       END;
+    END;
+
+    (* LLVM IR backend: m3llvmir writes textual LLVM IR. *)
+    IF backend_mode = Target.M3BackendMode_t.LlvmIR THEN
+      RETURN TeeBinWr (M3LLVMIR.New (target_wr), f_ir_name);
     END;
 
     (* LLVM backend: *)

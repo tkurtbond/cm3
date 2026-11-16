@@ -113,6 +113,7 @@ REVEAL
     llvmbackend   : ConfigProc;         (* translate llvm bitcode -> ASM or OBJ *)
     llvmopt       : ConfigProc;         (* optimize llvm bitcode *)
     c_compiler    : ConfigProc;         (* compile C code *)
+    llvm_ir_compiler : ConfigProc;      (* LLVM IR backend: compile .ll *)
     assembler     : ConfigProc;         (* assemble  *)
     librarian     : ConfigProc;         (* make libraries *)
     skip_lib      : ConfigProc;         (* don't make libraries *)
@@ -321,6 +322,7 @@ PROCEDURE CompileUnits (main     : TEXT;
     s.llvmbackend := GetConfigProc (s, "llvm_backend", 5);
     s.llvmopt     := GetConfigProc (s, "llvm_opt", 2);
     s.c_compiler  := GetConfigProc (s, "compile_c", 5);
+    s.llvm_ir_compiler := GetConfigProc (s, "compile_llvm_ir", 4); (* LLVM IR backend *)
     s.assembler   := GetConfigProc (s, "assemble", 2);
     s.librarian   := GetConfigProc (s, "make_lib", 5);
     s.skip_lib    := GetConfigProc (s, "skip_lib", 2);
@@ -1087,6 +1089,8 @@ PROCEDURE CompileEverything (s: State;  schedule: SourceList) =
         backend := "(GCC)";
       ELSIF s.m3backend_mode IN Target.BackendCSet THEN
         backend := "(C)";
+      ELSIF s.m3backend_mode = Target.M3BackendMode_t.LlvmIR THEN
+        backend := "(LLVM IR)"; (* LLVM IR backend *)
       ELSE
         backend := "(Unknown)";
       END;
@@ -1540,6 +1544,8 @@ PROCEDURE PushOneM3 (s: State;  u: M3Unit.T): BOOLEAN =
     DoWriteAsm : BOOLEAN := FALSE; (* Pass asm option to code generator. *)  
     DoRunAsm := mode IN Target.BackendAsmSet; 
     DoRunC : BOOLEAN := FALSE; 
+    LlvmIRCodeName: TEXT := NIL;     (* LLVM IR backend *)
+    DoRunLlvmIR : BOOLEAN := FALSE;  (* LLVM IR backend *)
     ok := FALSE;
   BEGIN
     (* ASSERT mode # Mode_t.ExternalObject *)     (* mostly nonexistant, untested, but for m3cgcat *)
@@ -1570,6 +1576,8 @@ PROCEDURE PushOneM3 (s: State;  u: M3Unit.T): BOOLEAN =
       StAloneLlvmObj          : m3 => mc =>(using m3llvm) mb =>(using llc) o 
       StAloneLlvmAsm          : m3 => mc =>(using m3llvm) mb =>(using llc) asm => o 
       StAloneLlvmAsm boot     : m3 => mc =>(using m3llvm) mb =>(using llc) asm  
+      LlvmIR                  : m3 => ll =>(using compile_llvm_ir) o
+      LlvmIR boot             : m3 => ll
 *)
     u.link_info := NIL;
     ResetExports (s, u);
@@ -1637,6 +1645,10 @@ PROCEDURE PushOneM3 (s: State;  u: M3Unit.T): BOOLEAN =
         DoRunLlc := TRUE; 
         DoRunAsm := NOT boot; 
         asmName := codeGenOutName; 
+    | Mode_t.LlvmIR => (* LLVM IR backend *)
+        LlvmIRCodeName := M3Unit.FileName (u) & ".ll";
+        cm3OutName := LlvmIRCodeName;
+        DoRunLlvmIR := NOT boot;
     END;
     
     (* External code generators always consume cm3IR. *)
@@ -1662,6 +1674,7 @@ PROCEDURE PushOneM3 (s: State;  u: M3Unit.T): BOOLEAN =
     IF NOT boot THEN
       Temps_Add (temps, s, asmName);
       Temps_Add (temps, s, CCodeName);
+      Temps_Add (temps, s, LlvmIRCodeName); (* LLVM IR backend *)
     END;
 
     ok := RunM3Front (s, u, cm3OutName);
@@ -1690,6 +1703,9 @@ PROCEDURE PushOneM3 (s: State;  u: M3Unit.T): BOOLEAN =
           END; 
           IF ok AND DoRunC THEN 
             ok := RunCC (s, CCodeName, u.object, TRUE, FALSE, s.include_path_empty);
+          END;
+          IF ok AND DoRunLlvmIR THEN (* LLVM IR backend *)
+            ok := RunLlvmIRCC (s, LlvmIRCodeName, u.object, u.debug, u.optimize);
           END;
           IF ok AND DoRunAsm THEN 
             ok := RunAsm (s, asmName, u.object);
@@ -2391,6 +2407,29 @@ BEGIN
   IF t = NIL THEN t := "<NIL>" END;
   RETURN t;
 END NilText;
+
+(* LLVM IR backend: compile a .ll file with the config proc
+   compile_llvm_ir (source, object, optimize, debug). *)
+PROCEDURE RunLlvmIRCC (s: State;  source, object: TEXT;
+                       debug, optimize: BOOLEAN): BOOLEAN (* Success. *) =
+  VAR failed: BOOLEAN;
+  BEGIN
+    ETimer.Push (M3Timers.pass_1);
+    s.machine.timer := M3Timers.pass_1;
+    StartCall (s, s.llvm_ir_compiler);
+    PushText  (s, source);
+    PushText  (s, object);
+    PushBool  (s, optimize);
+    PushBool  (s, debug);
+    failed := CallProc (s, s.llvm_ir_compiler);
+    IF failed THEN
+      s.compile_failed := TRUE;
+      Msg.Error (NIL, "compile_llvm_ir failed compiling: ", source);
+      IF NOT s.keep_files THEN Utils.Remove (object); END;
+    END;
+    ETimer.Pop ();
+    RETURN NOT failed;
+  END RunLlvmIRCC;
 
 PROCEDURE RunCC (s: State;  source, object: TEXT;  debug, optimize: BOOLEAN;
                  include_path: Arg.List): BOOLEAN (* Success. *) =

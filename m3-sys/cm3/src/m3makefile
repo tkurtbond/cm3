@@ -32,6 +32,7 @@ c_source ("Version")
 module ("M3Backend")
 import ("m3objfile")
 import ("m3back")
+import ("m3llvmir") % LLVM IR backend
 if equal (OS_TYPE, "POSIX")
   implementation ("UtilsPosix")
 else

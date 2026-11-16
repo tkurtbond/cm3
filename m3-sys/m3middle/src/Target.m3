@@ -197,7 +197,7 @@ PROCEDURE Init (system: TEXT; in_OS_name: TEXT; backend_mode: M3BackendMode_t): 
         TextUtils.Contains(system, "64")) AND NOT
         TextUtils.Contains(system, "32") THEN (* possibly IA64, Alpha *)
       Init64();
-    ELSIF backend_mode # M3BackendMode_t.C THEN
+    ELSIF NOT CLayout(backend_mode) THEN (* LLVM IR backend: was # C *)
       (* Change only alignment.  Size is always 64:
        * Aligning these types to 32 is incorrect on many but not all 32bit targets.
        * C backend cannot portably reduce alignment but it can portably increase
@@ -226,7 +226,7 @@ PROCEDURE Init (system: TEXT; in_OS_name: TEXT; backend_mode: M3BackendMode_t): 
 
     (* x86 and AMD64 allow unaligned loads/stores but converge C *)
 
-    IF backend_mode # M3BackendMode_t.C THEN
+    IF NOT CLayout(backend_mode) THEN (* LLVM IR backend: was # C *)
       IF IsX86orAmd64(system) THEN
         Allow_packed_byte_aligned := TRUE;
       END;
@@ -274,6 +274,15 @@ PROCEDURE Init (system: TEXT; in_OS_name: TEXT; backend_mode: M3BackendMode_t): 
     RETURN TRUE;
   END Init;
 
+(* LLVM IR backend: the LlvmIR mode must lay out data and pass
+   arguments exactly as the C backend does, so that its object files
+   link with libraries built by the C backend. *)
+PROCEDURE CLayout(backend_mode: M3BackendMode_t): BOOLEAN =
+  BEGIN
+    RETURN backend_mode = M3BackendMode_t.C
+        OR backend_mode = M3BackendMode_t.LlvmIR;
+  END CLayout;
+
 PROCEDURE InitCallingConventions(backend_mode: M3BackendMode_t;
                                  target_has_calling_conventions: BOOLEAN) =
   VAR integrated := backend_mode IN BackendIntegratedSet;
@@ -282,12 +291,12 @@ PROCEDURE InitCallingConventions(backend_mode: M3BackendMode_t;
   PROCEDURE New(name: TEXT; id: [0..1]): CallingConvention =
     VAR cc := NEW(CallingConvention, name := name);
     BEGIN
-      IF backend_mode = M3BackendMode_t.C OR target_has_calling_conventions THEN
+      IF CLayout(backend_mode) OR target_has_calling_conventions THEN (* LLVM IR backend: was = C *)
         cc.m3cg_id            := id;
       ELSE
         cc.m3cg_id            := 0;
       END;
-      IF backend_mode = M3BackendMode_t.C THEN
+      IF CLayout(backend_mode) THEN (* LLVM IR backend: was = C *)
         cc.args_left_to_right := TRUE;
         cc.results_on_left    := TRUE;
         cc.standard_structs   := TRUE;

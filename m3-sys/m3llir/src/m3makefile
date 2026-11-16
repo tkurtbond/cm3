@@ -1,0 +1,12 @@
+% m3llir: read M3CG IR (binary or ASCII) and write textual LLVM IR.
+% A standalone driver for the m3llvmir back end, for testing it on
+% saved IR without going through cm3.
+
+import ("libm3")
+import ("m3middle")
+import ("m3quake")
+import ("m3llvmir")
+
+implementation ("Main")
+
+Program ("m3llir")

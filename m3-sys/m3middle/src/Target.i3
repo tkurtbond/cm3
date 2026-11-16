@@ -59,8 +59,12 @@ TYPE
        translate it to llvm IR. *) 
     StAloneLlvmObj,     (* "9"  -- call m3llvm, then call compile_llvm. 
                                    It produces object code. *) 
-    StAloneLlvmAsm      (* "10" -- call m3llvm, then call compile_llvm. 
+    StAloneLlvmAsm,     (* "10" -- call m3llvm, then call compile_llvm. 
                                    It produces assembly code, run asm. *) 
+    (* LLVM IR backend (this fork): *)
+    LlvmIR              (* "11" -- don't call m3_backend; M3CG (m3llvmir)
+                                   produces textual LLVM IR (.ll), then
+                                   call compile_llvm_ir. *)
   };
 
 CONST
@@ -75,7 +79,8 @@ CONST
     "ExtLlvmObj", 
     "ExtLlvmAsm",
     "StAloneLlvmObj",
-    "StAloneLlvmAsm" 
+    "StAloneLlvmAsm",
+    "LlvmIR" (* LLVM IR backend *)
    };
 
   TYPE MT = M3BackendMode_t; 
@@ -121,17 +126,20 @@ CONST
       MT.IntLlvmObj,
       MT.IntLlvmAsm,
       MT.StAloneLlvmObj,
-      MT.StAloneLlvmAsm
+      MT.StAloneLlvmAsm,
+      MT.LlvmIR (* LLVM IR backend *)
     }; 
   
 (* Provoke compile errors: *) 
   BackendIntegratedXXX
     = ARRAY M3BackendMode_t OF BOOLEAN 
-        { TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE };
+        { TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
+          TRUE (* LlvmIR *) };
 
   BackendUsesLlvmXXX 
     = ARRAY M3BackendMode_t OF BOOLEAN 
-        { FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE };
+        { FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
+          FALSE (* LlvmIR: emits IR text, doesn't link LLVM *) };
 
   (* BackendAssembly = ARRAY M3BackendMode_t OF BOOLEAN { FALSE, TRUE, FALSE, TRUE, FALSE };  *)
 
