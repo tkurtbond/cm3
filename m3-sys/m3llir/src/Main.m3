@@ -1,16 +1,19 @@
 (* See the file COPYRIGHT for a full description. *)
 
-(* m3llir [-a] [-g] [-t TARGET] [-o OUTPUT] [INPUT]
+(* m3llir [-a] [-g] [-l LANGUAGE] [-t TARGET] [-o OUTPUT] [INPUT]
 
    Read the M3CG IR of one unit (binary by default, ASCII with -a) from
    INPUT or standard input, and write it as textual LLVM IR to OUTPUT
    or standard output.  The target comes from -t, or else from the
-   TARGET in the cm3 configuration.  -g adds debug information. *)
+   TARGET in the cm3 configuration.  -g adds debug information, whose
+   compile unit claims to be in LANGUAGE: Modula2 (the default, for
+   gdb) or C (for lldb). *)
 
 MODULE Main;
 
 IMPORT FileRd, FileWr, OSError, Params, Process, Rd, Stdio, Text, Wr;
 IMPORT Thread, M3CG_Rd, M3CG_BinRd, MxConfig, Target, M3LLVMIR;
+IMPORT M3LLVMIRDebug;
 
 <*FATAL Wr.Failure, Thread.Alerted*>
 
@@ -30,7 +33,7 @@ PROCEDURE Die (msg: TEXT) =
 
 PROCEDURE Usage () =
   BEGIN
-    Die ("usage: m3llir [-a] [-g] [-t TARGET] [-o OUTPUT] [INPUT]");
+    Die ("usage: m3llir [-a] [-g] [-l LANGUAGE] [-t TARGET] [-o OUTPUT] [INPUT]");
   END Usage;
 
 PROCEDURE GetParams () =
@@ -44,6 +47,12 @@ PROCEDURE GetParams () =
         debug := TRUE;
       ELSIF Text.Equal (p, "-b") THEN
         ascii := FALSE;
+      ELSIF Text.Equal (p, "-l") THEN
+        IF i + 1 >= Params.Count THEN Usage () END;
+        IF NOT M3LLVMIRDebug.SetLanguage (Params.Get (i + 1)) THEN
+          Die ("unknown language (use Modula2 or C): " & Params.Get (i + 1));
+        END;
+        INC (i);
       ELSIF Text.Equal (p, "-o") OR Text.Equal (p, "-t") THEN
         IF i + 1 >= Params.Count THEN Usage () END;
         IF Text.Equal (p, "-o")

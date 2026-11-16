@@ -397,6 +397,10 @@ end
 % the tests with it.
 if equal(M3_BACKEND_MODE, "LlvmIR")
   cm3opts = cm3opts & "-DM3_BACKEND_MODE=LlvmIR "
+  % "-DM3_DEBUG_LANGUAGE=C" labels its debug information C (for lldb).
+  if defined("M3_DEBUG_LANGUAGE")
+    cm3opts = cm3opts & "-DM3_DEBUG_LANGUAGE=" & M3_DEBUG_LANGUAGE & " "
+  end
 end
 % "-DM3TESTS_OPTIMIZE" builds each test with "cm3 -O" (any backend).
 if defined("M3TESTS_OPTIMIZE")

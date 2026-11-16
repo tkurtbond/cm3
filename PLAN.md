@@ -577,7 +577,7 @@ its variables can be printed in gdb.
     [`m3printers.py`](m3-sys/m3llvmir/src/m3printers.py) is bundled
     into the backend and embedded in every unit with debug information,
     as an inline script in `.debug_gdb_scripts` (a `linkonce_odr`
-    COMDAT kept by `@llvm.used`, so a program gets one 7 KB copy).
+    COMDAT kept by `@llvm.used`, so a program gets one 9 KB copy).
     - TEXT is now a typedef named `TEXT`. The printer finds the
       representation (`Text8`, `Text16`, `Text8Short`, `Text16Short`,
       `Text8CString`, `TextCat`, `TextSub`, literals) from the symbol in
@@ -599,12 +599,39 @@ its variables can be printed in gdb.
     nothing ("This version of LLDB has no plugin for the language").
     With the compile unit relabeled `DW_LANG_C99` by hand, lldb shows
     everything: locals, objects with their inheritance and `_methods`,
-    and the method procedures. An option to choose the DWARF language
-    (Modula-2 for gdb, C for lldb) would be cheap.
+    and the method procedures.
+  - **Choosing the DWARF language.** `cm3 -DM3_DEBUG_LANGUAGE=C` (or
+    `M3_DEBUG_LANGUAGE = "C"` in the config) makes the compile units
+    claim DW_LANG_C99, for lldb; `Modula2`, the default, suits gdb.
+    `m3llir -l C` does the same. The setting is
+    `M3LLVMIRDebug.SetLanguage`, which `Builder` calls when it reads
+    the backend mode (a small, marked edit).
+    - C has no sets, and gdb's C mode can't print `DW_TAG_set_type`
+      ("Unhandled type code 11"), so in a C unit a set is a struct
+      with a one-bit BOOLEAN member per element, named after the
+      enumeration element (`_5` or `_m5` for integer domains): gdb
+      prints `{Red = true, Green = false, Blue = true}`. Sets of more
+      than 1024 elements stay opaque. The bit layout assumes a
+      little-endian target.
+    - Under C, gdb prints BOOLEANs as `true`/`false` and objects with
+      `->`; the TEXT printer works the same.
+    - `m3tests` forwards `-DM3_DEBUG_LANGUAGE` to each test with
+      `-DM3_BACKEND_MODE=LlvmIR`. Both labels pass 292 of 293 (p047, as
+      before), and the IR corpus passes `llvm-dwarfdump --verify` with
+      both (`m3llir -g -l Modula2` and `-l C`).
+  - **TEXT formatter for lldb.** The decoding in `m3printers.py` is
+    now a class, `TextDecoder`, that doesn't use gdb (the file
+    imports `gdb` only if it can).
+    [`m3lldb.py`](m3-sys/m3llvmir/src/m3lldb.py) imports it and adds a
+    summary for the `TEXT` typedef, limited by
+    `target.max-string-summary-length`. lldb doesn't run embedded
+    scripts; load it with `command script import .../m3lldb.py`
+    (keeping `m3printers.py` beside it). With a C unit, `frame
+    variable` shows texts, sets, enumerations, BOOLEANs and objects.
 - **Not done:**
   - exceptions and RAISES are not described;
-  - no lldb formatter for TEXT;
-  - no option to choose the DWARF language.
+  - `m3lldb.py` is not installed anywhere; it is loaded from the
+    source tree.
 
 ### Phase 6: integration and CI
 

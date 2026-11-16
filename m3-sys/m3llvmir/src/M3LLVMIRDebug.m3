@@ -21,12 +21,13 @@
    Modula-3 support and treats DW_LANG_Modula3 as a "minimal" language
    that cannot print sets, and prints BOOLEAN and small subranges as C
    would.  Its Modula-2 mode prints sets, TRUE/FALSE and POINTER TO, and
-   accepts "p^", "a[i]" and "r.f" as Modula-3 does. *)
+   accepts "p^", "a[i]" and "r.f" as Modula-3 does.  SetLanguage can
+   make it claim to be C instead, for lldb. *)
 
 MODULE M3LLVMIRDebug;
 
 IMPORT Wr, TextWr, Text, Fmt, Thread, IntRefTbl, TextRefTbl;
-IMPORT Pathname, Process, OSError, Target, TInt;
+IMPORT Pathname, Process, OSError, Target, TInt, ASCII;
 IMPORT Bundle, M3LLVMIRBundle;  (* m3printers.py *)
 FROM M3CG IMPORT TypeUID;
 
@@ -416,7 +417,7 @@ PROCEDURE Body (t: T; d: DType): TEXT =
     | Kind.Address =>
         IF d.id = UID_TEXT THEN
           (* A typedef, so that a pretty-printer can recognize TEXT by
-             its name (m3gdb.py). *)
+             its name (m3printers.py, m3lldb.py). *)
           RETURN "!DIDerivedType(tag: DW_TAG_typedef, name: \"TEXT\", "
                    & "baseType: " & Node (t, PointerType (NIL, "null")) & ")";
         END;
@@ -676,6 +677,7 @@ PROCEDURE Suite (t: T; d: DType): TEXT =
 PROCEDURE SetBody (t: T; d: DType): TEXT =
   VAR dom := Resolve (t, d.a);  ref: TEXT;
   BEGIN
+    IF language = Language.C THEN RETURN SetStruct (t, d, dom) END;
     (* LLVM accepts sets of enumerations, subranges and basic types. *)
     IF dom # NIL AND dom.kind IN SET OF Kind {Kind.Enum, Kind.Subrange,
                                                 Kind.Basic} THEN
@@ -687,6 +689,43 @@ PROCEDURE SetBody (t: T; d: DType): TEXT =
     END;
     RETURN Opaque0 (d.name, d.bits);
   END SetBody;
+
+PROCEDURE SetStruct (t: T; d: DType; dom: DType): TEXT =
+  (* C has no sets, and gdb's C mode cannot print DW_TAG_set_type, so
+     in a unit that claims to be C a set is a structure with a one-bit
+     BOOLEAN member for each element, named after the element: "Red",
+     or "_5" ("_m5" for -5) if the domain is not an enumeration.  Bit
+     i - FIRST of the set is element i (little-endian targets). *)
+  CONST MaxMembers = 1024;
+  VAR wr: Wr.T;  min, max: INTEGER;  name: TEXT;
+  BEGIN
+    IF dom = NIL OR NOT Bounds (t, d.a, min, max)
+      OR max - min + 1 > MIN (MaxMembers, d.bits) THEN
+      RETURN Opaque0 (d.name, d.bits);
+    END;
+    wr := TextWr.New ();
+    Wr.PutText (wr, "distinct !DICompositeType(tag: DW_TAG_structure_type, "
+                      & NameField (d.name) & "size: " & Fmt.Int (d.bits)
+                      & ", elements: !{");
+    FOR i := min TO max DO
+      IF dom.kind = Kind.Enum AND dom.elts[i] # NIL THEN
+        name := dom.elts[i];
+      ELSIF i < 0 THEN
+        name := "_m" & Fmt.Int (-i);
+      ELSE
+        name := "_" & Fmt.Int (i);
+      END;
+      IF i > min THEN Wr.PutText (wr, ", ") END;
+      Wr.PutText (wr, "!DIDerivedType(tag: DW_TAG_member, "
+                        & NameField (name) & "scope: " & d.md
+                        & ", baseType: " & Ref (t, UID_BOOLEAN)
+                        & ", size: 1, offset: " & Fmt.Int (i - min)
+                        & ", flags: DIFlagBitField, extraData: i64 "
+                        & Fmt.Int (i - min) & ")");
+    END;
+    Wr.PutText (wr, "})");
+    RETURN TextWr.ToText (wr);
+  END SetStruct;
 
 PROCEDURE SubroutineType (t: T; result: TypeUID;
                           READONLY formals: ARRAY OF TypeUID): TEXT =
@@ -917,6 +956,31 @@ PROCEDURE GdbScripts (wr: Wr.T) =
                       & "], section \"llvm.metadata\"" & Wr.EOL);
   END GdbScripts;
 
+CONST LangName = ARRAY Language OF TEXT {"DW_LANG_Modula2", "DW_LANG_C99"};
+
+PROCEDURE SetLanguage (name: TEXT): BOOLEAN =
+  BEGIN
+    IF EqualIgnoringCase (name, "Modula2") THEN
+      language := Language.Modula2;
+    ELSIF EqualIgnoringCase (name, "C") THEN
+      language := Language.C;
+    ELSE
+      RETURN FALSE;
+    END;
+    RETURN TRUE;
+  END SetLanguage;
+
+PROCEDURE EqualIgnoringCase (a, b: TEXT): BOOLEAN =
+  BEGIN
+    IF Text.Length (a) # Text.Length (b) THEN RETURN FALSE END;
+    FOR i := 0 TO Text.Length (a) - 1 DO
+      IF ASCII.Upper[Text.GetChar (a, i)] # ASCII.Upper[Text.GetChar (b, i)]
+        THEN RETURN FALSE;
+      END;
+    END;
+    RETURN TRUE;
+  END EqualIgnoringCase;
+
 PROCEDURE Finish (t: T; wr: Wr.T; file: TEXT) =
   VAR d := t.deferred;  flags1, flags2: TEXT;
   BEGIN
@@ -924,7 +988,8 @@ PROCEDURE Finish (t: T; wr: Wr.T; file: TEXT) =
     t.deferred := NIL;
     (* No .debug_names: ld.gold concatenates the per-unit tables instead
        of merging them, and gdb then rejects the section. *)
-    Define (t, t.cu, "distinct !DICompileUnit(language: DW_LANG_Modula2, "
+    Define (t, t.cu, "distinct !DICompileUnit(language: "
+                       & LangName[language] & ", "
                        & "file: " & file & ", producer: \"cm3\", "
                        & "isOptimized: false, runtimeVersion: 0, "
                        & "emissionKind: FullDebug, globals: !{"

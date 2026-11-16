@@ -21,6 +21,19 @@ TYPE T <: REFANY;
 
 PROCEDURE New (): T;
 
+(*------------------------------------------------------------ language ---*)
+
+TYPE Language = {Modula2, C};
+(* The language the compile units claim to be (DW_AT_language).
+   Modula2, the default, suits gdb.  C (DW_LANG_C99) suits lldb, which
+   has no Modula-2 support and shows no variables of such units. *)
+
+VAR language := Language.Modula2;
+
+PROCEDURE SetLanguage (name: TEXT): BOOLEAN;
+(* Set "language" from its name, "Modula2" or "C" (in any case).
+   Return FALSE, leaving it unchanged, if the name is unknown. *)
+
 (*---------------------------------------------- M3CG type declarations ---*)
 
 PROCEDURE Typename   (t: T; id: TypeUID; name: TEXT);

@@ -13,6 +13,7 @@ IMPORT Msg, Arg, Utils, M3Path, M3Backend, M3Compiler;
 IMPORT Quake, QMachine, QValue, QVal, QVSeq;
 IMPORT M3Loc, M3Unit, M3Options, MxConfig;
 IMPORT QIdent;
+IMPORT M3LLVMIRDebug; (* LLVM IR backend *)
 IMPORT Target;
 FROM M3Path IMPORT OSKind, OSKindStrings;
 IMPORT Pathname;
@@ -298,6 +299,13 @@ PROCEDURE CompileUnits (main     : TEXT;
     END;
     s.m3backend_mode := ConvertBackendModeStringToEnum(s, value);
     Target.BackendMode := s.m3backend_mode;
+
+    (* LLVM IR backend: the DWARF language of the compile units. *)
+    value := GetDefn (s, "M3_DEBUG_LANGUAGE");
+    IF value # NIL
+      AND NOT M3LLVMIRDebug.SetLanguage (BindingToText (s, value)) THEN
+      ConfigErr (s, "M3_DEBUG_LANGUAGE", "must be Modula2 or C");
+    END;
     Target.BackendModeInitialized := TRUE;
 
     value := GetDefn (s, "TARGET_NAMING");

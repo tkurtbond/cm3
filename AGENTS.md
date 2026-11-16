@@ -38,7 +38,7 @@ them, and keep edits to shared files (`Builder.m3`, `M3Backend.m3`,
 | `m3-sys/m3middle/src/Target.i3` | Target description and `M3BackendMode_t`, the enum of backend modes. |
 | `m3-sys/m3back/src/M3C.m3` | **The C backend** (about 8,300 lines). It is the default on AMD64_LINUX. It is the closest structural template for a text-emitting backend and the reference oracle for testing. |
 | `m3-sys/m3llvmir/src/M3LLVMIR.m3` | **This fork's backend** (backend mode `LlvmIR`): an M3CG_Ops subtype of `M3CG_AssertFalse` that writes textual `.ll`. Unimplemented operations fail with an assertion; progress is tracked in `experiment-doc/m3cg-ops-checklist.md`. `M3LLVMIRDebug.m3` writes the DWARF debug metadata (Phase 5). |
-| `m3-sys/m3llir/` | Standalone driver: `m3llir [-a] [-g] [-t TARGET] [-o out.ll] in.mc` translates an M3CG file (`-a` for ASCII, `-g` for debug info) to `.ll`. Handy with the IR corpus: `m3llir -a -t AMD64_LINUX X.mc.txt \| llvm-as -o /dev/null`. |
+| `m3-sys/m3llir/` | Standalone driver: `m3llir [-a] [-g] [-l LANG] [-t TARGET] [-o out.ll] in.mc` translates an M3CG file (`-a` for ASCII, `-g` for debug info, `-l C` to label it C for lldb) to `.ll`. Handy with the IR corpus: `m3llir -a -t AMD64_LINUX X.mc.txt \| llvm-as -o /dev/null`. |
 | `m3-sys/llvm/llvm22/src/M3CG_LLVM.m3` | **The existing LLVM backend** (about 7,100 lines, by Peter McKinna and Rodney Bates). It uses LLVM's C API through bindings in `llvm22bindings`, runs as a standalone `m3llvm` executable, and needs LLVM's libraries at build time. Use it as the main reference for *how to lower* M3CG to LLVM, but don't add dependencies on it. `llvm13/` and `llvm18/` are older copies. |
 | `m3-sys/cm3/src/Builder.m3` | The build driver: dispatches on backend mode (`CompileM3llvm`, `CompileLlc`, `RunM3Llvm`, `RunLlcBack`, and so on). |
 | `m3-sys/cm3/src/M3Backend.m3` | Constructs the in-process code generator for a backend mode (`M3C.New` for C). |
@@ -99,9 +99,13 @@ and installs into the prefix of the `cm3` it finds on `PATH`.
   `gdb -iex ...`); otherwise `source` it. `DIR` can be any directory
   above the program. On the command line it must be `-iex`: `-ex` and
   `-x` run after the program is loaded, too late for auto-loading.
-  `set auto-load safe-path /` turns the check off entirely. An object's method suite is
-  `p o^._methods^`. lldb can set breakpoints and show backtraces but
-  can't show variables, because it has no Modula-2 support.
+  `set auto-load safe-path /` turns the check off entirely. An
+  object's method suite is `p o^._methods^`. lldb has no Modula-2
+  support and shows no variables of such units. For lldb, build with
+  `-DM3_DEBUG_LANGUAGE=C` (the compile unit then says C, and sets
+  become structs of one-bit members) and load the TEXT formatter with
+  `command script import m3-sys/m3llvmir/src/m3lldb.py` (in
+  `~/.lldbinit`, say); then use `o->n` and `o->_methods->get`.
 - After changing `m3llvmir`, rebuild the units you test (`rm -rf
   AMD64_LINUX` or touch the source): cm3 doesn't recompile when the
   compiler changes.
