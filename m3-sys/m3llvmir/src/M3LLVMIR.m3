@@ -753,8 +753,8 @@ PROCEDURE set_source_line (u: U; line: INTEGER) =
 <*NOWARN*>PROCEDURE declare_proctype(self: U; typeid: TypeUID; n_formals: INTEGER; result: TypeUID; n_raises: INTEGER; callingConvention: CallingConvention; result_typename: Name) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.ProcType (self.dbg, typeid, n_formals, result) END; END declare_proctype;
 <*NOWARN*>PROCEDURE declare_formal(self: U; name: Name; typeid: TypeUID; typename: Name) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.Formal (self.dbg, typeid) END; END declare_formal;
 <*NOWARN*>PROCEDURE declare_raises(self: U; name: Name) = BEGIN END declare_raises;
-<*NOWARN*>PROCEDURE declare_object(self: U; typeid, super_typeid: TypeUID; brand: TEXT; traced: BOOLEAN; n_fields, n_methods: INTEGER; field_size: BitSize; field_offset, method_offset : INTEGER; super_typename: Name) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.Object (self.dbg, typeid, super_typeid, n_fields, field_size, field_offset) END; END declare_object;
-<*NOWARN*>PROCEDURE declare_method(self: U; name: Name; signature: TypeUID) = BEGIN END declare_method;
+<*NOWARN*>PROCEDURE declare_object(self: U; typeid, super_typeid: TypeUID; brand: TEXT; traced: BOOLEAN; n_fields, n_methods: INTEGER; field_size: BitSize; field_offset, method_offset : INTEGER; super_typename: Name) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.Object (self.dbg, typeid, super_typeid, n_fields, field_size, field_offset, n_methods, method_offset) END; END declare_object;
+<*NOWARN*>PROCEDURE declare_method(self: U; name: Name; signature: TypeUID) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.Method (self.dbg, M3ID.ToText (name), signature) END; END declare_method;
 <*NOWARN*>PROCEDURE declare_opaque(self: U; typeid, super_typeid: TypeUID) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.Opaque (self.dbg, typeid, super_typeid) END; END declare_opaque;
 <*NOWARN*>PROCEDURE reveal_opaque(self: U; lhs_typeid, rhs_typeid: TypeUID) = BEGIN IF self.dbg # NIL THEN M3LLVMIRDebug.Reveal (self.dbg, lhs_typeid, rhs_typeid) END; END reveal_opaque;
 <*NOWARN*>PROCEDURE declare_exception(self: U; name: Name; arg_typeid: TypeUID; raise_proc: BOOLEAN; base: Var; offset: INTEGER) = BEGIN END declare_exception;
@@ -1132,6 +1132,8 @@ PROCEDURE DebugVar (u: U; v: LVar; name: Name; typeid: TypeUID) =
   BEGIN
     IF u.dbg = NIL OR name = M3ID.NoID OR v.owner = NIL THEN RETURN END;
     v.m3name := M3ID.ToText (name);
+    (* The front end's temporary for a function's result. *)
+    IF Text.Equal (v.m3name, "_result") THEN RETURN END;
     v.typeid := typeid;
     (* Variables declared before begin_procedure belong to its line. *)
     IF u.cur_proc # NIL THEN v.line := u.source_line END;
@@ -1168,7 +1170,8 @@ PROCEDURE end_block (u: U) =
 
 PROCEDURE DebugProc (u: U; p: LProc) =
   (* Reserve "p"'s DISubprogram, at the current source position. *)
-  VAR params: REF ARRAY OF TypeUID;
+  CONST UID_ADDRESS = 138420323;
+  VAR params: REF ARRAY OF TypeUID;  ret := p.ret_typeid;
   BEGIN
     u.loc := NIL;
     IF u.dbg = NIL OR u.source_file = NIL THEN RETURN END;
@@ -1177,9 +1180,11 @@ PROCEDURE DebugProc (u: U; p: LProc) =
     p.dbg_sp := M3LLVMIRDebug.Reserve (u.dbg);
     params := NEW (REF ARRAY OF TypeUID, p.n_declared);
     FOR i := 0 TO p.n_declared - 1 DO params[i] := p.params[i].typeid END;
+    (* The front end gives no result type to a module's body, which
+       returns its ADDRESS. *)
+    IF ret = 0 AND p.return = Type.Addr THEN ret := UID_ADDRESS END;
     M3LLVMIRDebug.Subprogram (u.dbg, p.dbg_sp, p.m3name, p.dbg_file,
-                              p.dbg_line, NOT p.exported, p.ret_typeid,
-                              params^);
+                              p.dbg_line, NOT p.exported, ret, params^);
   END DebugProc;
 
 PROCEDURE DebugDeclares (u: U; p: LProc): TEXT =

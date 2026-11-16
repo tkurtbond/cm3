@@ -8,4 +8,9 @@ import ("m3middle")
 Module ("M3LLVMIR")
 Module ("M3LLVMIRDebug")  % Phase 5: debug information
 
+% Phase 5: gdb pretty-printers, embedded in each unit with debug
+% information (see M3LLVMIRDebug.Finish)
+resource ("m3printers.py")
+bundle ("M3LLVMIRBundle")
+
 Library ("m3llvmir")

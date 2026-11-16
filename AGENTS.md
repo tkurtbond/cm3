@@ -92,7 +92,19 @@ and installs into the prefix of the `cm3` it finds on `PATH`.
   `LlvmIR` emits debug information unless `-g0` is given, so its
   programs can be debugged with gdb. The compile unit says Modula-2,
   because gdb's Modula-3 support can't print sets or BOOLEANs; use
-  `p^`, `a[i]` and `r.f`, not `Color.Blue`.
+  `p^`, `a[i]` and `r.f`, not `Color.Blue`. Every unit embeds
+  `m3-sys/m3llvmir/src/m3printers.py`, which prints TEXT values as
+  strings and fixes how procedure values print. gdb runs it only for
+  programs under `add-auto-load-safe-path DIR` (in `~/.gdbinit`, or
+  `gdb -iex ...`); otherwise `source` it. `DIR` can be any directory
+  above the program. On the command line it must be `-iex`: `-ex` and
+  `-x` run after the program is loaded, too late for auto-loading.
+  `set auto-load safe-path /` turns the check off entirely. An object's method suite is
+  `p o^._methods^`. lldb can set breakpoints and show backtraces but
+  can't show variables, because it has no Modula-2 support.
+- After changing `m3llvmir`, rebuild the units you test (`rm -rf
+  AMD64_LINUX` or touch the source): cm3 doesn't recompile when the
+  compiler changes.
 - A test package outside `m3tests` needs `import ("libm3")` in its
   `m3makefile`, or the front end can't find `RTHooks`.
 - Keep intermediate files and show the commands run: `cm3 -keep -commands`.

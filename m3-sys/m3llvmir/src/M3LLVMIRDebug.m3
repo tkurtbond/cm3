@@ -27,6 +27,7 @@ MODULE M3LLVMIRDebug;
 
 IMPORT Wr, TextWr, Text, Fmt, Thread, IntRefTbl, TextRefTbl;
 IMPORT Pathname, Process, OSError, Target, TInt;
+IMPORT Bundle, M3LLVMIRBundle;  (* m3printers.py *)
 FROM M3CG IMPORT TypeUID;
 
 <*FATAL Wr.Failure, Thread.Alerted*>
@@ -76,6 +77,11 @@ TYPE
     offset  : INTEGER := 0;    (* Object: bit offset of its fields *)
     md      : TEXT := NIL;     (* the DI type, "!N" *)
     cls     : TEXT := NIL;     (* Object, Opaque: the structure *)
+    methods : REF ARRAY OF FieldInfo := NIL;   (* Object: its new methods *)
+    n_methods := 0;            (* methods added so far *)
+    moffset := -1;             (* Object: bit offset of its methods in
+                                  the method suite, < 0 if unknown *)
+    suite   : TEXT := NIL;     (* Object: the method suite structure *)
   END;
 
   FieldInfo = RECORD
@@ -305,17 +311,33 @@ PROCEDURE Formal (t: T; type: TypeUID) =
   END Formal;
 
 PROCEDURE Object (t: T; id, super: TypeUID; n_fields: INTEGER;
-                  field_size, field_offset: INTEGER) =
+                  field_size, field_offset: INTEGER;
+                  n_methods, method_offset: INTEGER) =
   VAR d := Add (t, Kind.Object, id, field_size, super);
   BEGIN
     d.fields := NEW (REF ARRAY OF FieldInfo, MAX (n_fields, 0));
+    d.methods := NEW (REF ARRAY OF FieldInfo, MAX (n_methods, 0));
     d.offset := field_offset;
+    d.moffset := method_offset;
     IF field_offset >= 0 THEN
       (* the size of the whole object, its supertypes' fields included *)
       d.bits := field_offset + field_size;
     END;
     t.cur := d;
   END Object;
+
+PROCEDURE Method (t: T; name: TEXT; signature: TypeUID) =
+  (* The front end declares an object's new methods (not its overrides)
+     before its fields. *)
+  VAR d := t.cur;
+  BEGIN
+    IF d # NIL AND d.kind = Kind.Object
+       AND d.n_methods < NUMBER (d.methods^) THEN
+      d.methods[d.n_methods] := FieldInfo {name, 0, Target.Address.size,
+                                           signature};
+      INC (d.n_methods);
+    END;
+  END Method;
 
 PROCEDURE Opaque (t: T; id, super: TypeUID) =
   BEGIN
@@ -392,6 +414,12 @@ PROCEDURE Body (t: T; d: DType): TEXT =
         IF d.id = UID_WIDECHAR THEN d.bits := t.widechar_bits END;
         RETURN BasicType (d.name, d.bits, d.enc);
     | Kind.Address =>
+        IF d.id = UID_TEXT THEN
+          (* A typedef, so that a pretty-printer can recognize TEXT by
+             its name (m3gdb.py). *)
+          RETURN "!DIDerivedType(tag: DW_TAG_typedef, name: \"TEXT\", "
+                   & "baseType: " & Node (t, PointerType (NIL, "null")) & ")";
+        END;
         RETURN PointerType (d.name, "null");
     | Kind.Subrange =>
         RETURN SubrangeBody (t, d);
@@ -590,6 +618,17 @@ PROCEDURE Class (t: T; d: DType): TEXT =
                         & ", offset: 0)");
       first := FALSE;
     END;
+    IF d.kind = Kind.Object AND d.moffset >= 0 THEN
+      (* Every object starts with a pointer to its method suite.  Each
+         class has its own "_methods", which hides its supertype's. *)
+      IF NOT first THEN Wr.PutText (wr, ", ") END;
+      first := FALSE;
+      Wr.PutText (wr, "!DIDerivedType(tag: DW_TAG_member, name: \"_methods\", "
+                        & "scope: " & d.cls & ", baseType: "
+                        & Node (t, PointerType (NIL, Suite (t, d)))
+                        & ", size: " & Fmt.Int (Target.Address.size)
+                        & ", offset: 0, flags: DIFlagArtificial)");
+    END;
     IF d.kind = Kind.Object AND d.offset >= 0 THEN
       Members (t, wr, d.cls, d, d.offset, first);
     END;
@@ -597,6 +636,42 @@ PROCEDURE Class (t: T; d: DType): TEXT =
     Define (t, d.cls, TextWr.ToText (wr));
     RETURN d.cls;
   END Class;
+
+PROCEDURE Suite (t: T; d: DType): TEXT =
+  (* The method suite of an object type whose method offset is known:
+     its supertype's methods, then its own, each a procedure pointer. *)
+  VAR wr: TextWr.T;  super: DType;  first := TRUE;  ptr := Target.Address.size;
+      name: TEXT := NIL;
+  BEGIN
+    IF d.suite # NIL THEN RETURN d.suite END;
+    d.suite := Reserve (t);
+    wr := TextWr.New ();
+    IF d.name # NIL THEN name := d.name & "_methods" END;
+    Wr.PutText (wr, "distinct !DICompositeType(tag: DW_TAG_structure_type, "
+                      & NameField (name) & "size: "
+                      & Fmt.Int (d.moffset + d.n_methods * ptr)
+                      & ", elements: !{");
+    super := Resolve (t, d.a);
+    IF super # NIL AND super.kind = Kind.Object AND super.moffset >= 0 THEN
+      Wr.PutText (wr, "!DIDerivedType(tag: DW_TAG_inheritance, scope: "
+                        & d.suite & ", baseType: " & Suite (t, super)
+                        & ", offset: 0)");
+      first := FALSE;
+    END;
+    FOR i := 0 TO d.n_methods - 1 DO
+      IF NOT first THEN Wr.PutText (wr, ", ") END;
+      first := FALSE;
+      Wr.PutText (wr, "!DIDerivedType(tag: DW_TAG_member, "
+                        & NameField (d.methods[i].name) & "scope: " & d.suite
+                        & ", baseType: "
+                        & OrUnknown (t, Ref (t, d.methods[i].type))
+                        & ", size: " & Fmt.Int (ptr) & ", offset: "
+                        & Fmt.Int (d.moffset + i * ptr) & ")");
+    END;
+    Wr.PutText (wr, "})");
+    Define (t, d.suite, TextWr.ToText (wr));
+    RETURN d.suite;
+  END Suite;
 
 PROCEDURE SetBody (t: T; d: DType): TEXT =
   VAR dom := Resolve (t, d.a);  ref: TEXT;
@@ -813,6 +888,35 @@ PROCEDURE DefineGlobal (d: DGlobal; t: T) =
                         & Fmt.Int (d.offset DIV 8) & ops & "))");
   END DefineGlobal;
 
+PROCEDURE GdbScripts (wr: Wr.T) =
+  (* Embed m3printers.py, gdb's pretty-printers for TEXT and procedures,
+     in the .debug_gdb_scripts section.  The entry is an inline Python
+     script (4), whose first line is its name.  Each unit has a copy in
+     a COMDAT, and the linker keeps one. *)
+  CONST Sym = "@__m3_gdb_scripts_m3printers";
+  VAR
+    script := "m3printers.py\n"
+                & Bundle.Get (M3LLVMIRBundle.Get (), "m3printers.py");
+    n := Text.Length (script) + 2;   (* the leading 4 and the NUL *)
+    lit := TextWr.New ();  c: CHAR;
+  BEGIN
+    FOR i := 0 TO Text.Length (script) - 1 DO
+      c := Text.GetChar (script, i);
+      IF c >= ' ' AND c <= '~' AND c # '"' AND c # '\\' THEN
+        Wr.PutChar (lit, c);
+      ELSE
+        Wr.PutText (lit, "\\" & Fmt.Pad (Fmt.Int (ORD (c), 16), 2, '0'));
+      END;
+    END;
+    Wr.PutText (wr, Wr.EOL & "$__m3_gdb_scripts_m3printers = comdat any"
+                      & Wr.EOL & Sym & " = linkonce_odr constant ["
+                      & Fmt.Int (n) & " x i8] c\"\\04" & TextWr.ToText (lit)
+                      & "\\00\", section \".debug_gdb_scripts\", comdat, "
+                      & "align 1" & Wr.EOL
+                      & "@llvm.used = appending global [1 x ptr] [ptr " & Sym
+                      & "], section \"llvm.metadata\"" & Wr.EOL);
+  END GdbScripts;
+
 PROCEDURE Finish (t: T; wr: Wr.T; file: TEXT) =
   VAR d := t.deferred;  flags1, flags2: TEXT;
   BEGIN
@@ -825,6 +929,7 @@ PROCEDURE Finish (t: T; wr: Wr.T; file: TEXT) =
                        & "isOptimized: false, runtimeVersion: 0, "
                        & "emissionKind: FullDebug, globals: !{"
                        & t.gves & "}, nameTableKind: None)");
+    GdbScripts (wr);
     flags1 := Node (t, "!{i32 7, !\"Dwarf Version\", i32 5}");
     flags2 := Node (t, "!{i32 2, !\"Debug Info Version\", i32 3}");
     Wr.PutText (wr, Wr.EOL & "!llvm.dbg.cu = !{" & t.cu & "}" & Wr.EOL);

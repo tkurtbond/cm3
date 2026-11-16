@@ -559,12 +559,52 @@ its variables can be printed in gdb.
   - m3tests with `-DM3_BACKEND_MODE=LlvmIR`, which now has debug
     information on by default, still passes 292 of 293 (p047, as
     before).
+- **Follow-ups, done after the Phase 5 commit:**
+  - **Methods.** Each object's class struct has an artificial
+    `_methods` member at offset 0, a pointer to a `T_methods` struct
+    (the method suite). The suite inherits its supertype's suite and
+    holds the type's new methods as procedure pointers, at the front
+    end's `method_offset`. The suite pointer points at slot 0, and the
+    slots follow declaration order, so `p o^._methods^` shows which
+    procedure each method is bound to. Objects whose method offset is
+    unknown (opaque supertypes) get no `_methods`.
+  - **`_result` is hidden.** The front end's temporary for a function
+    result is no longer described.
+  - **The module body returns ADDRESS.** The front end gives `Main_M3`
+    no result typeid; when the procedure returns an address, the
+    debug information now says ADDRESS.
+  - **TEXT and procedure pretty-printers for gdb.**
+    [`m3printers.py`](m3-sys/m3llvmir/src/m3printers.py) is bundled
+    into the backend and embedded in every unit with debug information,
+    as an inline script in `.debug_gdb_scripts` (a `linkonce_odr`
+    COMDAT kept by `@llvm.used`, so a program gets one 7 KB copy).
+    - TEXT is now a typedef named `TEXT`. The printer finds the
+      representation (`Text8`, `Text16`, `Text8Short`, `Text16Short`,
+      `Text8CString`, `TextCat`, `TextSub`, literals) from the symbol in
+      the `get_info` slot of the text's method suite, decodes it, and
+      prints `"abc"`, `W"..."` for wide texts, or `NIL`. It honors
+      `set print elements`; `p/r` shows the pointer.
+    - gdb's Modula-2 printer shows a procedure pointer's own address
+      instead of its value (`p/a` is right). In Modula-2 frames the
+      script prints procedure values as `0x401000 <Main__CircleArea>`.
+    - gdb runs embedded scripts only from files under `auto-load
+      safe-path`, whose default doesn't cover user programs. Add
+      `add-auto-load-safe-path DIR` to `~/.gdbinit`, or `source` the
+      script.
+    - The layouts are copied from `m3core/src/text`; the script must
+      follow changes there.
+  - **lldb (22.1.8).** Breakpoints (by symbol and by file:line), `bt`,
+    stepping, `finish` and source display work. Variables and types
+    don't: lldb has no plugin for `modula2`, so `frame variable` shows
+    nothing ("This version of LLDB has no plugin for the language").
+    With the compile unit relabeled `DW_LANG_C99` by hand, lldb shows
+    everything: locals, objects with their inheritance and `_methods`,
+    and the method procedures. An option to choose the DWARF language
+    (Modula-2 for gdb, C for lldb) would be cheap.
 - **Not done:**
-  - methods, exceptions and RAISES are not described;
-  - TEXT shows as an address;
-  - the front end's `_result` temporaries are visible as locals;
-  - the module body's `Main_M3` has no return type;
-  - lldb is untested.
+  - exceptions and RAISES are not described;
+  - no lldb formatter for TEXT;
+  - no option to choose the DWARF language.
 
 ### Phase 6: integration and CI
 
