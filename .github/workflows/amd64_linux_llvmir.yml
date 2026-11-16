@@ -39,8 +39,11 @@ jobs:
       # Unix.common's compile_llvm_ir checks every .ll with llvm-as
       # (LLVM's IR verifier) before compiling it.
       M3_LLVM_IR_VERIFY: 1
-      # m3tests that fail with the C back end too.
-      KNOWN_FAILURES: p047
+      # m3tests that fail with the C back end too.  e041: the front end
+      # crashes (with either back end) on its mutually recursive
+      # REVEALs; under dash, the shell's "Segmentation fault" lands in
+      # the captured stderr, so it fails on Ubuntu (not under bash).
+      KNOWN_FAILURES: p047 e041
       RELEASE: ${{ inputs.release || 'https://github.com/modula3/cm3/releases/download/d5.12.0' }}
       BOOTSTRAP: ${{ inputs.bootstrap || 'cm3-boot-AMD64_LINUX-d5.12.0.tar.xz' }}
 

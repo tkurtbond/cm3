@@ -699,7 +699,14 @@ its variables can be printed in gdb.
   - a check that the installed `cm3.cfg` defaults to `LlvmIR`;
   - m3tests (using that default), reported with `dorny/test-reporter`,
     and a final step that fails on any test failure not listed in
-    `KNOWN_FAILURES` (p047, which fails with C too);
+    `KNOWN_FAILURES`, tests that fail with C too: p047, and e041. On
+    e041 the front end crashes with a segmentation fault, whatever
+    the backend: its mutually recursive REVEALs overflow the stack.
+    Under bash (Fedora's `/bin/sh`) the shell reports the crash on its
+    own stderr, so the test passes; under dash (Ubuntu's) the message
+    lands in the captured stderr and the test fails. Upstream's C job
+    on Ubuntu fails e041 too, along with 14 other tests (and p047)
+    that `LlvmIR` passes;
   - `M3_LLVM_IR_VERIFY=1` for the whole job.
 - **Build order.** The first CI run showed that the Phase 5 bundle of
   `m3printers.py` broke every fresh build, upstream's jobs included:
@@ -724,6 +731,9 @@ its variables can be printed in gdb.
   - m3tests, with `LlvmIR` as the installed default and verification
     on: 292 of 293 pass (p047 fails, as with C), and the CI workflow's
     check of the results passes.
+- **Results in CI (Ubuntu, LLVM 18 and 22):** the full build passes,
+  with every `.ll` verified, and m3tests passes 291 of 293 (p047 and
+  e041, as above).
 
 ### Phase 7: beyond AMD64_LINUX and the basics
 
