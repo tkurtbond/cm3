@@ -689,8 +689,11 @@ its variables can be printed in gdb.
   points `~/.lldbinit` at the installed copy.
 - **CI.** `.github/workflows/amd64_linux_llvmir.yml`, called from
   `integration.yml` and also runnable by hand:
-  - a matrix over LLVM 18 and 22, installed from apt.llvm.org with
-    `llvm.sh`, with `/usr/lib/llvm-N/bin` first on `PATH`;
+  - a matrix over LLVM 18, on Ubuntu 24.04, and 22, on
+    `ubuntu-latest`, each from the distribution's archive if it has
+    the version and else from apt.llvm.org (which has no LLVM 18 for
+    Ubuntu 26.04, the current `ubuntu-latest`), with
+    `/usr/lib/llvm-N/bin` first on `PATH`;
   - the d5.12.0 bootstrap, then `concierge.py full-upgrade --backend
     llvmir` with the package set of upstream's AMD64_LINUX job;
   - a check that the installed `cm3.cfg` defaults to `LlvmIR`;
@@ -698,6 +701,11 @@ its variables can be printed in gdb.
     and a final step that fails on any test failure not listed in
     `KNOWN_FAILURES` (p047, which fails with C too);
   - `M3_LLVM_IR_VERIFY=1` for the whole job.
+- **Build order.** The first CI run showed that the Phase 5 bundle of
+  `m3printers.py` broke every fresh build, upstream's jobs included:
+  `scripts/pkginfo.txt` listed `m3llvmir` before `m3bundle`, which a
+  bootstrap install doesn't have yet. `m3llvmir` now comes after
+  `m3bundle` (and `mklib`).
 - **Documentation.** [`m3-sys/m3llvmir/README.md`](m3-sys/m3llvmir/README.md)
   (using the backend: choosing it, optimization, overriding the clang
   step, `m3llir`, gdb and lldb, troubleshooting) and

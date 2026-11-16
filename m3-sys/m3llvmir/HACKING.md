@@ -155,7 +155,8 @@ check debug-information changes in both.
 
 `.github/workflows/amd64_linux_llvmir.yml` is called from
 `integration.yml` and can be started by hand (`workflow_dispatch`).
-For LLVM 18 and the newest LLVM (installed from apt.llvm.org), it
+For LLVM 18 (on Ubuntu 24.04, from its archive) and the newest LLVM
+(on `ubuntu-latest`, from its archive or else apt.llvm.org), it
 builds the bootstrap release, runs `concierge.py full-upgrade
 --backend llvmir` on the same package set as upstream's AMD64_LINUX
 job, checks that `cm3.cfg` defaults to `LlvmIR`, and runs m3tests. The
@@ -163,3 +164,7 @@ environment sets `M3_LLVM_IR_VERIFY`, so every `.ll` of the build and
 of the tests goes through `llvm-as`. The last step fails on any test
 failure not listed in `KNOWN_FAILURES`. When a new LLVM is released,
 bump the newest version in the matrix.
+
+`m3llvmir` bundles `m3printers.py` with `m3bundle`, so in
+`scripts/pkginfo.txt`, which sets concierge's build order, it must
+come after `m3bundle`. A fresh bootstrap install has no `m3bundle`.
