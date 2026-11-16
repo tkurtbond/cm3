@@ -538,6 +538,7 @@ if equal(M3_BACKEND_MODE, "0") or equal(M3_BACKEND_MODE, "1")
         or equal(M3_BACKEND_MODE, "IntegratedAssembly")
         or equal(M3_BACKEND_MODE, "IntegratedC")
         or equal(M3_BACKEND_MODE, "C")
+        or equal(M3_BACKEND_MODE, "LlvmIR") % LLVM IR backend
         or USE_C_BACKEND_VIA_M3CGCAT
      % Llvm itself requires unnested functions, so do it for all llvm modes. 
         or IsBackendLlvm()

@@ -1,0 +1,2 @@
+#!/bin/bash
+a=(); for x in "$@"; do [ "$x" = -O0 ] && x=-O2; a+=("$x"); done; exec /usr/bin/gcc "${a[@]}"

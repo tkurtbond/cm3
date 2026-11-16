@@ -1544,8 +1544,17 @@ PROCEDURE FloatLit (u: U; t: Type; READONLY f: Target.Float): TEXT =
       IF n # 16 THEN Fatal (u, "bad EXTENDED constant") END;
       RETURN "0xL" & Hex16 (buf, 0) & Hex16 (buf, 8);
     END;
-    (* float and double constants are written as doubles *)
-    IF TFloat.Prec (f) # Target.Precision.Long THEN
+    (* float and double constants are written as doubles.  A float
+       constant must be exactly representable as a float, so it is
+       always rounded to REAL first, as C's implicit conversion
+       does; the front end can hand a REAL operation a value of
+       LONGREAL precision. *)
+    IF FloatBits (t) = 32 THEN
+      (* TFloat.FloatF does not round, so round here. *)
+      g.pre := Target.Precision.Long;
+      g.exponent := f.exponent;
+      g.fraction := FLOAT (FLOAT (f.fraction, REAL), EXTENDED);
+    ELSIF TFloat.Prec (f) # Target.Precision.Long THEN
       IF NOT TFloat.FloatF (f, Target.Precision.Long, g) THEN
         Fatal (u, "bad floating-point constant");
       END;

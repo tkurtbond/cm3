@@ -1,7 +1,7 @@
 # Plan: an LLVM backend for cm3 that emits textual LLVM IR
 
-Status: draft, 2026-11-16. Phases 0, 1 and 2 are done; Phase 3 is done
-except `ex_stack`, which is deferred (see Phase 3).
+Status: draft, 2026-11-16. Phases 0, 1, 2 and 4 are done; Phase 3 is
+done except `ex_stack`, which is deferred (see Phase 3).
 
 ## Goal
 
@@ -455,6 +455,34 @@ Phase 3 as built:
 
 *Exit:* a self-hosted compiler at the fixed point, the headless
 package set built, and the numbers recorded in `experiment-doc/`.
+
+**Phase 4 as built** (details and numbers in
+[`experiment-doc/phase4-results.md`](experiment-doc/phase4-results.md)):
+
+- *Exit met.*
+  - **Fixed point:** starting from the C-built compiler, each `LlvmIR`
+    stage built the 15 compiler packages with the previous stage's
+    `cm3`. All 1,368 `.ll` files are byte-identical between stages, and
+    the binaries differ only in the build timestamp.
+  - **Headless set:** all 59 packages that concierge installs here
+    build with the self-hosted compiler.
+  - **m3tests:** the self-hosted compiler, with `LlvmIR`-built
+    libraries, passes 292 of 293 (p047 as before).
+- Two fixes:
+  - `cm3cfg.common` now passes `-unfold_nested_procs -check_procs` for
+    `LlvmIR`. Before, only `-DM3_BACKEND_MODE=LlvmIR` on a C config got
+    them.
+  - REAL constants are rounded to single precision before they're
+    written; `arithmetic` failed without this.
+- Compared with C, builds are 2 to 2.5 times faster, and `-O0` text is
+  20% smaller. Front end plus emitter takes 55% of the C backend's time,
+  and `M3LLVMIR` is under 2% of the profile, so the emitter was not
+  reworked.
+- At `-O2`, the benchmarks run within 10% of `gcc -O2`. Upstream never
+  optimizes the C backend's output (`cm3 -O` still runs `gcc -O0`), so
+  in practice `LlvmIR -O` is up to 4 times faster than C as shipped.
+- The scripts are in `experiment-doc/phase4/`: the staged build, the
+  measurement, and the benchmarks.
 
 ### Phase 5: debug information
 

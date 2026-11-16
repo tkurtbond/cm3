@@ -1,0 +1,15 @@
+m3core m3-libs/m3core
+libm3 m3-libs/libm3
+set m3-libs/set
+sysutils m3-libs/sysutils
+m3middle m3-sys/m3middle
+m3objfile m3-sys/m3objfile
+m3linker m3-sys/m3linker
+m3back m3-sys/m3back
+m3llvmir m3-sys/m3llvmir
+m3cggen m3-sys/m3cggen
+m3quake m3-sys/m3quake
+m3front m3-sys/m3front
+m3cgcat m3-sys/m3cgcat
+mklib m3-sys/mklib
+cm3 m3-sys/cm3
