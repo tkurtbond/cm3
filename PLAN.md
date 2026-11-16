@@ -1,6 +1,6 @@
 # Plan: an LLVM backend for cm3 that emits textual LLVM IR
 
-Status: draft, 2026-11-16. Phase 0 and Phase 1 are done; Phase 2 is next.
+Status: draft, 2026-11-16. Phases 0, 1 and 2 are done; Phase 3 is next.
 
 ## Goal
 
@@ -302,8 +302,62 @@ between the two backends from day one.
 *Exit:* hello world runs. The `p0` program tests pass when compiled
 with `LlvmIR` and linked against C-backend libraries, with the same
 pass/fail set as the baseline.
+**Met 2026-11-16**, and better than the baseline: with every test
+compiled by `LlvmIR` (and `m3core`/`libm3` by C), **291 of 292 tests
+pass** (293 runs), against 266 with the C backend. No test that passes
+with C fails with `LlvmIR`. The one failure, p047, fails the same way
+with C (its expected output assumes a 64-bit EXTENDED). Run it with:
+
+```sh
+cd m3-sys/m3tests
+systemd-run --user --scope -q -p MemoryMax=8G -p MemorySwapMax=0 \
+  cm3 -DHTML -DM3_BACKEND_MODE=LlvmIR
+```
+
+Phase 2 as built:
+- `m3-sys/m3tests/src/m3makefile` passes `-DM3_BACKEND_MODE=LlvmIR`
+  on to each test's `cm3` (a small marked edit; before it, every test
+  was built with the default backend).
+- `M3LLVMIR.m3` overrides 133 of the 146 M3CG operations. Besides the
+  Phase 2 list it already covers much of Phase 3: floating point
+  (`fp128` for EXTENDED), sets, bit fields, nested procedures and
+  static links, and `ex_frame` exceptions. Still missing: atomics,
+  the `ex_stack` operations (`start_try`, `invoke_*`, `landing_pad`)
+  and `init_label`/`init_offset`; see the checklist.
+- **Operand stack.** The M3CG stack is simulated at compile time as
+  (type, LLVM value) pairs. Variables are allocas; code after an
+  unconditional jump goes into a fresh unreachable block.
+- **Nested procedures.** Each procedure has a `%frame` block: offset 0
+  holds the static link, up-level variables follow. Nested procedures
+  take the static link as a trailing `ptr %sl` parameter, so a closure
+  call can pass it to any procedure (an extra argument is harmless
+  for a top-level callee). The static link for an indirect call goes
+  through a memory slot, because the front end pops it on only one
+  branch of the closure test. FINALLY handlers are declared with an
+  "activation" parameter that the front end's direct call omits;
+  `call_direct` passes zero for it.
+- **Runtime checks** call `RTHooks__ReportFault(module, code + line*32)`
+  as M3C does, then `unreachable`.
+- **setjmp.** `_setjmp`/`setjmp`/`sigsetjmp` are declared
+  `returns_twice`, and in any procedure that calls one, every load and
+  store becomes `volatile` (the C backend's approach, coarse but safe).
+- **Sets** are small internal helper functions over 64-bit words, emitted
+  once per unit when used; `set_member` and `set_singleton` are inline.
+  This is why p156, p159 and p162 pass here and fail with C.
+- `DIV`/`MOD` round toward negative infinity; shifts and rotates guard
+  out-of-range counts with `select`, so no shift produces poison.
+- Several C-backend failures pass with `LlvmIR`: the 10 GCC-warning
+  tests (nothing goes through GCC), p053/p160/p109/p269 (C++ the C
+  backend can't compile), p137, p227 (integer-multiply semantics),
+  p268/p270/p277/p280, and p201, whose "DeclareTypes not progressing"
+  error comes from `M3C.m3`, not the front end.
+- Not yet tested: `-O2` (`cm3 -O`), and the `c*` and `x0` tests.
 
 ### Phase 3: full M3CG coverage
+
+Much of this list was done in Phase 2 (see "Phase 2 as built"); what
+remains is atomics, `ex_stack`, the rarely emitted operations, the
+`-O2` runs, and building `m3core` and `libm3` with `LlvmIR`.
 
 - Floating point: arithmetic, conversions, `cvt_float`, and rounding.
 - Sets (`set_union`, `set_difference`, `set_intersection`,

@@ -99,7 +99,9 @@ and installs into the prefix of the `cm3` it finds on `PATH`.
 - Run the compiler tests: `cd m3-sys/m3tests && cm3 -DHTML` (writes
   `m3tests-results.xml`). They take a while; prefer running a subset
   while iterating. The C-backend baseline is in
-  `experiment-doc/m3tests-baseline-c.md`.
+  `experiment-doc/m3tests-baseline-c.md`. Add `-DM3_BACKEND_MODE=LlvmIR`
+  to build every test with this fork's backend (291 of 292 pass; see
+  Phase 2 in `PLAN.md`).
 - Rebuild the compiler after changing `m3front`, `m3middle`, `m3back`,
   `m3llvmir`, or `cm3`: `scripts/concierge.py upgrade` (or build and ship the
   packages in dependency order, then rebuild `cm3`).

@@ -60,8 +60,9 @@ appears, the "N warnings encountered" line is missing, and the
 expected run-time errors appear in a different form. These need a
 closer look before we count them as either backend's fault.
 
-**Front end (1).** p201: `DeclareTypes not progressing` (recursive
-values). Backend-independent.
+**C backend type declarations (1).** p201: `DeclareTypes not
+progressing` (recursive values). The message comes from `M3C.m3`; the
+test passes with `LlvmIR`.
 
 ## Passing tests (266)
 

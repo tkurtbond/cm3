@@ -22,12 +22,13 @@
 
 MODULE M3LLVMIR;
 
-IMPORT Wr, TextWr, Text, Fmt, Stdio, Thread, TextRefTbl;
-IMPORT M3CG, M3CG_Ops, M3CG_AssertFalse, M3ID, Target, TInt;
+IMPORT Wr, TextWr, Text, Fmt, Stdio, Thread, TextRefTbl, Word;
+IMPORT M3CG, M3CG_Ops, M3CG_AssertFalse, M3ID, Target, TInt, TFloat;
 FROM M3CG IMPORT Name, ByteOffset, TypeUID, CallingConvention;
 FROM M3CG IMPORT BitSize, ByteSize, Alignment, Frequency;
 FROM M3CG IMPORT Var, Proc, Label, BitOffset;
-FROM M3CG IMPORT Type, ZType, IType, MType;
+FROM M3CG IMPORT Type, ZType, IType, MType, RType, AType;
+FROM M3CG IMPORT Sign, CompareOp, ConvertOp, RuntimeError;
 
 <*FATAL Wr.Failure, Thread.Alerted*>
 
@@ -43,6 +44,9 @@ TYPE
     type     : Type      := Type.Struct;
     exported : BOOLEAN   := FALSE;
     used     : BOOLEAN   := FALSE;
+    owner    : LProc     := NIL;   (* for locals and parameters *)
+    up_level : BOOLEAN   := FALSE; (* lives in owner's frame *)
+    frame_off: INTEGER   := 0;
   END;
 
   LProc = Proc OBJECT
@@ -56,10 +60,19 @@ TYPE
     params     : REF ARRAY OF LVar;
     n_declared : INTEGER := 0;
     locals     : VarList := NIL;  (* declared before begin_procedure *)
+    level      : INTEGER := 0;    (* static nesting level *)
+    (* The frame holds the up-level variables and, at offset 0, the
+       static link (a pointer to the parent's frame). *)
+    frame_size : INTEGER := 0;
+    frame_align: INTEGER := 0;
+    frame_used : BOOLEAN := FALSE;
+    returns_twice : BOOLEAN := FALSE;  (* setjmp *)
+    calls_setjmp  : BOOLEAN := FALSE;
   END;
 
   VarList  = REF RECORD v: LVar;  next: VarList  END;
   ProcList = REF RECORD p: LProc; next: ProcList END;
+  DeclList = REF RECORD name, text: TEXT; next: DeclList END;
 
   Operand = RECORD
     type : ZType;   (* the M3CG stack type *)
@@ -76,6 +89,9 @@ TYPE
     funcs       : TextWr.T;    (* function definitions *)
     procs       : ProcList := NIL;
     imports     : VarList := NIL;  (* imported globals *)
+    decls       : DeclList := NIL; (* extra "declare" lines *)
+    helpers     : DeclList := NIL; (* internal helper functions *)
+    module_data : LVar := NIL;     (* passed to RTHooks.ReportFault *)
 
     next_var    := 1;
     next_proc   := 1;
@@ -96,9 +112,13 @@ TYPE
     sp          := 0;
 
     (* the call being built (calls do not nest) *)
-    call_proc   : LProc := NIL;
+    call_proc   : LProc := NIL;   (* NIL for indirect calls *)
     call_args   : TEXT := "";
     call_n      := 0;
+    in_call     := FALSE;
+    call_aborted:= FALSE;  (* abort occurred among the arguments *)
+    call_sl     : TEXT := NIL;  (* static link for an indirect call *)
+    call_last   : TEXT := NIL;  (* the last argument, as an i64 *)
 
     (* the initializer being built *)
     init_target : LVar := NIL;
@@ -175,6 +195,72 @@ TYPE
     call_direct := call_direct;
     load_procedure := load_procedure;
     comment := comment;
+    (* Phase 2 *)
+    init_float := init_float;
+    if_compare := if_compare;
+    case_jump := case_jump;
+    load_indirect := load_indirect;
+    store_indirect := store_indirect;
+    load_float := load_float;
+    compare := compare;
+    add := add;
+    subtract := subtract;
+    multiply := multiply;
+    divide := divide;
+    negate := negate;
+    abs := abs;
+    max := max;
+    min := min;
+    cvt_int := cvt_int;
+    cvt_float := cvt_float;
+    div := div;
+    mod := mod;
+    set_union := set_union;
+    set_difference := set_difference;
+    set_intersection := set_intersection;
+    set_sym_difference := set_sym_difference;
+    set_member := set_member;
+    set_compare := set_compare;
+    set_range := set_range;
+    set_singleton := set_singleton;
+    not := not;
+    and := and;
+    or := or;
+    xor := xor;
+    shift := shift;
+    shift_left := shift_left;
+    shift_right := shift_right;
+    rotate := rotate;
+    rotate_left := rotate_left;
+    rotate_right := rotate_right;
+    widen := widen;
+    chop := chop;
+    extract := extract;
+    extract_n := extract_n;
+    extract_mn := extract_mn;
+    insert := insert;
+    insert_n := insert_n;
+    insert_mn := insert_mn;
+    swap := swap;
+    copy_n := copy_n;
+    copy := copy;
+    zero_n := zero_n;
+    zero := zero;
+    loophole := loophole;
+    abort := abort;
+    check_nil := check_nil;
+    check_lo := check_lo;
+    check_hi := check_hi;
+    check_range := check_range;
+    check_index := check_index;
+    check_eq := check_eq;
+    add_offset := add_offset;
+    index_address := index_address;
+    start_call_indirect := start_call_indirect;
+    call_indirect := call_indirect;
+    pop_struct := pop_struct;
+    pop_static_link := pop_static_link;
+    load_static_link := load_static_link;
   END;
 
 (*------------------------------------------------------------ targets ---*)
@@ -416,6 +502,15 @@ PROCEDURE Cvt (u: U; val: TEXT; from, to: Type): TEXT =
       op := "inttoptr";
     ELSIF from = Type.Addr AND IsInt (to) THEN
       op := "ptrtoint";
+    ELSIF IsFloat (from) AND IsFloat (to) THEN
+      IF FloatBits (to) > FloatBits (from)
+        THEN op := "fpext";
+        ELSE op := "fptrunc";
+      END;
+    ELSIF IsInt (from) AND IsFloat (to) THEN
+      IF IsSigned (from) THEN op := "sitofp" ELSE op := "uitofp" END;
+    ELSIF IsFloat (from) AND IsInt (to) THEN
+      IF IsSigned (to) THEN op := "fptosi" ELSE op := "fptoui" END;
     ELSE
       Fatal (u, "unsupported conversion " & fl & " to " & tl);
     END;
@@ -428,6 +523,20 @@ PROCEDURE AddrOf (u: U; var: Var; offset: ByteOffset): TEXT =
   VAR v := NARROW (var, LVar);  t: TEXT;
   BEGIN
     v.used := TRUE;
+    IF v.up_level AND v.owner # NIL THEN
+      IF v.owner = u.cur_proc THEN
+        u.cur_proc.frame_used := TRUE;
+      ELSE
+        (* A variable of an enclosing procedure, in its frame. *)
+        t := NewTemp (u);
+        Emit (u, t & " = getelementptr i8, ptr "
+                   & FrameOf (u, v.owner.level) & ", i64 "
+                   & Fmt.Int (v.frame_off + offset));
+        RETURN t;
+      END;
+    ELSIF v.owner # NIL AND v.owner # u.cur_proc THEN
+      Fatal (u, "reference to a non-up-level variable of another procedure");
+    END;
     IF offset = 0 THEN RETURN v.name END;
     t := NewTemp (u);
     Emit (u, t & " = getelementptr i8, ptr " & v.name & ", i64 "
@@ -492,6 +601,10 @@ PROCEDURE end_unit (u: U) =
 
     Wr.PutText (wr, TextWr.ToText (u.funcs));
 
+    VAR d := u.helpers; BEGIN
+      WHILE d # NIL DO Wr.PutText (wr, d.text & Wr.EOL); d := d.next END;
+    END;
+
     (* Declarations for procedures used but not defined here. *)
     pl := u.procs;
     WHILE pl # NIL DO
@@ -508,10 +621,20 @@ PROCEDURE end_unit (u: U) =
       END;
       pl := pl.next;
     END;
+    VAR d := u.decls; BEGIN
+      WHILE d # NIL DO
+        IF NOT defined.get (d.name, ref) AND NOT seen.get (d.name, ref) THEN
+          EVAL seen.put (d.name, d);
+          Wr.PutText (wr, d.text & Wr.EOL);
+        END;
+        d := d.next;
+      END;
+    END;
     Wr.PutText (wr, Wr.EOL);
 
     Wr.PutText (wr, "attributes #0 = { uwtable \"frame-pointer\"=\"all\" }"
                       & Wr.EOL);
+    Wr.PutText (wr, "attributes #1 = { returns_twice }" & Wr.EOL);
     Wr.Flush (wr);
   END end_unit;
 
@@ -612,13 +735,14 @@ PROCEDURE import_global (u: U; name: Name; byte_size: ByteSize;
   END import_global;
 
 PROCEDURE declare_segment (u: U; name: Name; <*UNUSED*> typeid: TypeUID;
-                           <*UNUSED*> is_const: BOOLEAN): Var =
+                           is_const: BOOLEAN): Var =
   VAR v := NewVar (u, VarKind.Global, 0, 1, Type.Struct);
   BEGIN
     IF name = M3ID.NoID
       THEN v.name := "@seg." & Fmt.Int (v.id);
       ELSE v.name := GlobalName (name);
     END;
+    IF NOT is_const AND u.module_data = NIL THEN u.module_data := v END;
     RETURN v;
   END declare_segment;
 
@@ -779,6 +903,9 @@ PROCEDURE import_procedure (u: U; name: Name; n_params: INTEGER;
   VAR p := NewProc (u, name, n_params, ret_type);
   BEGIN
     p.imported := TRUE;
+    p.returns_twice := Text.Equal (p.name, "@_setjmp")
+                         OR Text.Equal (p.name, "@setjmp")
+                         OR Text.Equal (p.name, "@sigsetjmp");
     RETURN p;
   END import_procedure;
 
@@ -790,12 +917,10 @@ PROCEDURE declare_procedure (u: U; name: Name; n_params: INTEGER;
                              <*UNUSED*> return_typename: Name): Proc =
   VAR p: LProc;
   BEGIN
-    IF parent # NIL OR level # 0 THEN
-      Fatal (u, "nested procedures are not supported yet: "
-                  & M3ID.ToText (name));
-    END;
+    EVAL parent;
     p := NewProc (u, name, n_params, return_type);
     p.exported := exported;
+    p.level := level;
     RETURN p;
   END declare_procedure;
 
@@ -807,22 +932,55 @@ PROCEDURE Signature (p: LProc; names: BOOLEAN): TEXT =
     IF Text.Length (attr) > 0 THEN
       attr := Text.Sub (attr, 1) & " ";   (* drop the leading space *)
     END;
-    res := attr & LType (p.return) & " " & p.name & "(";
+    res := attr & ReturnType (p) & " " & p.name & "(";
     FOR i := 0 TO p.n_declared - 1 DO
       v := p.params[i];
       IF i > 0 THEN res := res & ", " END;
       res := res & LType (v.type) & ExtAttr (v.type);
       IF names THEN res := res & " %p." & Fmt.Int (v.id) END;
     END;
-    RETURN res & ")";
+    IF p.level > 0 THEN
+      (* The static link is the last parameter. *)
+      IF p.n_declared > 0 THEN res := res & ", " END;
+      res := res & "ptr";
+      IF names THEN res := res & " %sl" END;
+    END;
+    res := res & ")";
+    IF p.returns_twice THEN res := res & " #1" END;
+    RETURN res;
   END Signature;
 
 PROCEDURE Alloca (u: U; v: LVar) =
   BEGIN
-    Wr.PutText (u.allocas, "  " & v.name & " = alloca ["
-                             & Fmt.Int (v.size) & " x i8], align "
-                             & Fmt.Int (MAX (v.align, 1)) & Wr.EOL);
+    IF v.up_level THEN
+      Wr.PutText (u.allocas, "  " & v.name
+                               & " = getelementptr i8, ptr %frame, i64 "
+                               & Fmt.Int (v.frame_off) & Wr.EOL);
+      u.cur_proc.frame_used := TRUE;
+    ELSE
+      Wr.PutText (u.allocas, "  " & v.name & " = alloca ["
+                               & Fmt.Int (MAX (v.size, 1)) & " x i8], align "
+                               & Fmt.Int (MAX (v.align, 1)) & Wr.EOL);
+    END;
   END Alloca;
+
+PROCEDURE InFrame (p: LProc; v: LVar) =
+  (* Give "v" a place in "p"'s frame.  Offset 0 is the static link. *)
+  VAR a := MAX (v.align, 1);  off: INTEGER;
+  BEGIN
+    IF p.frame_size < 8 THEN p.frame_size := 8; p.frame_align := 8 END;
+    off := (p.frame_size + a - 1) DIV a * a;
+    v.up_level := TRUE;
+    v.frame_off := off;
+    p.frame_size := off + v.size;
+    p.frame_align := MAX (p.frame_align, a);
+  END InFrame;
+
+PROCEDURE ReturnType (p: LProc): TEXT =
+  BEGIN
+    IF p.returns_twice THEN RETURN "i32" END;  (* C "int" *)
+    RETURN LType (p.return);
+  END ReturnType;
 
 PROCEDURE NewLocal (u: U; kind: VarKind; byte_size: ByteSize;
                     alignment: Alignment; type: Type): LVar =
@@ -841,10 +999,13 @@ PROCEDURE declare_local (u: U; <*UNUSED*> name: Name; byte_size: ByteSize;
   VAR v := NewLocal (u, VarKind.Local, byte_size, alignment, type);
   BEGIN
     EVAL in_memory;
-    IF up_level THEN Fatal (u, "up-level locals are not supported yet") END;
     IF u.cur_proc # NIL THEN
+      v.owner := u.cur_proc;
+      IF up_level THEN InFrame (v.owner, v) END;
       Alloca (u, v);
     ELSIF u.decl_proc # NIL THEN
+      v.owner := u.decl_proc;
+      IF up_level THEN InFrame (v.owner, v) END;
       u.decl_proc.locals := NEW (VarList, v := v,
                                  next := u.decl_proc.locals);
     ELSE
@@ -863,12 +1024,8 @@ PROCEDURE declare_param (u: U; <*UNUSED*> name: Name; byte_size: ByteSize;
       p := u.decl_proc;
   BEGIN
     IF p = NIL THEN Fatal (u, "declare_param without a procedure") END;
-    IF type = Type.Struct THEN
-      Fatal (u, "structure parameters are not supported yet");
-    END;
-    IF up_level AND NOT p.imported THEN
-      Fatal (u, "up-level parameters are not supported yet");
-    END;
+    v.owner := p;
+    IF up_level AND NOT p.imported THEN InFrame (p, v) END;
     IF p.n_declared < NUMBER (p.params^) THEN
       p.params[p.n_declared] := v;
       INC (p.n_declared);
@@ -884,6 +1041,7 @@ PROCEDURE declare_temp (u: U; byte_size: ByteSize; alignment: Alignment;
   VAR v := NewLocal (u, VarKind.Local, byte_size, alignment, type);
   BEGIN
     IF u.cur_proc = NIL THEN Fatal (u, "declare_temp outside a procedure") END;
+    v.owner := u.cur_proc;
     Alloca (u, v);
     RETURN v;
   END declare_temp;
@@ -903,17 +1061,27 @@ PROCEDURE begin_procedure (u: U; proc: Proc) =
     FOR i := 0 TO p.n_declared - 1 DO
       v := p.params[i];
       Alloca (u, v);
-      Wr.PutText (u.allocas, "  store " & LType (v.type) & " %p."
-                               & Fmt.Int (v.id) & ", ptr " & v.name
-                               & ", align " & Fmt.Int (MAX (v.align, 1))
-                               & Wr.EOL);
+      IF v.type = Type.Struct THEN
+        (* The caller passes the address; the callee makes the copy. *)
+        Wr.PutText (u.allocas, "  call void @llvm.memcpy.p0.p0.i64(ptr "
+                                 & v.name & ", ptr %p." & Fmt.Int (v.id)
+                                 & ", i64 " & Fmt.Int (v.size)
+                                 & ", i1 false)" & Wr.EOL);
+        UseMemIntrinsic (u, "memcpy");
+      ELSE
+        Wr.PutText (u.allocas, "  store " & LType (v.type) & " %p."
+                                 & Fmt.Int (v.id) & ", ptr " & v.name
+                                 & ", align "
+                                 & Fmt.Int (AlignAt (v.align, 0, v.type))
+                                 & Wr.EOL);
+      END;
     END;
     l := p.locals;
     WHILE l # NIL DO Alloca (u, l.v); l := l.next END;
   END begin_procedure;
 
 PROCEDURE end_procedure (u: U; proc: Proc) =
-  VAR p := NARROW (proc, LProc);
+  VAR p := NARROW (proc, LProc);  frame := "";  body: TEXT;
   BEGIN
     IF p # u.cur_proc THEN Fatal (u, "end_procedure does not match") END;
     IF NOT u.terminated THEN
@@ -922,11 +1090,25 @@ PROCEDURE end_procedure (u: U; proc: Proc) =
         ELSE EmitTerm (u, "unreachable");
       END;
     END;
+    IF p.level > 0 OR p.frame_used OR p.frame_size > 8 THEN
+      frame := "  %frame = alloca [" & Fmt.Int (MAX (p.frame_size, 8))
+                 & " x i8], align " & Fmt.Int (MAX (p.frame_align, 8))
+                 & Wr.EOL;
+      IF p.level > 0 THEN
+        frame := frame & "  store ptr %sl, ptr %frame, align 8" & Wr.EOL;
+      END;
+    END;
+    body := TextWr.ToText (u.body);
+    IF p.calls_setjmp THEN
+      (* Locals must survive longjmp: keep them in memory. *)
+      body := Replace (body, " = load ", " = load volatile ");
+      body := Replace (body, "  store ", "  store volatile ");
+    END;
     Wr.PutText (u.funcs, "define " & Linkage (p.exported)
                            & Signature (p, TRUE) & " #0 {" & Wr.EOL
-                           & "entry:" & Wr.EOL
+                           & "entry:" & Wr.EOL & frame
                            & TextWr.ToText (u.allocas)
-                           & TextWr.ToText (u.body)
+                           & body
                            & "}" & Wr.EOL & Wr.EOL);
     u.cur_proc := NIL;
     u.allocas := NIL;
@@ -1032,43 +1214,96 @@ PROCEDURE pop (u: U; <*UNUSED*> type: Type) =
 
 (*-------------------------------------------------------------- calls ---*)
 
-PROCEDURE start_call_direct (u: U; proc: Proc; level: INTEGER;
-                             <*UNUSED*> type: Type) =
+PROCEDURE StartCall (u: U; p: LProc) =
   BEGIN
-    IF level # 0 THEN
-      Fatal (u, "calls to nested procedures are not supported yet");
-    END;
-    u.call_proc := NARROW (proc, LProc);
+    u.call_proc := p;
     u.call_args := "";
     u.call_n := 0;
+    u.call_last := NIL;
+    u.in_call := TRUE;
+    u.call_aborted := FALSE;
+    u.call_sl := NIL;
+  END StartCall;
+
+PROCEDURE EndCall (u: U) =
+  BEGIN
+    u.call_proc := NIL;
+    u.call_args := "";
+    u.in_call := FALSE;
+    u.call_aborted := FALSE;
+    u.call_sl := NIL;
+  END EndCall;
+
+PROCEDURE AddArg (u: U; arg: TEXT) =
+  BEGIN
+    IF u.call_n > 0 THEN u.call_args := u.call_args & ", " END;
+    u.call_args := u.call_args & arg;
+    INC (u.call_n);
+  END AddArg;
+
+PROCEDURE start_call_direct (u: U; proc: Proc; <*UNUSED*> level: INTEGER;
+                             <*UNUSED*> type: Type) =
+  BEGIN
+    StartCall (u, NARROW (proc, LProc));
   END start_call_direct;
 
 PROCEDURE pop_param (u: U; type: MType) =
-  VAR p := u.call_proc;  x := Pop (u);  ptype: Type := type;
+  VAR p := u.call_proc;  x := Pop (u);  ptype: Type := type;  val: TEXT;
   BEGIN
-    IF p = NIL THEN Fatal (u, "pop_param outside a call") END;
-    IF u.call_n < p.n_declared THEN ptype := p.params[u.call_n].type END;
-    IF u.call_n > 0 THEN u.call_args := u.call_args & ", " END;
-    u.call_args := u.call_args & LType (ptype) & ExtAttr (ptype) & " "
-                     & Cvt (u, x.val, x.type, ptype);
-    INC (u.call_n);
+    IF NOT u.in_call THEN Fatal (u, "pop_param outside a call") END;
+    IF p # NIL AND u.call_n < p.n_declared THEN
+      ptype := p.params[u.call_n].type;
+    END;
+    val := Cvt (u, Cvt (u, x.val, x.type, StackType (type)),
+                StackType (type), ptype);
+    u.call_last := Cvt (u, x.val, x.type, Type.Word64);
+    AddArg (u, LType (ptype) & ExtAttr (ptype) & " " & val);
   END pop_param;
 
 PROCEDURE call_direct (u: U; proc: Proc; type: Type) =
-  VAR p := NARROW (proc, LProc);  r: TEXT;  call: TEXT;
+  VAR p := NARROW (proc, LProc);  r: TEXT;  call, attr := "";
   BEGIN
+    IF u.call_aborted THEN
+      IF type # Type.Void THEN Push (u, StackType (type), "poison") END;
+      EndCall (u);
+      RETURN;
+    END;
+    IF p.imported AND Text.Equal (p.name, "@alloca") AND u.call_n = 1 THEN
+      (* The C library's alloca is a compiler builtin. *)
+      r := NewTemp (u);
+      Emit (u, r & " = alloca i8, i64 " & u.call_last & ", align 16");
+      Push (u, Type.Addr, r);
+      EndCall (u);
+      RETURN;
+    END;
     p.used := TRUE;
-    call := "call " & LType (p.return) & " " & p.name & "("
-              & u.call_args & ")";
+    (* The front end calls a FINALLY handler procedure directly without
+       its declared "activation" parameter (see TryFinStmt.Compile2);
+       pass zero for missing parameters so the static link lands last. *)
+    WHILE u.call_n < p.n_declared DO
+      WITH t = p.params[u.call_n].type DO
+        AddArg (u, LType (t) & ExtAttr (t) & " zeroinitializer");
+      END;
+    END;
+    IF p.level > 0 THEN AddArg (u, "ptr " & FrameOf (u, p.level - 1)) END;
+    IF p.returns_twice THEN
+      u.cur_proc.calls_setjmp := TRUE;
+      attr := " #1";
+    END;
+    call := "call " & ReturnType (p) & " " & p.name & "("
+              & u.call_args & ")" & attr;
     IF type = Type.Void THEN
       Emit (u, call);
     ELSE
       r := NewTemp (u);
       Emit (u, r & " = " & call);
-      Push (u, StackType (type), Cvt (u, r, p.return, StackType (type)));
+      IF p.returns_twice
+        THEN r := Cvt (u, r, Type.Int32, StackType (type));
+        ELSE r := Cvt (u, r, p.return, StackType (type));
+      END;
+      Push (u, StackType (type), r);
     END;
-    u.call_proc := NIL;
-    u.call_args := "";
+    EndCall (u);
   END call_direct;
 
 PROCEDURE load_procedure (u: U; proc: Proc) =
@@ -1077,6 +1312,1123 @@ PROCEDURE load_procedure (u: U; proc: Proc) =
     p.used := TRUE;
     Push (u, Type.Addr, p.name);
   END load_procedure;
+
+(*=================================================== Phase 2 helpers ===*)
+
+PROCEDURE IsFloat (t: Type): BOOLEAN =
+  BEGIN
+    RETURN t = Type.Reel OR t = Type.LReel OR t = Type.XReel;
+  END IsFloat;
+
+PROCEDURE FloatBits (t: Type): INTEGER =
+  VAR l := LType (t);
+  BEGIN
+    IF Text.Equal (l, "float") THEN RETURN 32 END;
+    IF Text.Equal (l, "double") THEN RETURN 64 END;
+    RETURN 128;
+  END FloatBits;
+
+PROCEDURE FloatSuffix (t: Type): TEXT =
+  (* The overload suffix of a floating-point intrinsic. *)
+  BEGIN
+    RETURN "f" & Fmt.Int (FloatBits (t));
+  END FloatSuffix;
+
+PROCEDURE NatAlign (t: Type): INTEGER =
+  BEGIN
+    IF t = Type.XReel THEN RETURN MAX (Target.Extended.align DIV 8, 1) END;
+    RETURN MAX (TypeBytes (t), 1);
+  END NatAlign;
+
+PROCEDURE Replace (t, old, new: TEXT): TEXT =
+  VAR wr := TextWr.New ();  start := 0;  i: INTEGER;
+      n := Text.Length (old);
+  BEGIN
+    LOOP
+      i := Text.FindChar (t, Text.GetChar (old, 0), start);
+      IF i < 0 THEN EXIT END;
+      IF Text.Equal (Text.Sub (t, i, n), old) THEN
+        Wr.PutText (wr, Text.Sub (t, start, i - start));
+        Wr.PutText (wr, new);
+        start := i + n;
+      ELSE
+        Wr.PutText (wr, Text.Sub (t, start, i + 1 - start));
+        start := i + 1;
+      END;
+    END;
+    Wr.PutText (wr, Text.Sub (t, start));
+    RETURN TextWr.ToText (wr);
+  END Replace;
+
+PROCEDURE Find (l: DeclList; name: TEXT): BOOLEAN =
+  BEGIN
+    WHILE l # NIL DO
+      IF Text.Equal (l.name, name) THEN RETURN TRUE END;
+      l := l.next;
+    END;
+    RETURN FALSE;
+  END Find;
+
+PROCEDURE AddDecl (u: U; name, text: TEXT) =
+  (* Declare the external function "name" (with "@"), once. *)
+  BEGIN
+    IF NOT Find (u.decls, name) THEN
+      u.decls := NEW (DeclList, name := name, text := text, next := u.decls);
+    END;
+  END AddDecl;
+
+PROCEDURE HaveHelper (u: U; name: TEXT): BOOLEAN =
+  BEGIN
+    RETURN Find (u.helpers, name);
+  END HaveHelper;
+
+PROCEDURE AddHelper (u: U; name, text: TEXT) =
+  BEGIN
+    u.helpers := NEW (DeclList, name := name, text := text, next := u.helpers);
+  END AddHelper;
+
+PROCEDURE UseMemIntrinsic (u: U; which: TEXT) =
+  BEGIN
+    IF Text.Equal (which, "memset") THEN
+      AddDecl (u, "@llvm.memset.p0.i64",
+               "declare void @llvm.memset.p0.i64(ptr, i8, i64, i1)");
+    ELSE
+      AddDecl (u, "@llvm." & which & ".p0.p0.i64",
+               "declare void @llvm." & which
+                 & ".p0.p0.i64(ptr, ptr, i64, i1)");
+    END;
+  END UseMemIntrinsic;
+
+PROCEDURE FrameOf (u: U; level: INTEGER): TEXT =
+  (* The frame of the enclosing procedure at nesting level "level". *)
+  VAR c := u.cur_proc;  f := "%sl";  lev: INTEGER;  t: TEXT;
+  BEGIN
+    IF level = c.level THEN c.frame_used := TRUE; RETURN "%frame" END;
+    IF level > c.level OR level < 0 THEN
+      Fatal (u, "bad static nesting level " & Fmt.Int (level));
+    END;
+    lev := c.level - 1;
+    WHILE lev > level DO
+      t := NewTemp (u);
+      Emit (u, t & " = load ptr, ptr " & f & ", align 8");
+      f := t;
+      DEC (lev);
+    END;
+    RETURN f;
+  END FrameOf;
+
+PROCEDURE PopAs (u: U; t: Type): TEXT =
+  (* Pop s0 and convert it to "t". *)
+  VAR x := Pop (u);
+  BEGIN
+    RETURN Cvt (u, x.val, x.type, t);
+  END PopAs;
+
+PROCEDURE Instr (u: U; rhs: TEXT): TEXT =
+  (* Emit "%t = rhs" and return %t. *)
+  VAR t := NewTemp (u);
+  BEGIN
+    Emit (u, t & " = " & rhs);
+    RETURN t;
+  END Instr;
+
+PROCEDURE Bits (t: Type): TEXT =
+  BEGIN
+    RETURN Fmt.Int (IntBits (t));
+  END Bits;
+
+PROCEDURE SignedConst (bits: INTEGER; w: Word.T): TEXT =
+  (* "w" truncated to "bits" bits, written as a signed decimal. *)
+  BEGIN
+    IF bits < BITSIZE (INTEGER) THEN
+      w := Word.And (w, Word.Minus (Word.LeftShift (1, bits), 1));
+      IF Word.And (w, Word.LeftShift (1, bits - 1)) # 0 THEN
+        w := Word.Or (w, Word.Not (Word.Minus (Word.LeftShift (1, bits), 1)));
+      END;
+    END;
+    RETURN Fmt.Int (w);  (* Word.T is INTEGER *)
+  END SignedConst;
+
+PROCEDURE LowMask (bits, n: INTEGER): TEXT =
+  (* n ones, in a "bits"-bit integer. *)
+  BEGIN
+    IF n >= bits THEN RETURN "-1" END;
+    RETURN SignedConst (bits, Word.Minus (Word.LeftShift (1, n), 1));
+  END LowMask;
+
+(*--------------------------------------------------------- faults ---*)
+
+PROCEDURE ReportFault (u: U): LProc =
+  VAR pl := u.procs;  p: LProc;
+  BEGIN
+    WHILE pl # NIL DO
+      IF Text.Equal (pl.p.name, "@RTHooks__ReportFault") THEN RETURN pl.p END;
+      pl := pl.next;
+    END;
+    p := NEW (LProc, id := u.next_proc, name := "@RTHooks__ReportFault",
+              return := Type.Void, imported := TRUE);
+    INC (u.next_proc);
+    p.params := NEW (REF ARRAY OF LVar, 2);
+    p.params[0] := NEW (LVar, id := 0, type := Type.Addr);
+    p.params[1] := NEW (LVar, id := 0, type := Type.Word64);
+    p.n_declared := 2;
+    u.procs := NEW (ProcList, p := p, next := u.procs);
+    RETURN p;
+  END ReportFault;
+
+PROCEDURE Fault (u: U; code: RuntimeError) =
+  VAR p := ReportFault (u);  m := "null";
+      info := ORD (code) + u.source_line * 32;
+  BEGIN
+    p.used := TRUE;
+    IF u.module_data # NIL THEN
+      u.module_data.used := TRUE;
+      m := u.module_data.name;
+    END;
+    Emit (u, "call void " & p.name & "(ptr " & m & ", i64 "
+               & Fmt.Int (info) & ")");
+    EmitTerm (u, "unreachable");
+  END Fault;
+
+PROCEDURE FaultIf (u: U; cond: TEXT; code: RuntimeError) =
+  (* If the i1 "cond" is true, report "code". *)
+  VAR bad := NewBlock (u, "fault.");  ok := NewBlock (u, "ok.");
+  BEGIN
+    EmitTerm (u, "br i1 " & cond & ", label %" & bad & ", label %" & ok);
+    StartBlock (u, bad);
+    Fault (u, code);
+    StartBlock (u, ok);
+  END FaultIf;
+
+(*---------------------------------------------------- floating point ---*)
+
+PROCEDURE PrecType (p: Target.Precision): Type =
+  BEGIN
+    CASE p OF
+    | Target.Precision.Short    => RETURN Type.Reel;
+    | Target.Precision.Long     => RETURN Type.LReel;
+    | Target.Precision.Extended => RETURN Type.XReel;
+    END;
+  END PrecType;
+
+PROCEDURE Hex16 (READONLY b: ARRAY OF TFloat.Byte; start: INTEGER): TEXT =
+  (* Bytes b[start..start+7], little-endian, as 16 hex digits. *)
+  VAR t := "";
+  BEGIN
+    FOR i := start + 7 TO start BY -1 DO t := t & Hex2 (b[i]) END;
+    RETURN t;
+  END Hex16;
+
+PROCEDURE FloatLit (u: U; t: Type; READONLY f: Target.Float): TEXT =
+  VAR buf: ARRAY [0..15] OF TFloat.Byte;  g: Target.Float;  n: INTEGER;
+  BEGIN
+    IF FloatBits (t) = 128 THEN
+      IF TFloat.Prec (f) # Target.Precision.Extended THEN
+        IF NOT TFloat.FloatF (f, Target.Precision.Extended, g) THEN
+          Fatal (u, "bad floating-point constant");
+        END;
+      ELSE
+        g := f;
+      END;
+      n := TFloat.ToBytes (g, buf);
+      IF n # 16 THEN Fatal (u, "bad EXTENDED constant") END;
+      RETURN "0xL" & Hex16 (buf, 0) & Hex16 (buf, 8);
+    END;
+    (* float and double constants are written as doubles *)
+    IF TFloat.Prec (f) # Target.Precision.Long THEN
+      IF NOT TFloat.FloatF (f, Target.Precision.Long, g) THEN
+        Fatal (u, "bad floating-point constant");
+      END;
+    ELSE
+      g := f;
+    END;
+    n := TFloat.ToBytes (g, buf);
+    IF n # 8 THEN Fatal (u, "bad LONGREAL constant") END;
+    RETURN "0x" & Hex16 (buf, 0);
+  END FloatLit;
+
+PROCEDURE init_float (u: U; byte_offset: ByteOffset;
+                      READONLY f: Target.Float) =
+  VAR t := PrecType (TFloat.Prec (f));
+  BEGIN
+    InitField (u, byte_offset, LType (t), FloatLit (u, t, f),
+               TypeBytes (t));
+  END init_float;
+
+PROCEDURE load_float (u: U; type: RType; READONLY f: Target.Float) =
+  BEGIN
+    Push (u, type, FloatLit (u, type, f));
+  END load_float;
+
+(*----------------------------------------------------- control flow ---*)
+
+PROCEDURE Pred (t: Type; op: CompareOp): TEXT =
+  (* "icmp xx" or "fcmp xx" *)
+  BEGIN
+    IF IsFloat (t) THEN
+      CASE op OF
+      | CompareOp.EQ => RETURN "fcmp oeq";
+      | CompareOp.NE => RETURN "fcmp une";
+      | CompareOp.GT => RETURN "fcmp ogt";
+      | CompareOp.GE => RETURN "fcmp oge";
+      | CompareOp.LT => RETURN "fcmp olt";
+      | CompareOp.LE => RETURN "fcmp ole";
+      END;
+    ELSIF IsSigned (t) THEN
+      CASE op OF
+      | CompareOp.EQ => RETURN "icmp eq";
+      | CompareOp.NE => RETURN "icmp ne";
+      | CompareOp.GT => RETURN "icmp sgt";
+      | CompareOp.GE => RETURN "icmp sge";
+      | CompareOp.LT => RETURN "icmp slt";
+      | CompareOp.LE => RETURN "icmp sle";
+      END;
+    ELSE
+      CASE op OF
+      | CompareOp.EQ => RETURN "icmp eq";
+      | CompareOp.NE => RETURN "icmp ne";
+      | CompareOp.GT => RETURN "icmp ugt";
+      | CompareOp.GE => RETURN "icmp uge";
+      | CompareOp.LT => RETURN "icmp ult";
+      | CompareOp.LE => RETURN "icmp ule";
+      END;
+    END;
+  END Pred;
+
+PROCEDURE Compare2 (u: U; t: ZType; op: CompareOp): TEXT =
+  (* Pop s0 and s1; return the i1 "s1 op s0". *)
+  VAR b := PopAs (u, t);  a := PopAs (u, t);
+  BEGIN
+    RETURN Instr (u, Pred (t, op) & " " & LType (t) & " " & a & ", " & b);
+  END Compare2;
+
+PROCEDURE if_compare (u: U; type: ZType; op: CompareOp; label: Label;
+                      <*UNUSED*> frequency: Frequency) =
+  VAR c := Compare2 (u, type, op);  next := NewBlock (u, "B.");
+  BEGIN
+    EmitTerm (u, "br i1 " & c & ", label %" & LabelName (label)
+                   & ", label %" & next);
+    StartBlock (u, next);
+  END if_compare;
+
+PROCEDURE case_jump (u: U; type: IType; READONLY labels: ARRAY OF Label) =
+  VAR x := PopAs (u, type);  def := NewBlock (u, "nocase.");
+      wr := TextWr.New ();  lt := LType (type);
+  BEGIN
+    Wr.PutText (wr, "switch " & lt & " " & x & ", label %" & def & " [");
+    FOR i := 0 TO LAST (labels) DO
+      Wr.PutText (wr, " " & lt & " " & Fmt.Int (i) & ", label %"
+                        & LabelName (labels[i]));
+    END;
+    Wr.PutText (wr, " ]");
+    EmitTerm (u, TextWr.ToText (wr));
+    StartBlock (u, def);
+    EmitTerm (u, "unreachable");
+  END case_jump;
+
+(*------------------------------------------------- loads and stores ---*)
+
+PROCEDURE Offset (u: U; a: TEXT; o: ByteOffset): TEXT =
+  BEGIN
+    IF o = 0 THEN RETURN a END;
+    RETURN Instr (u, "getelementptr i8, ptr " & a & ", i64 " & Fmt.Int (o));
+  END Offset;
+
+PROCEDURE load_indirect (u: U; o: ByteOffset; t: MType; z: ZType) =
+  VAR a := Offset (u, PopAs (u, Type.Addr), o);  r: TEXT;
+  BEGIN
+    r := Instr (u, "load " & LType (t) & ", ptr " & a & ", align "
+                     & Fmt.Int (NatAlign (t)));
+    Push (u, z, Cvt (u, r, t, z));
+  END load_indirect;
+
+PROCEDURE store_indirect (u: U; o: ByteOffset; z: ZType; t: MType) =
+  VAR x := Pop (u);  a := Offset (u, PopAs (u, Type.Addr), o);  val: TEXT;
+  BEGIN
+    val := Cvt (u, Cvt (u, x.val, x.type, z), z, t);
+    Emit (u, "store " & LType (t) & " " & val & ", ptr " & a & ", align "
+               & Fmt.Int (NatAlign (t)));
+  END store_indirect;
+
+(*------------------------------------------------------- arithmetic ---*)
+
+PROCEDURE compare (u: U; t: ZType; r: IType; op: CompareOp) =
+  VAR c := Compare2 (u, t, op);
+  BEGIN
+    Push (u, r, Instr (u, "zext i1 " & c & " to " & LType (r)));
+  END compare;
+
+PROCEDURE Binary (u: U; t: Type; iop, fop: TEXT) =
+  VAR b := PopAs (u, t);  a := PopAs (u, t);  op := iop;
+  BEGIN
+    IF IsFloat (t) THEN op := fop END;
+    Push (u, t, Instr (u, op & " " & LType (t) & " " & a & ", " & b));
+  END Binary;
+
+PROCEDURE add (u: U; t: AType) =
+  BEGIN Binary (u, t, "add", "fadd") END add;
+
+PROCEDURE subtract (u: U; t: AType) =
+  BEGIN Binary (u, t, "sub", "fsub") END subtract;
+
+PROCEDURE multiply (u: U; t: AType) =
+  BEGIN Binary (u, t, "mul", "fmul") END multiply;
+
+PROCEDURE divide (u: U; t: RType) =
+  BEGIN Binary (u, t, "fdiv", "fdiv") END divide;
+
+PROCEDURE negate (u: U; t: AType) =
+  VAR a := PopAs (u, t);
+  BEGIN
+    IF IsFloat (t)
+      THEN Push (u, t, Instr (u, "fneg " & LType (t) & " " & a));
+      ELSE Push (u, t, Instr (u, "sub " & LType (t) & " 0, " & a));
+    END;
+  END negate;
+
+PROCEDURE abs (u: U; t: AType) =
+  VAR a := PopAs (u, t);  lt := LType (t);  n, c: TEXT;
+  BEGIN
+    IF IsFloat (t) THEN
+      AddDecl (u, "@llvm.fabs." & FloatSuffix (t),
+               "declare " & lt & " @llvm.fabs." & FloatSuffix (t)
+                 & "(" & lt & ")");
+      Push (u, t, Instr (u, "call " & lt & " @llvm.fabs." & FloatSuffix (t)
+                              & "(" & lt & " " & a & ")"));
+    ELSIF IsSigned (t) THEN
+      n := Instr (u, "sub " & lt & " 0, " & a);
+      c := Instr (u, "icmp slt " & lt & " " & a & ", 0");
+      Push (u, t, Instr (u, "select i1 " & c & ", " & lt & " " & n & ", "
+                              & lt & " " & a));
+    ELSE
+      Push (u, t, a);
+    END;
+  END abs;
+
+PROCEDURE MaxMin (u: U; t: ZType; op: CompareOp) =
+  (* M3C: s0 op s1 ? s0 : s1 *)
+  VAR b := PopAs (u, t);  a := PopAs (u, t);  lt := LType (t);  c: TEXT;
+  BEGIN
+    c := Instr (u, Pred (t, op) & " " & lt & " " & b & ", " & a);
+    Push (u, t, Instr (u, "select i1 " & c & ", " & lt & " " & b & ", "
+                            & lt & " " & a));
+  END MaxMin;
+
+PROCEDURE max (u: U; t: ZType) =
+  BEGIN MaxMin (u, t, CompareOp.GT) END max;
+
+PROCEDURE min (u: U; t: ZType) =
+  BEGIN MaxMin (u, t, CompareOp.LT) END min;
+
+PROCEDURE cvt_int (u: U; t: RType; r: IType; op: ConvertOp) =
+  VAR a := PopAs (u, t);  lt := LType (t);  sfx := FloatSuffix (t);
+      fn, v: TEXT;
+  BEGIN
+    CASE op OF
+    | ConvertOp.Trunc =>
+        v := Instr (u, "fptosi " & lt & " " & a & " to i64");
+    | ConvertOp.Round =>
+        IF FloatBits (t) = 128 THEN
+          AddDecl (u, "@llroundq", "declare i64 @llroundq(fp128)");
+          v := Instr (u, "call i64 @llroundq(fp128 " & a & ")");
+        ELSE
+          fn := "@llvm.llround.i64." & sfx;
+          AddDecl (u, fn, "declare i64 " & fn & "(" & lt & ")");
+          v := Instr (u, "call i64 " & fn & "(" & lt & " " & a & ")");
+        END;
+    | ConvertOp.Floor, ConvertOp.Ceiling =>
+        IF FloatBits (t) = 128 THEN
+          IF op = ConvertOp.Floor THEN fn := "@floorq" ELSE fn := "@ceilq" END;
+        ELSIF op = ConvertOp.Floor THEN
+          fn := "@llvm.floor." & sfx;
+        ELSE
+          fn := "@llvm.ceil." & sfx;
+        END;
+        AddDecl (u, fn, "declare " & lt & " " & fn & "(" & lt & ")");
+        v := Instr (u, "call " & lt & " " & fn & "(" & lt & " " & a & ")");
+        v := Instr (u, "fptosi " & lt & " " & v & " to i64");
+    END;
+    Push (u, r, Cvt (u, v, Type.Int64, r));
+  END cvt_int;
+
+PROCEDURE cvt_float (u: U; t: AType; r: RType) =
+  VAR x := Pop (u);
+  BEGIN
+    Push (u, r, Cvt (u, Cvt (u, x.val, x.type, t), t, r));
+  END cvt_float;
+
+PROCEDURE DivMod (u: U; t: IType; a, b: Sign; is_div: BOOLEAN) =
+  VAR y := PopAs (u, t);  x := PopAs (u, t);  lt := LType (t);
+      q, r, c1, c2, adj: TEXT;
+  BEGIN
+    IF NOT IsSigned (t) THEN
+      IF is_div
+        THEN Push (u, t, Instr (u, "udiv " & lt & " " & x & ", " & y));
+        ELSE Push (u, t, Instr (u, "urem " & lt & " " & x & ", " & y));
+      END;
+      RETURN;
+    END;
+    IF a = b AND a # Sign.Unknown THEN
+      IF is_div
+        THEN Push (u, t, Instr (u, "sdiv " & lt & " " & x & ", " & y));
+        ELSE Push (u, t, Instr (u, "srem " & lt & " " & x & ", " & y));
+      END;
+      RETURN;
+    END;
+    (* Round toward minus infinity. *)
+    q := Instr (u, "sdiv " & lt & " " & x & ", " & y);
+    r := Instr (u, "srem " & lt & " " & x & ", " & y);
+    c1 := Instr (u, "icmp ne " & lt & " " & r & ", 0");
+    c2 := Instr (u, "xor " & lt & " " & r & ", " & y);
+    c2 := Instr (u, "icmp slt " & lt & " " & c2 & ", 0");
+    adj := Instr (u, "and i1 " & c1 & ", " & c2);
+    IF is_div THEN
+      c1 := Instr (u, "sub " & lt & " " & q & ", 1");
+      Push (u, t, Instr (u, "select i1 " & adj & ", " & lt & " " & c1
+                              & ", " & lt & " " & q));
+    ELSE
+      c1 := Instr (u, "add " & lt & " " & r & ", " & y);
+      Push (u, t, Instr (u, "select i1 " & adj & ", " & lt & " " & c1
+                              & ", " & lt & " " & r));
+    END;
+  END DivMod;
+
+PROCEDURE div (u: U; t: IType; a, b: Sign) =
+  BEGIN DivMod (u, t, a, b, TRUE) END div;
+
+PROCEDURE mod (u: U; t: IType; a, b: Sign) =
+  BEGIN DivMod (u, t, a, b, FALSE) END mod;
+
+(*------------------------------------------------------------- sets ---*)
+
+(* Sets larger than a word are arrays of 64-bit words in memory; the
+   operations on them call small internal helper functions, written
+   into the unit once each. *)
+
+PROCEDURE SetWords (u: U; s: ByteSize): TEXT =
+  BEGIN
+    IF s MOD 8 # 0 THEN
+      Fatal (u, "set size is not a multiple of 8 bytes: " & Fmt.Int (s));
+    END;
+    RETURN Fmt.Int (s DIV 8);
+  END SetWords;
+
+PROCEDURE SetLoopHelper (u: U; name, op: TEXT) =
+  (* a[i] := b[i] op c[i] for i in [0..n-1]; "op" computes %r from
+     %vb and %vc. *)
+  BEGIN
+    IF HaveHelper (u, name) THEN RETURN END;
+    AddHelper (u, name,
+      "define internal void " & name & "(i64 %n, ptr %a, ptr %b, ptr %c) {\n"
+      & "entry:\n  br label %loop\n"
+      & "loop:\n  %i = phi i64 [ 0, %entry ], [ %i1, %body ]\n"
+      & "  %done = icmp uge i64 %i, %n\n"
+      & "  br i1 %done, label %exit, label %body\n"
+      & "body:\n"
+      & "  %pb = getelementptr i64, ptr %b, i64 %i\n"
+      & "  %pc = getelementptr i64, ptr %c, i64 %i\n"
+      & "  %pa = getelementptr i64, ptr %a, i64 %i\n"
+      & "  %vb = load i64, ptr %pb, align 1\n"
+      & "  %vc = load i64, ptr %pc, align 1\n"
+      & op
+      & "  store i64 %r, ptr %pa, align 1\n"
+      & "  %i1 = add i64 %i, 1\n"
+      & "  br label %loop\n"
+      & "exit:\n  ret void\n}\n");
+  END SetLoopHelper;
+
+PROCEDURE SetBinary (u: U; s: ByteSize; name, op: TEXT) =
+  VAR c := PopAs (u, Type.Addr);  b := PopAs (u, Type.Addr);
+      a := PopAs (u, Type.Addr);
+  BEGIN
+    SetLoopHelper (u, name, op);
+    Emit (u, "call void " & name & "(i64 " & SetWords (u, s) & ", ptr " & a
+               & ", ptr " & b & ", ptr " & c & ")");
+  END SetBinary;
+
+PROCEDURE set_union (u: U; s: ByteSize) =
+  BEGIN
+    SetBinary (u, s, "@m3_set_union", "  %r = or i64 %vb, %vc\n");
+  END set_union;
+
+PROCEDURE set_difference (u: U; s: ByteSize) =
+  BEGIN
+    SetBinary (u, s, "@m3_set_difference",
+               "  %nc = xor i64 %vc, -1\n  %r = and i64 %vb, %nc\n");
+  END set_difference;
+
+PROCEDURE set_intersection (u: U; s: ByteSize) =
+  BEGIN
+    SetBinary (u, s, "@m3_set_intersection", "  %r = and i64 %vb, %vc\n");
+  END set_intersection;
+
+PROCEDURE set_sym_difference (u: U; s: ByteSize) =
+  BEGIN
+    SetBinary (u, s, "@m3_set_sym_difference", "  %r = xor i64 %vb, %vc\n");
+  END set_sym_difference;
+
+PROCEDURE SetTestHelper (u: U; name, op: TEXT) =
+  (* Returns 1 if, for every i in [0..n-1], the %x that "op" computes
+     from %va and %vb is zero. *)
+  BEGIN
+    IF HaveHelper (u, name) THEN RETURN END;
+    AddHelper (u, name,
+      "define internal i1 " & name & "(i64 %n, ptr %a, ptr %b) {\n"
+      & "entry:\n  br label %loop\n"
+      & "loop:\n  %i = phi i64 [ 0, %entry ], [ %i1, %body ]\n"
+      & "  %done = icmp uge i64 %i, %n\n"
+      & "  br i1 %done, label %yes, label %body\n"
+      & "body:\n"
+      & "  %pa = getelementptr i64, ptr %a, i64 %i\n"
+      & "  %pb = getelementptr i64, ptr %b, i64 %i\n"
+      & "  %va = load i64, ptr %pa, align 1\n"
+      & "  %vb = load i64, ptr %pb, align 1\n"
+      & op
+      & "  %z = icmp eq i64 %x, 0\n"
+      & "  %i1 = add i64 %i, 1\n"
+      & "  br i1 %z, label %loop, label %no\n"
+      & "yes:\n  ret i1 true\n"
+      & "no:\n  ret i1 false\n}\n");
+  END SetTestHelper;
+
+PROCEDURE SetTest (u: U; name, n, a, b: TEXT): TEXT =
+  BEGIN
+    IF Text.Equal (name, "@m3_set_eq")
+      THEN SetTestHelper (u, name, "  %x = xor i64 %va, %vb\n");
+      ELSE SetTestHelper (u, name, "  %nb = xor i64 %vb, -1\n"
+                                     & "  %x = and i64 %va, %nb\n");
+    END;
+    RETURN Instr (u, "call i1 " & name & "(i64 " & n & ", ptr " & a
+                       & ", ptr " & b & ")");
+  END SetTest;
+
+PROCEDURE set_compare (u: U; s: ByteSize; op: CompareOp; t: IType) =
+  (* s1.t := (s1.B op s0.B); pop *)
+  VAR b := PopAs (u, Type.Addr);  a := PopAs (u, Type.Addr);
+      n := SetWords (u, s);  r, x, y: TEXT;
+  BEGIN
+    IF op = CompareOp.GT OR op = CompareOp.GE THEN
+      x := a;  a := b;  b := x;
+      IF op = CompareOp.GT THEN op := CompareOp.LT ELSE op := CompareOp.LE END;
+    END;
+    CASE op OF
+    | CompareOp.EQ => r := SetTest (u, "@m3_set_eq", n, a, b);
+    | CompareOp.NE =>
+        r := SetTest (u, "@m3_set_eq", n, a, b);
+        r := Instr (u, "xor i1 " & r & ", true");
+    | CompareOp.LE => r := SetTest (u, "@m3_set_le", n, a, b);
+    | CompareOp.LT =>
+        x := SetTest (u, "@m3_set_le", n, a, b);
+        y := SetTest (u, "@m3_set_eq", n, a, b);
+        y := Instr (u, "xor i1 " & y & ", true");
+        r := Instr (u, "and i1 " & x & ", " & y);
+    ELSE <*ASSERT FALSE*>
+    END;
+    Push (u, t, Instr (u, "zext i1 " & r & " to " & LType (t)));
+  END set_compare;
+
+PROCEDURE SetWordAddr (u: U; set, elt: TEXT; VAR bit: TEXT): TEXT =
+  (* The address of the word of "set" holding element "elt" (an i64),
+     and in "bit", the bit number within it. *)
+  VAR w := Instr (u, "udiv i64 " & elt & ", 64");
+  BEGIN
+    bit := Instr (u, "urem i64 " & elt & ", 64");
+    RETURN Instr (u, "getelementptr i64, ptr " & set & ", i64 " & w);
+  END SetWordAddr;
+
+PROCEDURE set_member (u: U; <*UNUSED*> s: ByteSize; t: IType) =
+  (* s1.t := (s0.t IN s1.B); pop *)
+  VAR e := PopAs (u, Type.Word64);  set := PopAs (u, Type.Addr);
+      bit: TEXT;  a := SetWordAddr (u, set, e, bit);  v: TEXT;
+  BEGIN
+    v := Instr (u, "load i64, ptr " & a & ", align 1");
+    v := Instr (u, "lshr i64 " & v & ", " & bit);
+    v := Instr (u, "and i64 " & v & ", 1");
+    Push (u, t, Cvt (u, v, Type.Word64, t));
+  END set_member;
+
+PROCEDURE set_singleton (u: U; <*UNUSED*> s: ByteSize; <*UNUSED*> t: IType) =
+  (* s1.A[s0.t] := 1; pop(2) *)
+  VAR e := PopAs (u, Type.Word64);  set := PopAs (u, Type.Addr);
+      bit: TEXT;  a := SetWordAddr (u, set, e, bit);  v, m: TEXT;
+  BEGIN
+    v := Instr (u, "load i64, ptr " & a & ", align 1");
+    m := Instr (u, "shl i64 1, " & bit);
+    v := Instr (u, "or i64 " & v & ", " & m);
+    Emit (u, "store i64 " & v & ", ptr " & a & ", align 1");
+  END set_singleton;
+
+PROCEDURE set_range (u: U; <*UNUSED*> s: ByteSize; t: IType) =
+  (* s2.A[s1.t..s0.t] := 1's; pop(3) *)
+  VAR hi := PopAs (u, t);  lo := PopAs (u, t);  set := PopAs (u, Type.Addr);
+      name := "@m3_set_range";
+  BEGIN
+    IF NOT HaveHelper (u, name) THEN
+      AddHelper (u, name,
+        "define internal void " & name & "(ptr %a, i64 %lo, i64 %hi) {\n"
+        & "entry:\n  br label %loop\n"
+        & "loop:\n  %i = phi i64 [ %lo, %entry ], [ %i1, %body ]\n"
+        & "  %done = icmp sgt i64 %i, %hi\n"
+        & "  br i1 %done, label %exit, label %body\n"
+        & "body:\n"
+        & "  %w = udiv i64 %i, 64\n"
+        & "  %bit = urem i64 %i, 64\n"
+        & "  %p = getelementptr i64, ptr %a, i64 %w\n"
+        & "  %v = load i64, ptr %p, align 1\n"
+        & "  %m = shl i64 1, %bit\n"
+        & "  %v1 = or i64 %v, %m\n"
+        & "  store i64 %v1, ptr %p, align 1\n"
+        & "  %i1 = add i64 %i, 1\n"
+        & "  br label %loop\n"
+        & "exit:\n  ret void\n}\n");
+    END;
+    Emit (u, "call void " & name & "(ptr " & set & ", i64 "
+               & Cvt (u, lo, t, Type.Int64) & ", i64 "
+               & Cvt (u, hi, t, Type.Int64) & ")");
+  END set_range;
+
+(*----------------------------------------------------- bit operations ---*)
+
+PROCEDURE not (u: U; t: IType) =
+  VAR a := PopAs (u, t);
+  BEGIN
+    Push (u, t, Instr (u, "xor " & LType (t) & " " & a & ", -1"));
+  END not;
+
+PROCEDURE and (u: U; t: IType) =
+  BEGIN Binary (u, t, "and", "") END and;
+
+PROCEDURE or (u: U; t: IType) =
+  BEGIN Binary (u, t, "or", "") END or;
+
+PROCEDURE xor (u: U; t: IType) =
+  BEGIN Binary (u, t, "xor", "") END xor;
+
+PROCEDURE Select (u: U; t: Type; c, a, b: TEXT): TEXT =
+  VAR lt := LType (t);
+  BEGIN
+    RETURN Instr (u, "select i1 " & c & ", " & lt & " " & a & ", "
+                       & lt & " " & b);
+  END Select;
+
+PROCEDURE ShiftOp (u: U; t: Type; op, x, n: TEXT): TEXT =
+  (* x op n, or 0 if n >= the bit size (unsigned). *)
+  VAR lt := LType (t);  big, r: TEXT;
+  BEGIN
+    big := Instr (u, "icmp uge " & lt & " " & n & ", " & Bits (t));
+    r := Instr (u, op & " " & lt & " " & x & ", " & n);
+    RETURN Select (u, t, big, "0", r);
+  END ShiftOp;
+
+PROCEDURE shift_left (u: U; t: IType) =
+  VAR n := PopAs (u, t);  x := PopAs (u, t);
+  BEGIN
+    Push (u, t, ShiftOp (u, t, "shl", x, n));
+  END shift_left;
+
+PROCEDURE shift_right (u: U; t: IType) =
+  VAR n := PopAs (u, t);  x := PopAs (u, t);
+  BEGIN
+    Push (u, t, ShiftOp (u, t, "lshr", x, n));
+  END shift_right;
+
+PROCEDURE shift (u: U; t: IType) =
+  (* Positive counts shift left, negative counts right. *)
+  VAR n := PopAs (u, t);  x := PopAs (u, t);  lt := LType (t);
+      neg, pos, l, r, v, an, big: TEXT;  rop := "lshr";
+  BEGIN
+    IF IsSigned (t) THEN rop := "ashr" END;   (* as M3C *)
+    neg := Instr (u, "sub " & lt & " 0, " & n);
+    pos := Instr (u, "icmp sgt " & lt & " " & n & ", 0");
+    l := Instr (u, "shl " & lt & " " & x & ", " & n);
+    r := Instr (u, rop & " " & lt & " " & x & ", " & neg);
+    v := Select (u, t, pos, l, r);
+    an := Select (u, t, pos, n, neg);
+    big := Instr (u, "icmp uge " & lt & " " & an & ", " & Bits (t));
+    Push (u, t, Select (u, t, big, "0", v));
+  END shift;
+
+PROCEDURE Funnel (u: U; t: IType; fn: TEXT; neg: BOOLEAN) =
+  VAR n := PopAs (u, t);  x := PopAs (u, t);  lt := LType (t);
+      name := "@llvm." & fn & "." & lt;
+  BEGIN
+    IF neg THEN n := Instr (u, "sub " & lt & " 0, " & n) END;
+    AddDecl (u, name, "declare " & lt & " " & name & "(" & lt & ", " & lt
+                        & ", " & lt & ")");
+    Push (u, t, Instr (u, "call " & lt & " " & name & "(" & lt & " " & x
+                            & ", " & lt & " " & x & ", " & lt & " " & n
+                            & ")"));
+  END Funnel;
+
+PROCEDURE rotate (u: U; t: IType) =
+  BEGIN Funnel (u, t, "fshl", FALSE) END rotate;
+
+PROCEDURE rotate_left (u: U; t: IType) =
+  BEGIN Funnel (u, t, "fshl", FALSE) END rotate_left;
+
+PROCEDURE rotate_right (u: U; t: IType) =
+  BEGIN Funnel (u, t, "fshr", FALSE) END rotate_right;
+
+PROCEDURE widen (u: U; sign: BOOLEAN) =
+  VAR a := PopAs (u, Type.Int32);
+  BEGIN
+    IF sign
+      THEN Push (u, Type.Int64, Instr (u, "sext i32 " & a & " to i64"));
+      ELSE Push (u, Type.Word64, Instr (u, "zext i32 " & a & " to i64"));
+    END;
+  END widen;
+
+PROCEDURE chop (u: U) =
+  VAR a := PopAs (u, Type.Int64);
+  BEGIN
+    Push (u, Type.Int32, Instr (u, "trunc i64 " & a & " to i32"));
+  END chop;
+
+PROCEDURE Extract (u: U; t: IType; sign: BOOLEAN; x, off, cnt: TEXT) =
+  (* Word.Extract (x, off, cnt), sign-extended if "sign". *)
+  VAR lt := LType (t);  v, m, s: TEXT;
+  BEGIN
+    v := ShiftOp (u, t, "lshr", x, off);
+    m := Instr (u, "xor " & lt & " " & ShiftOp (u, t, "shl", "-1", cnt)
+                     & ", -1");
+    v := Instr (u, "and " & lt & " " & v & ", " & m);
+    IF sign THEN
+      s := Instr (u, "sub " & lt & " " & Bits (t) & ", " & cnt);
+      v := ShiftOp (u, t, "shl", v, s);
+      v := Instr (u, "ashr " & lt & " " & v & ", " & s);
+      (* a count of zero gives zero *)
+      m := Instr (u, "icmp eq " & lt & " " & cnt & ", 0");
+      v := Select (u, t, m, "0", v);
+    END;
+    Push (u, t, v);
+  END Extract;
+
+PROCEDURE extract (u: U; t: IType; sign: BOOLEAN) =
+  VAR cnt := PopAs (u, t);  off := PopAs (u, t);  x := PopAs (u, t);
+  BEGIN
+    Extract (u, t, sign, x, off, cnt);
+  END extract;
+
+PROCEDURE extract_n (u: U; t: IType; sign: BOOLEAN; n: CARDINAL) =
+  VAR off := PopAs (u, t);  x := PopAs (u, t);
+  BEGIN
+    Extract (u, t, sign, x, off, Fmt.Int (n));
+  END extract_n;
+
+PROCEDURE extract_mn (u: U; t: IType; sign: BOOLEAN; m, n: CARDINAL) =
+  VAR x := PopAs (u, t);  lt := LType (t);  bits := IntBits (t);  v: TEXT;
+  BEGIN
+    IF n = 0 OR m >= bits THEN Push (u, t, "0"); RETURN END;
+    n := MIN (n, bits - m);
+    IF sign THEN
+      v := x;
+      IF bits - m - n > 0 THEN
+        v := Instr (u, "shl " & lt & " " & v & ", " & Fmt.Int (bits - m - n));
+      END;
+      IF bits - n > 0 THEN
+        v := Instr (u, "ashr " & lt & " " & v & ", " & Fmt.Int (bits - n));
+      END;
+    ELSE
+      v := x;
+      IF m > 0 THEN
+        v := Instr (u, "lshr " & lt & " " & v & ", " & Fmt.Int (m));
+      END;
+      IF n < bits THEN
+        v := Instr (u, "and " & lt & " " & v & ", " & LowMask (bits, n));
+      END;
+    END;
+    Push (u, t, v);
+  END extract_mn;
+
+PROCEDURE Insert (u: U; t: IType; x, y, off, cnt: TEXT) =
+  (* Word.Insert (x, y, off, cnt) *)
+  VAR lt := LType (t);  m, nm, v, w: TEXT;
+  BEGIN
+    m := Instr (u, "xor " & lt & " " & ShiftOp (u, t, "shl", "-1", cnt)
+                     & ", -1");
+    m := ShiftOp (u, t, "shl", m, off);
+    nm := Instr (u, "xor " & lt & " " & m & ", -1");
+    v := ShiftOp (u, t, "shl", y, off);
+    v := Instr (u, "and " & lt & " " & v & ", " & m);
+    w := Instr (u, "and " & lt & " " & x & ", " & nm);
+    Push (u, t, Instr (u, "or " & lt & " " & v & ", " & w));
+  END Insert;
+
+PROCEDURE insert (u: U; t: IType) =
+  VAR cnt := PopAs (u, t);  off := PopAs (u, t);  y := PopAs (u, t);
+      x := PopAs (u, t);
+  BEGIN
+    Insert (u, t, x, y, off, cnt);
+  END insert;
+
+PROCEDURE insert_n (u: U; t: IType; n: CARDINAL) =
+  VAR off := PopAs (u, t);  y := PopAs (u, t);  x := PopAs (u, t);
+  BEGIN
+    Insert (u, t, x, y, off, Fmt.Int (n));
+  END insert_n;
+
+PROCEDURE insert_mn (u: U; t: IType; m, n: CARDINAL) =
+  VAR y := PopAs (u, t);  x := PopAs (u, t);  lt := LType (t);
+      bits := IntBits (t);  mask: Word.T;  v, w: TEXT;
+  BEGIN
+    IF n = 0 OR m >= bits THEN Push (u, t, x); RETURN END;
+    n := MIN (n, bits - m);
+    IF n >= BITSIZE (Word.T)
+      THEN mask := Word.Not (0);
+      ELSE mask := Word.Minus (Word.LeftShift (1, n), 1);
+    END;
+    mask := Word.LeftShift (mask, m);
+    v := y;
+    IF m > 0 THEN v := Instr (u, "shl " & lt & " " & v & ", " & Fmt.Int (m)) END;
+    v := Instr (u, "and " & lt & " " & v & ", " & SignedConst (bits, mask));
+    w := Instr (u, "and " & lt & " " & x & ", "
+                     & SignedConst (bits, Word.Not (mask)));
+    Push (u, t, Instr (u, "or " & lt & " " & v & ", " & w));
+  END insert_mn;
+
+PROCEDURE swap (u: U; <*UNUSED*> a, b: Type) =
+  VAR x := Pop (u);  y := Pop (u);
+  BEGIN
+    Push (u, x.type, x.val);
+    Push (u, y.type, y.val);
+  END swap;
+
+(*-------------------------------------------------- copying and zeroing ---*)
+
+PROCEDURE MemCopy (u: U; dst, src, len: TEXT; overlap: BOOLEAN) =
+  VAR fn := "memcpy";
+  BEGIN
+    IF overlap THEN fn := "memmove" END;
+    UseMemIntrinsic (u, fn);
+    Emit (u, "call void @llvm." & fn & ".p0.p0.i64(ptr " & dst & ", ptr "
+               & src & ", i64 " & len & ", i1 false)");
+  END MemCopy;
+
+PROCEDURE MemZero (u: U; dst, len: TEXT) =
+  BEGIN
+    UseMemIntrinsic (u, "memset");
+    Emit (u, "call void @llvm.memset.p0.i64(ptr " & dst & ", i8 0, i64 "
+               & len & ", i1 false)");
+  END MemZero;
+
+PROCEDURE copy (u: U; n: INTEGER; t: MType; overlap: BOOLEAN) =
+  (* Mem[s1.A:n] := Mem[s0.A:n]; pop(2) *)
+  VAR src := PopAs (u, Type.Addr);  dst := PopAs (u, Type.Addr);
+  BEGIN
+    MemCopy (u, dst, src, Fmt.Int (n * TypeBytes (t)), overlap);
+  END copy;
+
+PROCEDURE copy_n (u: U; z: IType; t: MType; overlap: BOOLEAN) =
+  (* Mem[s2.A:s0.z] := Mem[s1.A:s0.z]; pop(3) *)
+  VAR n := PopAs (u, z);  src := PopAs (u, Type.Addr);
+      dst := PopAs (u, Type.Addr);  len: TEXT;
+  BEGIN
+    len := Instr (u, "mul i64 " & Cvt (u, n, z, Type.Int64) & ", "
+                       & Fmt.Int (TypeBytes (t)));
+    MemCopy (u, dst, src, len, overlap);
+  END copy_n;
+
+PROCEDURE zero (u: U; n: INTEGER; t: MType) =
+  VAR dst := PopAs (u, Type.Addr);
+  BEGIN
+    MemZero (u, dst, Fmt.Int (n * TypeBytes (t)));
+  END zero;
+
+PROCEDURE zero_n (u: U; z: IType; t: MType) =
+  VAR n := PopAs (u, z);  dst := PopAs (u, Type.Addr);  len: TEXT;
+  BEGIN
+    len := Instr (u, "mul i64 " & Cvt (u, n, z, Type.Int64) & ", "
+                       & Fmt.Int (TypeBytes (t)));
+    MemZero (u, dst, len);
+  END zero_n;
+
+(*------------------------------------------------------- conversions ---*)
+
+PROCEDURE loophole (u: U; from, two: ZType) =
+  VAR x := Pop (u);  v := Cvt (u, x.val, x.type, from);
+  BEGIN
+    IF IsFloat (from) # IsFloat (two) AND TypeBytes (from) = TypeBytes (two)
+      AND from # Type.Addr AND two # Type.Addr THEN
+      v := Instr (u, "bitcast " & LType (from) & " " & v & " to "
+                       & LType (two));
+    ELSIF IsFloat (from) AND two = Type.Addr THEN
+      v := Cvt (u, Instr (u, "bitcast " & LType (from) & " " & v & " to i"
+                               & Fmt.Int (FloatBits (from))),
+                IntOfBits (FloatBits (from)), two);
+    ELSIF from = Type.Addr AND IsFloat (two) THEN
+      v := Instr (u, "bitcast " & LType (IntOfBits (FloatBits (two))) & " "
+                       & Cvt (u, v, from, IntOfBits (FloatBits (two)))
+                       & " to " & LType (two));
+    ELSE
+      v := Cvt (u, v, from, two);
+    END;
+    Push (u, two, v);
+  END loophole;
+
+PROCEDURE IntOfBits (bits: INTEGER): Type =
+  BEGIN
+    CASE bits OF
+    | 32 => RETURN Type.Word32;
+    | 64 => RETURN Type.Word64;
+    ELSE RETURN Type.Word64;
+    END;
+  END IntOfBits;
+
+(*---------------------------------------------------- runtime checks ---*)
+
+PROCEDURE abort (u: U; code: RuntimeError) =
+  BEGIN
+    IF u.in_call THEN u.call_aborted := TRUE END;
+    Fault (u, code);
+  END abort;
+
+PROCEDURE Top (u: U; t: Type): TEXT =
+  (* s0 converted to "t", without popping it. *)
+  VAR x := Pop (u);  v := Cvt (u, x.val, x.type, t);
+  BEGIN
+    Push (u, x.type, x.val);
+    RETURN v;
+  END Top;
+
+PROCEDURE check_nil (u: U; code: RuntimeError) =
+  VAR a := Top (u, Type.Addr);
+  BEGIN
+    FaultIf (u, Instr (u, "icmp eq ptr " & a & ", null"), code);
+  END check_nil;
+
+PROCEDURE check_lo (u: U; t: IType; READONLY i: Target.Int;
+                    code: RuntimeError) =
+  VAR a := Top (u, t);
+  BEGIN
+    FaultIf (u, Instr (u, Pred (t, CompareOp.LT) & " " & LType (t) & " " & a
+                            & ", " & IntText (i)), code);
+  END check_lo;
+
+PROCEDURE check_hi (u: U; t: IType; READONLY i: Target.Int;
+                    code: RuntimeError) =
+  VAR a := Top (u, t);
+  BEGIN
+    FaultIf (u, Instr (u, Pred (t, CompareOp.GT) & " " & LType (t) & " " & a
+                            & ", " & IntText (i)), code);
+  END check_hi;
+
+PROCEDURE check_range (u: U; t: IType; READONLY a, b: Target.Int;
+                       code: RuntimeError) =
+  VAR x := Top (u, t);  lt := LType (t);  lo, hi: TEXT;
+  BEGIN
+    lo := Instr (u, Pred (t, CompareOp.LT) & " " & lt & " " & x & ", "
+                      & IntText (a));
+    hi := Instr (u, Pred (t, CompareOp.GT) & " " & lt & " " & x & ", "
+                      & IntText (b));
+    FaultIf (u, Instr (u, "or i1 " & lo & ", " & hi), code);
+  END check_range;
+
+PROCEDURE check_index (u: U; t: IType; code: RuntimeError) =
+  (* IF NOT (0 <= s1.t < s0.t) THEN abort(code); pop *)
+  VAR n := PopAs (u, t);  i := Top (u, t);  lt := LType (t);
+  BEGIN
+    FaultIf (u, Instr (u, "icmp ule " & lt & " " & n & ", " & i), code);
+  END check_index;
+
+PROCEDURE check_eq (u: U; t: IType; code: RuntimeError) =
+  VAR b := PopAs (u, t);  a := PopAs (u, t);
+  BEGIN
+    FaultIf (u, Instr (u, "icmp ne " & LType (t) & " " & a & ", " & b), code);
+  END check_eq;
+
+(*------------------------------------------------- address arithmetic ---*)
+
+PROCEDURE add_offset (u: U; i: INTEGER) =
+  VAR a := PopAs (u, Type.Addr);
+  BEGIN
+    Push (u, Type.Addr, Offset (u, a, i));
+  END add_offset;
+
+PROCEDURE index_address (u: U; t: IType; size: INTEGER) =
+  (* s1.A := s1.A + s0.t * size; pop *)
+  VAR i := PopAs (u, t);  a := PopAs (u, Type.Addr);
+  BEGIN
+    IF size = 0 THEN Push (u, Type.Addr, a); RETURN END;
+    Push (u, Type.Addr,
+          Instr (u, "getelementptr [" & Fmt.Int (size) & " x i8], ptr " & a
+                      & ", i64 " & Cvt (u, i, t, Type.Int64)));
+  END index_address;
+
+(*----------------------------------------------- indirect calls etc. ---*)
+
+PROCEDURE start_call_indirect (u: U; <*UNUSED*> t: Type;
+                               <*UNUSED*> cc: CallingConvention) =
+  BEGIN
+    StartCall (u, NIL);
+  END start_call_indirect;
+
+PROCEDURE SlotName (u: U): TEXT =
+  (* The front end pops the static link of an indirect call only on the
+     path that calls a closure, so it is kept in memory: a slot that is
+     NIL on the other path.  Callees that are not nested ignore the
+     extra argument. *)
+  BEGIN
+    IF u.call_sl = NIL THEN
+      u.call_sl := "%slink." & Fmt.Int (u.next_tmp);
+      INC (u.next_tmp);
+      Wr.PutText (u.allocas, "  " & u.call_sl & " = alloca ptr, align 8"
+                               & Wr.EOL & "  store ptr null, ptr "
+                               & u.call_sl & ", align 8" & Wr.EOL);
+    END;
+    RETURN u.call_sl;
+  END SlotName;
+
+PROCEDURE call_indirect (u: U; t: Type; <*UNUSED*> cc: CallingConvention) =
+  VAR f := PopAs (u, Type.Addr);  r, call, attr := "";
+  BEGIN
+    IF u.call_aborted THEN
+      IF t # Type.Void THEN Push (u, StackType (t), "poison") END;
+      EndCall (u);
+      RETURN;
+    END;
+    IF u.call_sl # NIL THEN
+      r := Instr (u, "load ptr, ptr " & u.call_sl & ", align 8");
+      Emit (u, "store ptr null, ptr " & u.call_sl & ", align 8");
+      AddArg (u, "ptr " & r);
+    END;
+    attr := ExtAttr (t);
+    IF Text.Length (attr) > 0 THEN attr := Text.Sub (attr, 1) & " " END;
+    call := "call " & attr & LType (t) & " " & f & "(" & u.call_args & ")";
+    IF t = Type.Void THEN
+      Emit (u, call);
+    ELSE
+      r := Instr (u, call);
+      Push (u, StackType (t), Cvt (u, r, t, StackType (t)));
+    END;
+    EndCall (u);
+  END call_indirect;
+
+PROCEDURE pop_struct (u: U; <*UNUSED*> typeid: TypeUID;
+                      <*UNUSED*> size: ByteSize;
+                      <*UNUSED*> align: Alignment) =
+  (* Structures are passed by reference; the callee copies them. *)
+  VAR a := PopAs (u, Type.Addr);
+  BEGIN
+    IF NOT u.in_call THEN Fatal (u, "pop_struct outside a call") END;
+    u.call_last := a;
+    AddArg (u, "ptr " & a);
+  END pop_struct;
+
+PROCEDURE pop_static_link (u: U) =
+  BEGIN
+    VAR sl := PopAs (u, Type.Addr); BEGIN
+      Emit (u, "store ptr " & sl & ", ptr " & SlotName (u) & ", align 8");
+    END;
+  END pop_static_link;
+
+PROCEDURE load_static_link (u: U; proc: Proc) =
+  VAR p := NARROW (proc, LProc);
+  BEGIN
+    IF p.level = 0
+      THEN Push (u, Type.Addr, "null");
+      ELSE Push (u, Type.Addr, FrameOf (u, p.level - 1));
+    END;
+  END load_static_link;
 
 BEGIN
 END M3LLVMIR.
