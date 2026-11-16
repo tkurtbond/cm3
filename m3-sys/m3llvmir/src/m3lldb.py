@@ -7,9 +7,10 @@
 #     cm3 -DM3_BACKEND_MODE=LlvmIR -DM3_DEBUG_LANGUAGE=C
 #
 # and load this file, with m3printers.py beside it, for example from
-# ~/.lldbinit:
+# ~/.lldbinit.  Shipping m3llvmir installs both in
+# INSTALL_ROOT/share/m3llvmir:
 #
-#     command script import /path/to/m3lldb.py
+#     command script import /usr/local/cm3/share/m3llvmir/m3lldb.py
 #
 # (lldb does not read the scripts that the back end embeds for gdb.)
 #

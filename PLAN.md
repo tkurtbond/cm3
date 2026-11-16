@@ -628,10 +628,11 @@ its variables can be printed in gdb.
     scripts; load it with `command script import .../m3lldb.py`
     (keeping `m3printers.py` beside it). With a C unit, `frame
     variable` shows texts, sets, enumerations, BOOLEANs and objects.
-- **Not done:**
-  - exceptions and RAISES are not described;
+- **Not done** (moved to later phases):
+  - exceptions and RAISES are not described (Phase 7, with
+    `ex_stack`);
   - `m3lldb.py` is not installed anywhere; it is loaded from the
-    source tree.
+    source tree (done in Phase 6).
 
 ### Phase 6: integration and CI
 
@@ -641,9 +642,80 @@ its variables can be printed in gdb.
 - Add a GitHub Actions job (based on `amd64_linux.yml`) that installs
   distribution LLVM packages for the minimum and newest versions, builds
   with `LlvmIR`, and runs `m3tests`, verifying every emitted `.ll`.
+- Install the debugger scripts: ship `m3lldb.py` with `m3printers.py`
+  beside it (gdb gets `m3printers.py` embedded in each unit, but lldb
+  has to load a file), and point the documentation's `~/.lldbinit`
+  line at the installed copy. (From Phase 5.)
 - Write user and developer documentation, linked from `AGENTS.md`.
 
 *Exit:* CI is green on two LLVM versions.
+
+**Phase 6 as built:**
+
+- *Exit not yet confirmed.* The workflow has been written and its
+  pieces tested locally, but it first runs on GitHub after the push.
+- **concierge.** `--backend llvmir` (or `-llvmir`) is accepted by every
+  command and falls back to C on targets other than AMD64_LINUX.
+  - `check_clang` fails unless `clang` on `PATH` reports version 18 or
+    later.
+  - `upgrade` and `full-upgrade` (`_doLlvmIR`) build the front packages
+    once with C, because the installed cm3 (a bootstrap, say) may
+    predate `LlvmIR`, and then twice with `LlvmIR`, so the second pass
+    uses an `LlvmIR`-built cm3.
+  - The installed `cm3.cfg` starts with `M3_BACKEND_MODE = "LlvmIR"`.
+  - Package builds get `-DM3_BACKEND_MODE=LlvmIR`.
+- **Config.** `AMD64_LINUX` keeps C as its default and documents
+  `LlvmIR` as the alternative: `cm3.cfg` (as concierge writes it) or
+  `-DM3_BACKEND_MODE=LlvmIR`.
+- **IR verification.** With `M3_LLVM_IR_VERIFY` set in the environment,
+  `compile_llvm_ir` (`Unix.common`) first runs `llvm-as -o /dev/null`
+  on the `.ll`. clang 22 verifies IR input itself; this makes sure the
+  check also happens with older clangs.
+  - It uses `exec`, not `try_exec`. Under the parallel back end
+    (`M3_PARALLEL_BACK = 20` in `AMD64.common`), quake records each
+    back-end command as a promise, and `try_exec` promises ignore
+    their exit status. A failing `try_exec` therefore doesn't stop the
+    build; an `exec` failure does, as "quake error in parallel build".
+    Tested with a fake `llvm-as` that always fails, both with
+    `M3_PARALLEL_BACK = 20` and with 1.
+  - The same thing hides clang failures in `compile_llvm_ir`, and in
+    upstream's `compile_c`: with the parallel back end, a failed
+    compile shows up only when the link can't find the object. This is
+    upstream behavior and has been left alone.
+- **Debugger scripts.** The `m3llvmir` `m3makefile` installs
+  `m3printers.py` and `m3lldb.py` in `INSTALL_ROOT/share/m3llvmir`
+  with `RootExport`. `m3lldb.py` imports `m3printers.py` from its own
+  directory, so the installed pair works as is. The documentation now
+  points `~/.lldbinit` at the installed copy.
+- **CI.** `.github/workflows/amd64_linux_llvmir.yml`, called from
+  `integration.yml` and also runnable by hand:
+  - a matrix over LLVM 18 and 22, installed from apt.llvm.org with
+    `llvm.sh`, with `/usr/lib/llvm-N/bin` first on `PATH`;
+  - the d5.12.0 bootstrap, then `concierge.py full-upgrade --backend
+    llvmir` with the package set of upstream's AMD64_LINUX job;
+  - a check that the installed `cm3.cfg` defaults to `LlvmIR`;
+  - m3tests (using that default), reported with `dorny/test-reporter`,
+    and a final step that fails on any test failure not listed in
+    `KNOWN_FAILURES` (p047, which fails with C too);
+  - `M3_LLVM_IR_VERIFY=1` for the whole job.
+- **Documentation.** [`m3-sys/m3llvmir/README.md`](m3-sys/m3llvmir/README.md)
+  (using the backend: choosing it, optimization, overriding the clang
+  step, `m3llir`, gdb and lldb, troubleshooting) and
+  [`HACKING.md`](m3-sys/m3llvmir/HACKING.md) (the file map, how the
+  emitter works, rules for the IR, testing, CI), linked from
+  `AGENTS.md`.
+- **Results (local, Fedora, clang 22, on a copy of the installation):**
+  - `full-upgrade --backend llvmir` succeeds, and the installed
+    `cm3.cfg` selects `LlvmIR`.
+  - With `M3_LLVM_IR_VERIFY=1`, the CI package set (about 170
+    packages, including the GUI libraries and applications) builds and
+    ships with `LlvmIR`, and every `.ll` passes `llvm-as`. The
+    exception is `llvm22bindings`, whose shared library doesn't link
+    on this machine with either backend (gold finds 32-bit libraries
+    in `/lib`); upstream CI builds it on Ubuntu.
+  - m3tests, with `LlvmIR` as the installed default and verification
+    on: 292 of 293 pass (p047 fails, as with C), and the CI workflow's
+    check of the results passes.
 
 ### Phase 7: beyond AMD64_LINUX and the basics
 
@@ -657,6 +729,10 @@ Ordered by expected value. Each item is a separate mini-plan.
   with the C++ personality, interoperating with `RTStackC.c`. See
   `README-ex_stack.md`. The old LLVM backend's `invoke_direct` and
   `landing_pad` are the starting reference.
+- **Debug information for exceptions** (from Phase 5): describe
+  exception declarations and procedures' RAISES sets in the DWARF.
+  Design it together with `ex_stack`, which decides how exceptions are
+  represented at run time.
 - Optimization work: function attributes (`nounwind`, `noalias` where
   the front end guarantees it, `nonnull`), cheap loop and alias hints,
   and possibly LTO through `clang -flto`.

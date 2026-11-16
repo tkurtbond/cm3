@@ -18,6 +18,10 @@ jobs:
   AMD64_LINUX:
     uses: modula3/cm3/.github/workflows/amd64_linux.yml@master
 
+  # This fork: the LlvmIR back end, with LLVM 18 and the newest LLVM.
+  AMD64_LINUX_LLVMIR:
+    uses: ./.github/workflows/amd64_linux_llvmir.yml
+
   AMD64_MINGW:
     uses: modula3/cm3/.github/workflows/amd64_mingw.yml@master
 

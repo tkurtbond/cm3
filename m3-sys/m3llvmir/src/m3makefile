@@ -13,4 +13,10 @@ Module ("M3LLVMIRDebug")  % Phase 5: debug information
 resource ("m3printers.py")
 bundle ("M3LLVMIRBundle")
 
+% Phase 6: install the debugger scripts in INSTALL_ROOT/share/m3llvmir,
+% so ~/.gdbinit or ~/.lldbinit can load them from there.  m3lldb.py
+% imports m3printers.py from its own directory.
+RootExport ("m3printers.py", "share/m3llvmir")
+RootExport ("m3lldb.py", "share/m3llvmir")
+
 Library ("m3llvmir")

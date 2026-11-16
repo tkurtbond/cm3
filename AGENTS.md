@@ -37,7 +37,7 @@ them, and keep edits to shared files (`Builder.m3`, `M3Backend.m3`,
 | `m3-sys/m3middle/src/M3CG_*.m3` | M3CG utilities: `M3CG_BinWr`/`M3CG_BinRd` (binary IR files), `M3CG_Wr`/`M3CG_Rd` (ASCII IR), `M3CG_Check` (stack/type checker), `M3CG_MultiPass` (record and replay), `M3CG_Tee`. |
 | `m3-sys/m3middle/src/Target.i3` | Target description and `M3BackendMode_t`, the enum of backend modes. |
 | `m3-sys/m3back/src/M3C.m3` | **The C backend** (about 8,300 lines). It is the default on AMD64_LINUX. It is the closest structural template for a text-emitting backend and the reference oracle for testing. |
-| `m3-sys/m3llvmir/src/M3LLVMIR.m3` | **This fork's backend** (backend mode `LlvmIR`): an M3CG_Ops subtype of `M3CG_AssertFalse` that writes textual `.ll`. Unimplemented operations fail with an assertion; progress is tracked in `experiment-doc/m3cg-ops-checklist.md`. `M3LLVMIRDebug.m3` writes the DWARF debug metadata (Phase 5). |
+| `m3-sys/m3llvmir/src/M3LLVMIR.m3` | **This fork's backend** (backend mode `LlvmIR`): an M3CG_Ops subtype of `M3CG_AssertFalse` that writes textual `.ll`. Unimplemented operations fail with an assertion; progress is tracked in `experiment-doc/m3cg-ops-checklist.md`. `M3LLVMIRDebug.m3` writes the DWARF debug metadata (Phase 5). Documentation: [`m3-sys/m3llvmir/README.md`](m3-sys/m3llvmir/README.md) (using it) and [`HACKING.md`](m3-sys/m3llvmir/HACKING.md) (working on it). |
 | `m3-sys/m3llir/` | Standalone driver: `m3llir [-a] [-g] [-l LANG] [-t TARGET] [-o out.ll] in.mc` translates an M3CG file (`-a` for ASCII, `-g` for debug info, `-l C` to label it C for lldb) to `.ll`. Handy with the IR corpus: `m3llir -a -t AMD64_LINUX X.mc.txt \| llvm-as -o /dev/null`. |
 | `m3-sys/llvm/llvm22/src/M3CG_LLVM.m3` | **The existing LLVM backend** (about 7,100 lines, by Peter McKinna and Rodney Bates). It uses LLVM's C API through bindings in `llvm22bindings`, runs as a standalone `m3llvm` executable, and needs LLVM's libraries at build time. Use it as the main reference for *how to lower* M3CG to LLVM, but don't add dependencies on it. `llvm13/` and `llvm18/` are older copies. |
 | `m3-sys/cm3/src/Builder.m3` | The build driver: dispatches on backend mode (`CompileM3llvm`, `CompileLlc`, `RunM3Llvm`, `RunLlcBack`, and so on). |
@@ -45,9 +45,9 @@ them, and keep edits to shared files (`Builder.m3`, `M3Backend.m3`,
 | `m3-sys/cminstall/src/config/` | Per-platform quake config. `Unix.common` defines the `m3llvm`, `llvm_backend` (llc) and `llvm_opt` procs. `AMD64_LINUX` selects the backend mode. |
 | `m3-sys/m3tests/` | Compiler test suite: `p*` program tests (expected output), `r0` runtime-error tests, `e0` static-error tests, `c*` code tests, `x0` manual tests. |
 | `m3-sys/m3cgcat/` | Converts between binary and ASCII M3CG IR. Useful for inspecting what the front end emits. |
-| `scripts/concierge.py` | The installer and build driver (`install`, `upgrade`, `full-upgrade`, `--backend c|gcc|integrated|llvm`). |
+| `scripts/concierge.py` | The installer and build driver (`install`, `upgrade`, `full-upgrade`, `--backend c|gcc|integrated|llvm|llvmir`). `--backend llvmir` checks for clang 18+, builds the compiler with C and then twice with `LlvmIR`, and makes `LlvmIR` the installed `cm3.cfg`'s default. |
 | `README-ex_stack.md` | The newer zero-cost exception model. It currently requires the C backend, and is off by default on AMD64_LINUX. |
-| `.github/workflows/` | Upstream CI, one workflow per platform. |
+| `.github/workflows/` | Upstream CI, one workflow per platform. This fork adds `amd64_linux_llvmir.yml` (called from `integration.yml`): the `LlvmIR` build and m3tests with LLVM 18 and the newest LLVM. |
 
 ## Building and testing
 
@@ -89,8 +89,11 @@ and installs into the prefix of the `cm3` it finds on `PATH`.
   `clang -x ir` on it. After editing `Unix.common`, reinstall the config
   (`concierge.py upgrade` does) or copy it to
   `/usr/local/sw/versions/cm3/git/bin/config/`.
+  Set `M3_LLVM_IR_VERIFY=1` in the environment to run `llvm-as` (the
+  IR verifier) on every `.ll` first; a failure stops the build.
   `LlvmIR` emits debug information unless `-g0` is given, so its
-  programs can be debugged with gdb. The compile unit says Modula-2,
+  programs can be debugged with gdb (details in
+  [`m3-sys/m3llvmir/README.md`](m3-sys/m3llvmir/README.md)). The compile unit says Modula-2,
   because gdb's Modula-3 support can't print sets or BOOLEANs; use
   `p^`, `a[i]` and `r.f`, not `Color.Blue`. Every unit embeds
   `m3-sys/m3llvmir/src/m3printers.py`, which prints TEXT values as
@@ -104,8 +107,12 @@ and installs into the prefix of the `cm3` it finds on `PATH`.
   support and shows no variables of such units. For lldb, build with
   `-DM3_DEBUG_LANGUAGE=C` (the compile unit then says C, and sets
   become structs of one-bit members) and load the TEXT formatter with
-  `command script import m3-sys/m3llvmir/src/m3lldb.py` (in
-  `~/.lldbinit`, say); then use `o->n` and `o->_methods->get`.
+  `command script import INSTALL_ROOT/share/m3llvmir/m3lldb.py` (in
+  `~/.lldbinit`, say; here
+  `/usr/local/sw/versions/cm3/git/share/m3llvmir/`, or
+  `m3-sys/m3llvmir/src/` in the tree); then use `o->n` and
+  `o->_methods->get`. Both debugger scripts are installed there when
+  `m3llvmir` is shipped.
 - After changing `m3llvmir`, rebuild the units you test (`rm -rf
   AMD64_LINUX` or touch the source): cm3 doesn't recompile when the
   compiler changes.
@@ -120,8 +127,8 @@ and installs into the prefix of the `cm3` it finds on `PATH`.
   `m3tests-results.xml`). They take a while; prefer running a subset
   while iterating. The C-backend baseline is in
   `experiment-doc/m3tests-baseline-c.md`. Add `-DM3_BACKEND_MODE=LlvmIR`
-  to build every test with this fork's backend (291 of 292 pass; see
-  Phases 2 and 3 in `PLAN.md`), and `-DM3TESTS_OPTIMIZE` to build
+  to build every test with this fork's backend (292 of 293 pass, as
+  with C; see Phases 2 to 6 in `PLAN.md`), and `-DM3TESTS_OPTIMIZE` to build
   each test with `cm3 -O`.
 - Rebuild the compiler after changing `m3front`, `m3middle`, `m3back`,
   `m3llvmir`, or `cm3`: `scripts/concierge.py upgrade` (or build and ship the

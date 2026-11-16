@@ -11,6 +11,11 @@ readonly SYSTEM_ASM = "as --64" % Assembler
 % Requires libunwind-dev: apt-get install libunwind-dev
 %M3_USE_STACK_WALKER = TRUE
 
+% LLVM IR backend (this fork): M3_BACKEND_MODE = "LlvmIR" compiles with
+% clang (LLVM 18 or later) instead of the C compiler.  Set it in
+% cm3.cfg ("concierge.py upgrade --backend llvmir" does) or with
+% "cm3 -DM3_BACKEND_MODE=LlvmIR".  ex_stack, below, still forces C.
+
 % ex_stack requires the C backend and g++ with -x c++.
 % M3_BACKEND_MODE must be set before includes so cm3cfg.common's
 % "if not defined" guard fires correctly.

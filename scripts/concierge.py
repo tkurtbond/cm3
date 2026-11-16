@@ -74,6 +74,9 @@
 # Developers can specify `-gcc` or `--backend gcc` to build the GCC
 # backend.
 # Or could specify `-llvm` or `--backend llvm` to build the LLVM backend
+# Or `-llvmir` or `--backend llvmir` for the LlvmIR backend (this fork),
+# which is part of cm3 and writes textual LLVM IR for the system's
+# clang (LLVM 18 or later).  Supported on AMD64_LINUX.
 #
 # GCC is not included in the distribution tarball and is not available
 # on new system installs, it must be built from source using
@@ -225,8 +228,12 @@ COMPILER_DEFINE = -D<name> | -D<name>=<value>
 Select the backend to use for compliation.  Breaking from tradition,
 the "c" backend is used as the default if nothing is specified, and
 the gcc or llvm backend is only built when explicitly requested.
+The llvmir backend (LLVM IR compiled by clang 18 or later, AMD64_LINUX
+only) is part of cm3 itself: upgrade first builds cm3 with the C
+backend, then rebuilds everything with llvmir, and makes llvmir the
+installation's default backend.
 
-BACKEND_OPTION = --backend (c|gcc|integrated|llvm) | -c | -gcc | -integrated | -llvm
+BACKEND_OPTION = --backend (c|gcc|integrated|llvm|llvmir) | -c | -gcc | -integrated | -llvm | -llvmir
 
 Select the compile target.  The command-line "--target" takes
 precedence over the "CM3_TARGET" environment variable, which takes
@@ -266,6 +273,27 @@ ENVIRONMENT VARIABLES
 
 class Error(Exception):
     pass
+
+
+MIN_CLANG_VERSION = 18      # the LlvmIR backend's minimum LLVM version
+
+
+def check_clang():
+    "Fail unless clang, version MIN_CLANG_VERSION or later, is on PATH"
+    clang = shutil.which("clang")
+    if not clang:
+        raise FatalError("the llvmir backend needs clang, which is not on PATH")
+    try:
+        out = subprocess.run([clang, "--version"], capture_output=True,
+                             text=True, check=True).stdout
+    except (OSError, subprocess.CalledProcessError) as e:
+        raise FatalError(f"cannot run {clang} --version: {e}")
+    m = re.search(r"clang version (\d+)", out)
+    if not m:
+        raise FatalError(f"cannot find the version of {clang} in: {out.strip()}")
+    if int(m.group(1)) < MIN_CLANG_VERSION:
+        raise FatalError(f"the llvmir backend needs clang {MIN_CLANG_VERSION} "
+                         f"or later; {clang} is version {m.group(1)}")
 
 
 class FatalError(Error):
@@ -359,6 +387,10 @@ class Platform:
         else:
             return False
 
+    def has_llvmir_backend(self):
+        "The LlvmIR backend (this fork) knows only AMD64_LINUX so far"
+        return self.name() in ["AMD64_LINUX"]
+
     def has_serial(self):
         return self.is_win32()
 
@@ -442,7 +474,11 @@ class Cm3:
         if self._backend == "llvm" and not self.target().has_llvm_backend():
             self._backend = "c"
 
-        assert self._backend in ["c", "gcc", "integrated", "llvm"]
+        # Don't try to use the LlvmIR backend when not available.
+        if self._backend == "llvmir" and not self.target().has_llvmir_backend():
+            self._backend = "c"
+
+        assert self._backend in ["c", "gcc", "integrated", "llvm", "llvmir"]
         return self._backend
 
     def build(self, *paths):
@@ -629,6 +665,9 @@ class Cm3:
     def use_llvm_backend(self):
         return self.backend() == "llvm"
 
+    def use_llvmir_backend(self):
+        return self.backend() == "llvmir"
+
     def get_backend(self):
         return self._backend
 
@@ -664,7 +703,8 @@ class WithCm3:
             "get_backend",
             "set_backend",
             "use_gcc_backend",
-            "use_llvm_backend"
+            "use_llvm_backend",
+            "use_llvmir_backend"
         ]
         if method_name not in forwards:
             raise AttributeError
@@ -933,6 +973,9 @@ class PackageAction(WithCm3):
         if self.use_llvm_backend():
             defines.append(f"-DM3_BACKEND_MODE=StAloneLlvmObj")
 
+        if self.use_llvmir_backend():
+            defines.append(f"-DM3_BACKEND_MODE=LlvmIR")
+
         # Include any defines given on the command-line.
         return defines + self.cm3().defines()
 
@@ -1194,12 +1237,12 @@ class ConciergeCommand(WithPackageActions):
                 backend = tail.pop(0)
             elif head.startswith("--backend="):
                 backend = head[10:]
-            elif head in ["-c", "-gcc", "-integrated", "-llvm"]:
+            elif head in ["-c", "-gcc", "-integrated", "-llvm", "-llvmir"]:
                 backend = head[1:]
             else:
                 args.append(head)
 
-        if backend not in ["c", "gcc", "integrated", "llvm"]:
+        if backend not in ["c", "gcc", "integrated", "llvm", "llvmir"]:
             raise UsageError(f"{backend} is not a recognized backend")
 
         setattr(namespace, "_backend", backend)
@@ -1350,6 +1393,8 @@ class UpgradeCommand(ConciergeCommand):
             self._doGcc()
         elif self.use_llvm_backend():
             self._doLLVM()
+        elif self.use_llvmir_backend():
+            self._doLlvmIR()
         else:
             self._doCandIntegrated()
 
@@ -1504,6 +1549,26 @@ class UpgradeCommand(ConciergeCommand):
             self.buildship(base_packages)
             self._ship_front()
 
+    def _doLlvmIR(self):
+        "Do the LlvmIR backend (textual LLVM IR, compiled by clang)"
+
+        check_clang()
+
+        base_packages = ["+front", "+m3bundle", "-m3cc"]
+
+        # The installed cm3 may predate LlvmIR (a bootstrap compiler,
+        # say), so first build cm3 with the C backend: the result has
+        # LlvmIR built in.  Then build everything with LlvmIR, twice:
+        # the second pass uses the LlvmIR-built cm3 (self-hosting).
+        self.set_backend("c")
+        self._install_config()
+        self._run_pass(base_packages)
+
+        self.set_backend("llvmir")
+        self._install_config()
+        self._run_pass(base_packages)
+        self._run_pass(base_packages)
+
     def _resetCfg(self):
         "reset the cm3.cfg file"
         backend = ''
@@ -1606,6 +1671,9 @@ include(path() & SL & "config" & SL & TARGET)
 
         if self.use_llvm_backend():
             backend = ' M3_BACKEND_MODE = "StAloneLlvmObj"\n'
+
+        if self.use_llvmir_backend():
+            backend = ' M3_BACKEND_MODE = "LlvmIR"\n'
 
         cross_compile = ''
         if self.config() == "I386_LINUX":

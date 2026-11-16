@@ -206,9 +206,18 @@ if not defined("LLVM_IR_CC")
   LLVM_IR_CC = "clang -fPIC -Wno-override-module"
 end
 
+% If the environment variable M3_LLVM_IR_VERIFY is set (CI sets it),
+% each .ll is first checked with "llvm-as -o /dev/null", which runs
+% LLVM's IR verifier; older clangs may not verify IR input themselves.
+% It uses exec, not try_exec, so that a failure stops the build even
+% with M3_PARALLEL_BACK > 1, where try_exec's exit codes are dropped.
+
 if not defined("compile_llvm_ir")
 
   proc compile_llvm_ir(source, object, optimize, debug) is
+      if not equal($M3_LLVM_IR_VERIFY, "")
+          exec ("@llvm-as", "-o", "/dev/null", source)
+      end
       local args = [ ]
       if optimize
           args += m3back_optimize
