@@ -1,0 +1,264 @@
+	begin_unit	 0
+	widechar_size	 16
+					-----FILE ../Main.m3  -----
+					-----LINE 7  -----
+	# module global constants
+	declare_segment	 * -1 T v.1
+	# module global data
+	declare_segment	 M_Main -1 F v.2
+					-----LINE 14  -----
+	declare_procedure	 Main_M3 1 Addr 0 0 T * p.1
+	declare_param	 mode 8 8 Int.64 425470580 F F 100 v.3
+	declare_subrange	 -1909968425 425470580 0 4 8
+	import_procedure	 Main_I3 1 Addr 0 p.2
+	declare_param	 mode 8 8 Int.64 425470580 F F 100 v.4
+	export_unit	 Main
+	import_procedure	 RTHooks_I3 1 Addr 0 p.3
+	declare_param	 mode 8 8 Int.64 425470580 F F 100 v.5
+	import_unit	 RTHooks
+	# Main_M3
+	# module main body Main_M3
+	begin_procedure	 p.1
+	load		 v.3 0 Int.64 Int.64
+	if_false	 Int.64 L.1 0
+	import_procedure	 alloca 1 Addr 0 p.4
+	declare_param	 * 8 8 Word.64 0 F F 0 v.6
+	import_global	 m3_jmpbuf_size 8 8 Word.64 0 v.7
+	# AllocateJmpbufs  try_count:0
+					-----LINE 16  -----
+	load_integer	 Int.64 0
+	load		 v.2 104 Int.64 Int.64
+	if_gt		 Int.64 L.2 0
+	load_integer	 Int.64 12
+	load		 v.2 104 Int.64 Int.64
+	if_lt		 Int.64 L.2 0
+	load		 v.2 104 Int.64 Int.64
+	case_jump	 Int.64 13 L.3 L.3 L.3 L.4 L.5 L.2 L.2 L.6 L.5 L.5 L.5 L.5 L.5
+. L.3 F
+					-----LINE 17  -----
+	load_integer	 Int.64 49
+	store		 v.2 113 Word.64 Word.8
+	jump		 L.7
+. L.4 F
+					-----LINE 18  -----
+	load_integer	 Int.64 50
+	store		 v.2 113 Word.64 Word.8
+	jump		 L.7
+. L.6 F
+					-----LINE 19  -----
+	load_integer	 Int.64 51
+	store		 v.2 113 Word.64 Word.8
+	jump		 L.7
+. L.5 F
+					-----LINE 20  -----
+	load_integer	 Int.64 52
+	store		 v.2 113 Word.64 Word.8
+	jump		 L.7
+. L.2 F
+	declare_proctype	 -1531209598 2 0 -1 0
+	declare_formal	 module 138420323
+	declare_formal	 info 425470580
+	import_procedure	 RTHooks__ReportFault 2 Void 0 p.5
+	declare_param	 module 8 8 Addr 138420323 F F 50 v.8
+	declare_param	 info 8 8 Int.64 425470580 F F 50 v.9
+	set_runtime_proc	 ReportFault p.5
+	abort		 7
+. L.7 F
+					-----LINE 23  -----
+	load_integer	 Int.64 0
+	load		 v.2 104 Int.64 Int.64
+	if_gt		 Int.64 L.8 0
+	load_integer	 Int.64 12
+	load		 v.2 104 Int.64 Int.64
+	if_lt		 Int.64 L.8 0
+	load		 v.2 104 Int.64 Int.64
+	case_jump	 Int.64 13 L.9 L.9 L.9 L.10 L.11 L.8 L.8 L.12 L.11 L.11 L.11 L.11 L.11
+. L.9 F
+					-----LINE 24  -----
+	load_integer	 Int.64 49
+	store		 v.2 113 Word.64 Word.8
+	jump		 L.13
+. L.10 F
+					-----LINE 25  -----
+	load_integer	 Int.64 50
+	store		 v.2 113 Word.64 Word.8
+	jump		 L.13
+. L.12 F
+					-----LINE 26  -----
+	load_integer	 Int.64 51
+	store		 v.2 113 Word.64 Word.8
+	jump		 L.13
+. L.11 F
+					-----LINE 27  -----
+	load_integer	 Int.64 52
+	store		 v.2 113 Word.64 Word.8
+	jump		 L.13
+. L.8 F
+					-----LINE 28  -----
+	load_integer	 Int.64 53
+	store		 v.2 113 Word.64 Word.8
+. L.13 F
+					-----LINE 31  -----
+	load_integer	 Int.64 0
+	load		 v.2 104 Int.64 Int.64
+	if_gt		 Int.64 L.14 0
+	load_integer	 Int.64 50
+	load		 v.2 104 Int.64 Int.64
+	if_lt		 Int.64 L.14 0
+	load		 v.2 104 Int.64 Int.64
+	case_jump	 Int.64 51 L.15 L.15 L.15 L.16 L.17 L.14 L.14 L.18 L.17 L.17 L.17 L.17 L.17 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.14 L.19
+. L.15 F
+					-----LINE 32  -----
+	load_integer	 Int.64 49
+	store		 v.2 113 Word.64 Word.8
+	jump		 L.20
+. L.16 F
+					-----LINE 33  -----
+	load_integer	 Int.64 50
+	store		 v.2 113 Word.64 Word.8
+	jump		 L.20
+. L.18 F
+					-----LINE 34  -----
+	load_integer	 Int.64 51
+	store		 v.2 113 Word.64 Word.8
+	jump		 L.20
+. L.17 F
+					-----LINE 35  -----
+	load_integer	 Int.64 52
+	store		 v.2 113 Word.64 Word.8
+	jump		 L.20
+. L.19 F
+					-----LINE 36  -----
+	load_integer	 Int.64 53
+	store		 v.2 113 Word.64 Word.8
+	jump		 L.20
+. L.14 F
+	abort		 7
+. L.20 F
+					-----LINE 39  -----
+	load_integer	 Int.64 0
+	load		 v.2 104 Int.64 Int.64
+	if_gt		 Int.64 L.21 0
+	load_integer	 Int.64 50
+	load		 v.2 104 Int.64 Int.64
+	if_lt		 Int.64 L.21 0
+	load		 v.2 104 Int.64 Int.64
+	case_jump	 Int.64 51 L.22 L.22 L.22 L.23 L.24 L.21 L.21 L.25 L.24 L.24 L.24 L.24 L.24 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.21 L.26
+. L.22 F
+					-----LINE 40  -----
+	load_integer	 Int.64 49
+	store		 v.2 113 Word.64 Word.8
+	jump		 L.27
+. L.23 F
+					-----LINE 41  -----
+	load_integer	 Int.64 50
+	store		 v.2 113 Word.64 Word.8
+	jump		 L.27
+. L.25 F
+					-----LINE 42  -----
+	load_integer	 Int.64 51
+	store		 v.2 113 Word.64 Word.8
+	jump		 L.27
+. L.24 F
+					-----LINE 43  -----
+	load_integer	 Int.64 52
+	store		 v.2 113 Word.64 Word.8
+	jump		 L.27
+. L.26 F
+					-----LINE 44  -----
+	load_integer	 Int.64 53
+	store		 v.2 113 Word.64 Word.8
+	jump		 L.27
+. L.21 F
+					-----LINE 45  -----
+	load_integer	 Int.64 54
+	store		 v.2 113 Word.64 Word.8
+. L.27 F
+					-----LINE 48  -----
+					-----LINE 49  -----
+	load_integer	 Int.64 0
+	load		 v.2 112 Word.8 Int.64
+	if_ge		 Int.64 L.28 50
+					-----LINE 51  -----
+	load_integer	 Int.64 1
+	load		 v.2 112 Word.8 Int.64
+	if_ge		 Int.64 L.29 50
+					-----LINE 49  -----
+	load_integer	 Int.64 3
+	load		 v.2 112 Word.8 Int.64
+	if_ge		 Int.64 L.28 50
+					-----LINE 50  -----
+	load_integer	 Int.64 4
+	load		 v.2 112 Word.8 Int.64
+	if_ge		 Int.64 L.30 50
+. L.28 F
+					-----LINE 49  -----
+	load_integer	 Int.64 49
+	store		 v.2 113 Word.64 Word.8
+	jump		 L.31
+. L.30 F
+					-----LINE 50  -----
+	load_integer	 Int.64 50
+	store		 v.2 113 Word.64 Word.8
+	jump		 L.31
+. L.29 F
+					-----LINE 51  -----
+	load_integer	 Int.64 51
+	store		 v.2 113 Word.64 Word.8
+	jump		 L.31
+. L.32 F
+. L.31 F
+. L.1 F
+	load_address	 v.2 0
+	exit_proc	 Addr
+	end_procedure	 p.1
+	# global constant type descriptor
+	declare_record	 -1 384 0
+	# global data type descriptor
+	declare_record	 -1 1344 3
+	declare_field	 i 832 64 425470580
+	declare_field	 r 896 8 -1909968425
+	declare_field	 c 904 8 1457612899
+	# module global constants
+	bind_segment	 v.1 48 16 Struct F T
+	begin_init	 v.1
+	# procedure names
+	init_chars	 0 "Main_M3"
+	# procedure table
+	init_proc	 8 p.1
+	init_var	 16 v.1 0
+	# file name
+	init_chars	 32 "../Main.m3"
+	end_init	 v.1
+	# module global data
+	bind_segment	 v.2 176 16 Struct F T
+	begin_init	 v.2
+	init_var	 0 v.1 32
+	init_var	 40 v.1 8
+	init_var	 72 v.2 120
+	init_proc	 88 p.1
+	init_int	 96 3 Int.64
+	init_proc	 128 p.2
+	init_var	 136 v.2 144
+	init_proc	 152 p.3
+	end_init	 v.2
+	# load map
+	# 
+	# 
+	#  global data allocation for M_Main
+	#      0   104  8  *module info*
+	#    104     8  8  Main.i
+	#    112     1  1  Main.r
+	#    113     1  1  Main.c
+	#    120    24  8  import Main
+	#    144    24  8  import RTHooks
+	#    168     0  8  *TOTAL*
+	# 
+	# 
+	#  global constants for M_Main
+	#      0     8  8  *proc names*
+	#      8    24  8  *proc info*
+	#     32    11  1  *string*
+	#     48     0  8  *TOTAL*
+	# 
+	end_unit	

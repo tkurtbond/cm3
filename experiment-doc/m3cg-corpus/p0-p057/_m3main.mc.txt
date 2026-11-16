@@ -1,0 +1,53 @@
+	begin_unit	 0
+					-----FILE _m3main.mc  -----
+					-----LINE 1  -----
+	declare_segment	 MM__m3main 0 F v.1
+	bind_segment	 v.1 8 8 Struct F T
+	begin_init	 v.1
+	end_init	 v.1
+	import_procedure	 Main_M3 1 Addr 0 p.1
+	declare_param	 mode 8 8 Int.64 0 F F 100 v.2
+	import_procedure	 RTLinker__InitRuntime 4 Void 0 p.2
+	declare_param	 argc 8 8 Int.64 0 F F 100 v.3
+	declare_param	 argv 8 8 Addr 0 F F 100 v.4
+	declare_param	 envp 8 8 Addr 0 F F 100 v.5
+	declare_param	 instance 8 8 Addr 0 F F 100 v.6
+	import_procedure	 RTLinker__AddUnit 1 Void 0 p.3
+	declare_param	 m 8 8 Addr 0 F F 100 v.7
+	import_procedure	 RTProcess__Exit 1 Void 0 p.4
+	declare_param	 n 8 8 Int.64 0 F F 100 v.8
+	declare_procedure	 main 3 Int.64 0 0 T * p.5
+	declare_param	 argc 8 8 Int.64 0 F F 100 v.9
+	declare_param	 argv 8 8 Addr 0 F F 100 v.10
+	declare_param	 envp 8 8 Addr 0 F F 100 v.11
+	begin_procedure	 p.5
+	declare_local	 self 8 8 Addr 0 F F 100 v.12
+					-----LINE 2  -----
+	load_integer	 Int.64 0
+	store		 v.12 0 Int.64 Int.64
+					-----LINE 3  -----
+	start_call_direct	 p.2 0 Void
+	load		 v.9 0 Int.64 Int.64
+	pop_param	 Int.64
+	load		 v.10 0 Addr Addr
+	pop_param	 Addr
+	load		 v.11 0 Addr Addr
+	pop_param	 Addr
+	load		 v.12 0 Addr Addr
+	pop_param	 Addr
+	call_direct	 p.2 Void
+					-----LINE 4  -----
+	start_call_direct	 p.3 0 Void
+	load_procedure	 p.1
+	pop_param	 Addr
+	call_direct	 p.3 Void
+					-----LINE 5  -----
+	start_call_direct	 p.4 0 Void
+	load_integer	 Int.64 0
+	pop_param	 Int.64
+	call_direct	 p.4 Void
+					-----LINE 6  -----
+	load_integer	 Int.64 0
+	exit_proc	 Int.64
+	end_procedure	 p.5
+	end_unit	

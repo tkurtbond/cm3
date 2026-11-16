@@ -1,0 +1,272 @@
+# M3CG operation checklist for the LlvmIR backend
+
+Generated from `m3-sys/m3middle/src/M3CG_Ops.i3` by `gen_m3cg_checklist.py`; the Status column is
+maintained by hand. Line links point at the implementing procedure in
+each reference backend (`—` means no procedure of that name was found,
+which usually means the method is inherited or bound under another
+name, so check by hand).
+
+Status values: `todo`, `wip`, `done` (implemented and covered by a
+test), `n/a` (deliberately not needed; say why in Notes).
+
+
+## ID counters
+
+| Op | Decl | M3C | M3CG_LLVM | Status | Notes |
+|---|---|---|---|---|---|
+| `next_label` | [41](../m3-sys/m3middle/src/M3CG_Ops.i3#L41) | — | [1418](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1418) | wip |  |
+
+## READONLY configuration
+
+| Op | Decl | M3C | M3CG_LLVM | Status | Notes |
+|---|---|---|---|---|---|
+| `set_error_handler` | [46](../m3-sys/m3middle/src/M3CG_Ops.i3#L46) | [3120](../m3-sys/m3back/src/M3C.m3#L3120) | [1427](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1427) | wip |  |
+
+## compilation units
+
+| Op | Decl | M3C | M3CG_LLVM | Status | Notes |
+|---|---|---|---|---|---|
+| `begin_unit` | [55](../m3-sys/m3middle/src/M3CG_Ops.i3#L55) | [3208](../m3-sys/m3back/src/M3C.m3#L3208) | [1435](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1435) | wip |  |
+| `end_unit` | [58](../m3-sys/m3middle/src/M3CG_Ops.i3#L58) | [3217](../m3-sys/m3back/src/M3C.m3#L3217) | [1473](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1473) | wip |  |
+| `import_unit` | [62](../m3-sys/m3middle/src/M3CG_Ops.i3#L62) | — | [1521](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1521) | wip |  |
+| `export_unit` | [63](../m3-sys/m3middle/src/M3CG_Ops.i3#L63) | — | [1526](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1526) | wip |  |
+
+## debugging line numbers
+
+| Op | Decl | M3C | M3CG_LLVM | Status | Notes |
+|---|---|---|---|---|---|
+| `set_source_file` | [68](../m3-sys/m3middle/src/M3CG_Ops.i3#L68) | [3233](../m3-sys/m3back/src/M3C.m3#L3233) | [1533](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1533) | wip | Used for source_filename. |
+| `set_source_line` | [69](../m3-sys/m3middle/src/M3CG_Ops.i3#L69) | [3249](../m3-sys/m3back/src/M3C.m3#L3249) | [1552](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1552) | wip | Ignored until Phase 5 (debug info). |
+
+## debugging type declarations
+
+| Op | Decl | M3C | M3CG_LLVM | Status | Notes |
+|---|---|---|---|---|---|
+| `declare_typename` | [83](../m3-sys/m3middle/src/M3CG_Ops.i3#L83) | [3330](../m3-sys/m3back/src/M3C.m3#L3330) | [1578](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1578) | wip | No-op: type info is only needed for debug info (Phase 5). |
+| `declare_array` | [89](../m3-sys/m3middle/src/M3CG_Ops.i3#L89) | [3349](../m3-sys/m3back/src/M3C.m3#L3349) | [1609](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1609) | wip | No-op: type info is only needed for debug info (Phase 5). |
+| `declare_open_array` | [91](../m3-sys/m3middle/src/M3CG_Ops.i3#L91) | [3364](../m3-sys/m3back/src/M3C.m3#L3364) | [1619](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1619) | wip | No-op: type info is only needed for debug info (Phase 5). |
+| `declare_enum` | [94](../m3-sys/m3middle/src/M3CG_Ops.i3#L94) | [3408](../m3-sys/m3back/src/M3C.m3#L3408) | [1629](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1629) | wip | No-op: type info is only needed for debug info (Phase 5). |
+| `declare_enum_elt` | [98](../m3-sys/m3middle/src/M3CG_Ops.i3#L98) | [3444](../m3-sys/m3back/src/M3C.m3#L3444) | [1640](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1640) | wip | No-op: type info is only needed for debug info (Phase 5). |
+| `declare_packed` | [101](../m3-sys/m3middle/src/M3CG_Ops.i3#L101) | [3482](../m3-sys/m3back/src/M3C.m3#L3482) | [1649](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1649) | wip | No-op: type info is only needed for debug info (Phase 5). |
+| `declare_record` | [103](../m3-sys/m3middle/src/M3CG_Ops.i3#L103) | [3592](../m3-sys/m3back/src/M3C.m3#L3592) | [1659](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1659) | wip | No-op: type info is only needed for debug info (Phase 5). |
+| `declare_field` | [108](../m3-sys/m3middle/src/M3CG_Ops.i3#L108) | [3625](../m3-sys/m3back/src/M3C.m3#L3625) | [1678](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1678) | wip | No-op: type info is only needed for debug info (Phase 5). |
+| `declare_set` | [111](../m3-sys/m3middle/src/M3CG_Ops.i3#L111) | [3666](../m3-sys/m3back/src/M3C.m3#L3666) | [1696](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1696) | wip | No-op: type info is only needed for debug info (Phase 5). |
+| `declare_subrange` | [113](../m3-sys/m3middle/src/M3CG_Ops.i3#L113) | [3718](../m3-sys/m3back/src/M3C.m3#L3718) | [1706](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1706) | wip | No-op: type info is only needed for debug info (Phase 5). |
+| `declare_pointer` | [115](../m3-sys/m3middle/src/M3CG_Ops.i3#L115) | [3778](../m3-sys/m3back/src/M3C.m3#L3778) | [1725](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1725) | wip | No-op: type info is only needed for debug info (Phase 5). |
+| `declare_indirect` | [118](../m3-sys/m3middle/src/M3CG_Ops.i3#L118) | [3795](../m3-sys/m3back/src/M3C.m3#L3795) | [1738](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1738) | wip | No-op: type info is only needed for debug info (Phase 5). |
+| `declare_proctype` | [121](../m3-sys/m3middle/src/M3CG_Ops.i3#L121) | [3819](../m3-sys/m3back/src/M3C.m3#L3819) | [1747](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1747) | wip | No-op: type info is only needed for debug info (Phase 5). |
+| `declare_formal` | [130](../m3-sys/m3middle/src/M3CG_Ops.i3#L130) | [3848](../m3-sys/m3back/src/M3C.m3#L3848) | [1770](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1770) | wip | No-op: type info is only needed for debug info (Phase 5). |
+| `declare_raises` | [134](../m3-sys/m3middle/src/M3CG_Ops.i3#L134) | [3870](../m3-sys/m3back/src/M3C.m3#L3870) | [1781](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1781) | wip | No-op: type info is only needed for debug info (Phase 5). |
+| `declare_object` | [138](../m3-sys/m3middle/src/M3CG_Ops.i3#L138) | [3884](../m3-sys/m3back/src/M3C.m3#L3884) | [1790](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1790) | wip | No-op: type info is only needed for debug info (Phase 5). |
+| `declare_method` | [149](../m3-sys/m3middle/src/M3CG_Ops.i3#L149) | [3931](../m3-sys/m3back/src/M3C.m3#L3931) | [1828](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1828) | wip | No-op: type info is only needed for debug info (Phase 5). |
+| `declare_opaque` | [152](../m3-sys/m3middle/src/M3CG_Ops.i3#L152) | [3943](../m3-sys/m3back/src/M3C.m3#L3943) | [1838](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1838) | wip | No-op: type info is only needed for debug info (Phase 5). |
+| `reveal_opaque` | [157](../m3-sys/m3middle/src/M3CG_Ops.i3#L157) | [3956](../m3-sys/m3back/src/M3C.m3#L3956) | [1852](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1852) | wip | No-op. |
+| `declare_exception` | [160](../m3-sys/m3middle/src/M3CG_Ops.i3#L160) | [3972](../m3-sys/m3back/src/M3C.m3#L3972) | [1872](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1872) | wip | No-op: type info is only needed for debug info (Phase 5). |
+| `widechar_size` | [168](../m3-sys/m3middle/src/M3CG_Ops.i3#L168) | — | [1885](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1885) | wip | No-op. |
+
+## runtime hooks
+
+| Op | Decl | M3C | M3CG_LLVM | Status | Notes |
+|---|---|---|---|---|---|
+| `set_runtime_proc` | [175](../m3-sys/m3middle/src/M3CG_Ops.i3#L175) | [4018](../m3-sys/m3back/src/M3C.m3#L4018) | [1916](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1916) | wip | No-op. |
+
+## variable declarations
+
+| Op | Decl | M3C | M3CG_LLVM | Status | Notes |
+|---|---|---|---|---|---|
+| `import_global` | [208](../m3-sys/m3middle/src/M3CG_Ops.i3#L208) | [4030](../m3-sys/m3back/src/M3C.m3#L4030) | [1933](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1933) | wip |  |
+| `declare_segment` | [213](../m3-sys/m3middle/src/M3CG_Ops.i3#L213) | [4074](../m3-sys/m3back/src/M3C.m3#L4074) | [1958](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1958) | wip |  |
+| `bind_segment` | [214](../m3-sys/m3middle/src/M3CG_Ops.i3#L214) | [4110](../m3-sys/m3back/src/M3C.m3#L4110) | [1992](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L1992) | wip |  |
+| `declare_global` | [222](../m3-sys/m3middle/src/M3CG_Ops.i3#L222) | [4135](../m3-sys/m3back/src/M3C.m3#L4135) | [2007](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2007) | wip |  |
+| `declare_constant` | [229](../m3-sys/m3middle/src/M3CG_Ops.i3#L229) | [4162](../m3-sys/m3back/src/M3C.m3#L4162) | [2045](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2045) | wip |  |
+| `declare_local` | [235](../m3-sys/m3middle/src/M3CG_Ops.i3#L235) | [5362](../m3-sys/m3back/src/M3C.m3#L5362) | [2098](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2098) | wip | Phase 1: up-level locals are Fatal. |
+| `declare_param` | [258](../m3-sys/m3middle/src/M3CG_Ops.i3#L258) | [4986](../m3-sys/m3back/src/M3C.m3#L4986) | [2157](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2157) | wip | Phase 1: struct and up-level params are Fatal. |
+| `declare_temp` | [273](../m3-sys/m3middle/src/M3CG_Ops.i3#L273) | [5599](../m3-sys/m3back/src/M3C.m3#L5599) | [2197](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2197) | wip |  |
+| `free_temp` | [279](../m3-sys/m3middle/src/M3CG_Ops.i3#L279) | [5611](../m3-sys/m3back/src/M3C.m3#L5611) | [2215](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2215) | wip | No-op. |
+
+## static variable initialization
+
+| Op | Decl | M3C | M3CG_LLVM | Status | Notes |
+|---|---|---|---|---|---|
+| `begin_init` | [293](../m3-sys/m3middle/src/M3CG_Ops.i3#L293) | [5618](../m3-sys/m3back/src/M3C.m3#L5618) | [2228](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2228) | wip |  |
+| `end_init` | [294](../m3-sys/m3middle/src/M3CG_Ops.i3#L294) | [5643](../m3-sys/m3back/src/M3C.m3#L5643) | [2237](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2237) | wip |  |
+| `init_int` | [297](../m3-sys/m3middle/src/M3CG_Ops.i3#L297) | [5776](../m3-sys/m3back/src/M3C.m3#L5776) | [2369](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2369) | wip |  |
+| `init_proc` | [301](../m3-sys/m3middle/src/M3CG_Ops.i3#L301) | [5803](../m3-sys/m3back/src/M3C.m3#L5803) | [2379](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2379) | wip |  |
+| `init_label` | [305](../m3-sys/m3middle/src/M3CG_Ops.i3#L305) | [5839](../m3-sys/m3back/src/M3C.m3#L5839) | [2388](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2388) | todo |  |
+| `init_var` | [309](../m3-sys/m3middle/src/M3CG_Ops.i3#L309) | [5851](../m3-sys/m3back/src/M3C.m3#L5851) | [2398](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2398) | wip |  |
+| `init_offset` | [314](../m3-sys/m3middle/src/M3CG_Ops.i3#L314) | [5872](../m3-sys/m3back/src/M3C.m3#L5872) | [2407](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2407) | todo |  |
+| `init_chars` | [319](../m3-sys/m3middle/src/M3CG_Ops.i3#L319) | [5887](../m3-sys/m3back/src/M3C.m3#L5887) | [2418](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2418) | wip |  |
+| `init_float` | [323](../m3-sys/m3middle/src/M3CG_Ops.i3#L323) | [6040](../m3-sys/m3back/src/M3C.m3#L6040) | [2427](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2427) | todo |  |
+
+## procedures
+
+| Op | Decl | M3C | M3CG_LLVM | Status | Notes |
+|---|---|---|---|---|---|
+| `import_procedure` | [350](../m3-sys/m3middle/src/M3CG_Ops.i3#L350) | [6061](../m3-sys/m3back/src/M3C.m3#L6061) | [2445](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2445) | wip |  |
+| `declare_procedure` | [361](../m3-sys/m3middle/src/M3CG_Ops.i3#L361) | [6111](../m3-sys/m3back/src/M3C.m3#L6111) | [2493](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2493) | wip | Phase 1: nested procedures are Fatal. |
+| `begin_procedure` | [376](../m3-sys/m3middle/src/M3CG_Ops.i3#L376) | [6213](../m3-sys/m3back/src/M3C.m3#L6213) | [2521](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2521) | wip |  |
+| `end_procedure` | [380](../m3-sys/m3middle/src/M3CG_Ops.i3#L380) | [6342](../m3-sys/m3back/src/M3C.m3#L6342) | [2698](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2698) | wip |  |
+| `begin_block` | [384](../m3-sys/m3middle/src/M3CG_Ops.i3#L384) | [6355](../m3-sys/m3back/src/M3C.m3#L6355) | [2774](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2774) | wip | No-op. |
+| `end_block` | [385](../m3-sys/m3middle/src/M3CG_Ops.i3#L385) | [6364](../m3-sys/m3back/src/M3C.m3#L6364) | [2780](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2780) | wip | No-op. |
+| `note_procedure_origin` | [388](../m3-sys/m3middle/src/M3CG_Ops.i3#L388) | [6373](../m3-sys/m3back/src/M3C.m3#L6373) | [2786](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2786) | wip | No-op. |
+
+## statements
+
+| Op | Decl | M3C | M3CG_LLVM | Status | Notes |
+|---|---|---|---|---|---|
+| `set_label` | [397](../m3-sys/m3middle/src/M3CG_Ops.i3#L397) | [6380](../m3-sys/m3back/src/M3C.m3#L6380) | [2818](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2818) | wip |  |
+| `jump` | [401](../m3-sys/m3middle/src/M3CG_Ops.i3#L401) | [6393](../m3-sys/m3back/src/M3C.m3#L6393) | [2867](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2867) | wip |  |
+| `if_true` | [404](../m3-sys/m3middle/src/M3CG_Ops.i3#L404) | [6416](../m3-sys/m3back/src/M3C.m3#L6416) | [2934](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2934) | wip |  |
+| `if_false` | [407](../m3-sys/m3middle/src/M3CG_Ops.i3#L407) | [6422](../m3-sys/m3back/src/M3C.m3#L6422) | [2940](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2940) | wip |  |
+| `if_compare` | [410](../m3-sys/m3middle/src/M3CG_Ops.i3#L410) | [6448](../m3-sys/m3back/src/M3C.m3#L6448) | [2946](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2946) | todo |  |
+| `case_jump` | [413](../m3-sys/m3middle/src/M3CG_Ops.i3#L413) | [6464](../m3-sys/m3back/src/M3C.m3#L6464) | [2982](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L2982) | todo |  |
+| `exit_proc` | [416](../m3-sys/m3middle/src/M3CG_Ops.i3#L416) | [6480](../m3-sys/m3back/src/M3C.m3#L6480) | [3009](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3009) | wip |  |
+
+## load/store
+
+| Op | Decl | M3C | M3CG_LLVM | Status | Notes |
+|---|---|---|---|---|---|
+| `load` | [431](../m3-sys/m3middle/src/M3CG_Ops.i3#L431) | [6594](../m3-sys/m3back/src/M3C.m3#L6594) | [3148](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3148) | wip |  |
+| `load_address` | [437](../m3-sys/m3middle/src/M3CG_Ops.i3#L437) | [6656](../m3-sys/m3back/src/M3C.m3#L6656) | [3223](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3223) | wip |  |
+| `load_indirect` | [440](../m3-sys/m3middle/src/M3CG_Ops.i3#L440) | [6675](../m3-sys/m3back/src/M3C.m3#L6675) | [3243](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3243) | todo |  |
+| `store` | [444](../m3-sys/m3middle/src/M3CG_Ops.i3#L444) | [6639](../m3-sys/m3back/src/M3C.m3#L6639) | [3181](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3181) | wip |  |
+| `store_indirect` | [447](../m3-sys/m3middle/src/M3CG_Ops.i3#L447) | [6701](../m3-sys/m3back/src/M3C.m3#L6701) | [3265](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3265) | todo |  |
+
+## literals
+
+| Op | Decl | M3C | M3CG_LLVM | Status | Notes |
+|---|---|---|---|---|---|
+| `load_nil` | [485](../m3-sys/m3middle/src/M3CG_Ops.i3#L485) | [6721](../m3-sys/m3back/src/M3C.m3#L6721) | [3292](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3292) | wip |  |
+| `load_integer` | [486](../m3-sys/m3middle/src/M3CG_Ops.i3#L486) | [6760](../m3-sys/m3back/src/M3C.m3#L6760) | [3300](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3300) | wip |  |
+| `load_float` | [487](../m3-sys/m3middle/src/M3CG_Ops.i3#L487) | [6786](../m3-sys/m3back/src/M3C.m3#L6786) | [3368](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3368) | todo |  |
+
+## arithmetic
+
+| Op | Decl | M3C | M3CG_LLVM | Status | Notes |
+|---|---|---|---|---|---|
+| `compare` | [495](../m3-sys/m3middle/src/M3CG_Ops.i3#L495) | [6938](../m3-sys/m3back/src/M3C.m3#L6938) | [3485](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3485) | todo |  |
+| `add` | [496](../m3-sys/m3middle/src/M3CG_Ops.i3#L496) | [6963](../m3-sys/m3back/src/M3C.m3#L6963) | [3509](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3509) | todo |  |
+| `subtract` | [497](../m3-sys/m3middle/src/M3CG_Ops.i3#L497) | [6970](../m3-sys/m3back/src/M3C.m3#L6970) | [3515](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3515) | todo |  |
+| `multiply` | [498](../m3-sys/m3middle/src/M3CG_Ops.i3#L498) | [6976](../m3-sys/m3back/src/M3C.m3#L6976) | [3521](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3521) | todo |  |
+| `divide` | [499](../m3-sys/m3middle/src/M3CG_Ops.i3#L499) | [6982](../m3-sys/m3back/src/M3C.m3#L6982) | [3527](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3527) | todo |  |
+| `negate` | [500](../m3-sys/m3middle/src/M3CG_Ops.i3#L500) | [7020](../m3-sys/m3back/src/M3C.m3#L7020) | [3533](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3533) | todo |  |
+| `abs` | [501](../m3-sys/m3middle/src/M3CG_Ops.i3#L501) | [7026](../m3-sys/m3back/src/M3C.m3#L7026) | [3580](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3580) | todo |  |
+| `max` | [502](../m3-sys/m3middle/src/M3CG_Ops.i3#L502) | [7037](../m3-sys/m3back/src/M3C.m3#L7037) | [3637](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3637) | todo |  |
+| `min` | [503](../m3-sys/m3middle/src/M3CG_Ops.i3#L503) | [7049](../m3-sys/m3back/src/M3C.m3#L7049) | [3643](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3643) | todo |  |
+| `cvt_int` | [504](../m3-sys/m3middle/src/M3CG_Ops.i3#L504) | [7061](../m3-sys/m3back/src/M3C.m3#L7061) | [3672](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3672) | todo |  |
+| `cvt_float` | [505](../m3-sys/m3middle/src/M3CG_Ops.i3#L505) | [7072](../m3-sys/m3back/src/M3C.m3#L7072) | [3686](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3686) | todo |  |
+| `div` | [506](../m3-sys/m3middle/src/M3CG_Ops.i3#L506) | [6988](../m3-sys/m3back/src/M3C.m3#L6988) | [3802](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3802) | todo |  |
+| `mod` | [507](../m3-sys/m3middle/src/M3CG_Ops.i3#L507) | [7004](../m3-sys/m3back/src/M3C.m3#L7004) | [3817](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3817) | todo |  |
+
+## sets
+
+| Op | Decl | M3C | M3CG_LLVM | Status | Notes |
+|---|---|---|---|---|---|
+| `set_union` | [515](../m3-sys/m3middle/src/M3CG_Ops.i3#L515) | [7099](../m3-sys/m3back/src/M3C.m3#L7099) | [3914](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3914) | todo |  |
+| `set_difference` | [516](../m3-sys/m3middle/src/M3CG_Ops.i3#L516) | [7105](../m3-sys/m3back/src/M3C.m3#L7105) | [3920](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3920) | todo |  |
+| `set_intersection` | [517](../m3-sys/m3middle/src/M3CG_Ops.i3#L517) | [7111](../m3-sys/m3back/src/M3C.m3#L7111) | [3926](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3926) | todo |  |
+| `set_sym_difference` | [518](../m3-sys/m3middle/src/M3CG_Ops.i3#L518) | [7117](../m3-sys/m3back/src/M3C.m3#L7117) | [3932](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3932) | todo |  |
+| `set_member` | [519](../m3-sys/m3middle/src/M3CG_Ops.i3#L519) | [7123](../m3-sys/m3back/src/M3C.m3#L7123) | [3938](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3938) | todo |  |
+| `set_compare` | [520](../m3-sys/m3middle/src/M3CG_Ops.i3#L520) | [7135](../m3-sys/m3back/src/M3C.m3#L7135) | [3966](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3966) | todo |  |
+| `set_range` | [521](../m3-sys/m3middle/src/M3CG_Ops.i3#L521) | [7164](../m3-sys/m3back/src/M3C.m3#L7164) | [3986](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3986) | todo |  |
+| `set_singleton` | [522](../m3-sys/m3middle/src/M3CG_Ops.i3#L522) | [7177](../m3-sys/m3back/src/M3C.m3#L7177) | [3996](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L3996) | todo |  |
+
+## Word.T bit operations
+
+| Op | Decl | M3C | M3CG_LLVM | Status | Notes |
+|---|---|---|---|---|---|
+| `not` | [526](../m3-sys/m3middle/src/M3CG_Ops.i3#L526) | [7191](../m3-sys/m3back/src/M3C.m3#L7191) | [4008](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4008) | todo |  |
+| `and` | [527](../m3-sys/m3middle/src/M3CG_Ops.i3#L527) | [7197](../m3-sys/m3back/src/M3C.m3#L7197) | [4019](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4019) | todo |  |
+| `or` | [528](../m3-sys/m3middle/src/M3CG_Ops.i3#L528) | [7203](../m3-sys/m3back/src/M3C.m3#L7203) | [4024](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4024) | todo |  |
+| `xor` | [529](../m3-sys/m3middle/src/M3CG_Ops.i3#L529) | [7209](../m3-sys/m3back/src/M3C.m3#L7209) | [4029](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4029) | todo |  |
+| `shift` | [531](../m3-sys/m3middle/src/M3CG_Ops.i3#L531) | [7278](../m3-sys/m3back/src/M3C.m3#L7278) | [4034](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4034) | todo |  |
+| `shift_left` | [532](../m3-sys/m3middle/src/M3CG_Ops.i3#L532) | [7249](../m3-sys/m3back/src/M3C.m3#L7249) | [4089](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4089) | todo |  |
+| `shift_right` | [533](../m3-sys/m3middle/src/M3CG_Ops.i3#L533) | [7259](../m3-sys/m3back/src/M3C.m3#L7259) | [4095](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4095) | todo |  |
+| `rotate` | [534](../m3-sys/m3middle/src/M3CG_Ops.i3#L534) | [7284](../m3-sys/m3back/src/M3C.m3#L7284) | [4124](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4124) | todo |  |
+| `rotate_left` | [535](../m3-sys/m3middle/src/M3CG_Ops.i3#L535) | [7290](../m3-sys/m3back/src/M3C.m3#L7290) | [4165](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4165) | todo |  |
+| `rotate_right` | [536](../m3-sys/m3middle/src/M3CG_Ops.i3#L536) | [7296](../m3-sys/m3back/src/M3C.m3#L7296) | [4182](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4182) | todo |  |
+| `widen` | [538](../m3-sys/m3middle/src/M3CG_Ops.i3#L538) | [7302](../m3-sys/m3back/src/M3C.m3#L7302) | [4199](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4199) | todo |  |
+| `chop` | [541](../m3-sys/m3middle/src/M3CG_Ops.i3#L541) | [7309](../m3-sys/m3back/src/M3C.m3#L7309) | [4214](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4214) | todo |  |
+| `extract` | [544](../m3-sys/m3middle/src/M3CG_Ops.i3#L544) | [7316](../m3-sys/m3back/src/M3C.m3#L7316) | [4246](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4246) | todo |  |
+| `extract_n` | [548](../m3-sys/m3middle/src/M3CG_Ops.i3#L548) | [7331](../m3-sys/m3back/src/M3C.m3#L7331) | [4276](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4276) | todo |  |
+| `extract_mn` | [552](../m3-sys/m3middle/src/M3CG_Ops.i3#L552) | [7350](../m3-sys/m3back/src/M3C.m3#L7350) | [4298](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4298) | todo |  |
+| `insert` | [556](../m3-sys/m3middle/src/M3CG_Ops.i3#L556) | [7366](../m3-sys/m3back/src/M3C.m3#L7366) | [4341](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4341) | todo |  |
+| `insert_n` | [559](../m3-sys/m3middle/src/M3CG_Ops.i3#L559) | [7380](../m3-sys/m3back/src/M3C.m3#L7380) | [4367](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4367) | todo |  |
+| `insert_mn` | [562](../m3-sys/m3middle/src/M3CG_Ops.i3#L562) | [7390](../m3-sys/m3back/src/M3C.m3#L7390) | [4393](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4393) | todo |  |
+
+## misc. stack/memory ops
+
+| Op | Decl | M3C | M3CG_LLVM | Status | Notes |
+|---|---|---|---|---|---|
+| `swap` | [567](../m3-sys/m3middle/src/M3CG_Ops.i3#L567) | [7403](../m3-sys/m3back/src/M3C.m3#L7403) | [4418](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4418) | todo |  |
+| `pop` | [570](../m3-sys/m3middle/src/M3CG_Ops.i3#L570) | [2796](../m3-sys/m3back/src/M3C.m3#L2796) | [4430](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4430) | wip |  |
+| `copy_n` | [573](../m3-sys/m3middle/src/M3CG_Ops.i3#L573) | [7427](../m3-sys/m3back/src/M3C.m3#L7427) | [4446](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4446) | todo |  |
+| `copy` | [578](../m3-sys/m3middle/src/M3CG_Ops.i3#L578) | [7440](../m3-sys/m3back/src/M3C.m3#L7440) | [4469](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4469) | todo |  |
+| `zero_n` | [583](../m3-sys/m3middle/src/M3CG_Ops.i3#L583) | [7452](../m3-sys/m3back/src/M3C.m3#L7452) | [4493](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4493) | todo |  |
+| `zero` | [586](../m3-sys/m3middle/src/M3CG_Ops.i3#L586) | [7466](../m3-sys/m3back/src/M3C.m3#L7466) | [4510](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4510) | todo |  |
+
+## conversions
+
+| Op | Decl | M3C | M3CG_LLVM | Status | Notes |
+|---|---|---|---|---|---|
+| `loophole` | [591](../m3-sys/m3middle/src/M3CG_Ops.i3#L591) | [7479](../m3-sys/m3back/src/M3C.m3#L7479) | [4629](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4629) | todo |  |
+
+## traps & runtime checks
+
+| Op | Decl | M3C | M3CG_LLVM | Status | Notes |
+|---|---|---|---|---|---|
+| `abort` | [605](../m3-sys/m3middle/src/M3CG_Ops.i3#L605) | [7541](../m3-sys/m3back/src/M3C.m3#L7541) | [4708](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4708) | todo |  |
+| `check_nil` | [608](../m3-sys/m3middle/src/M3CG_Ops.i3#L608) | [7550](../m3-sys/m3back/src/M3C.m3#L7550) | [4768](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4768) | todo |  |
+| `check_lo` | [611](../m3-sys/m3middle/src/M3CG_Ops.i3#L611) | [7567](../m3-sys/m3back/src/M3C.m3#L7567) | [4779](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4779) | todo |  |
+| `check_hi` | [614](../m3-sys/m3middle/src/M3CG_Ops.i3#L614) | [7584](../m3-sys/m3back/src/M3C.m3#L7584) | [4791](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4791) | todo |  |
+| `check_range` | [617](../m3-sys/m3middle/src/M3CG_Ops.i3#L617) | [7601](../m3-sys/m3back/src/M3C.m3#L7601) | [4803](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4803) | todo |  |
+| `check_index` | [620](../m3-sys/m3middle/src/M3CG_Ops.i3#L620) | [7616](../m3-sys/m3back/src/M3C.m3#L7616) | [4817](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4817) | todo |  |
+| `check_eq` | [625](../m3-sys/m3middle/src/M3CG_Ops.i3#L625) | [7648](../m3-sys/m3back/src/M3C.m3#L7648) | [4832](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4832) | todo |  |
+
+## address arithmetic
+
+| Op | Decl | M3C | M3CG_LLVM | Status | Notes |
+|---|---|---|---|---|---|
+| `add_offset` | [630](../m3-sys/m3middle/src/M3CG_Ops.i3#L630) | [7676](../m3-sys/m3back/src/M3C.m3#L7676) | [4847](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4847) | todo |  |
+| `index_address` | [633](../m3-sys/m3middle/src/M3CG_Ops.i3#L633) | [7687](../m3-sys/m3back/src/M3C.m3#L7687) | [4858](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4858) | todo |  |
+
+## procedure calls
+
+| Op | Decl | M3C | M3CG_LLVM | Status | Notes |
+|---|---|---|---|---|---|
+| `start_call_direct` | [664](../m3-sys/m3middle/src/M3CG_Ops.i3#L664) | [7724](../m3-sys/m3back/src/M3C.m3#L7724) | [4876](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4876) | wip | Phase 1: level # 0 (static link) is Fatal. |
+| `call_direct` | [669](../m3-sys/m3middle/src/M3CG_Ops.i3#L669) | [7933](../m3-sys/m3back/src/M3C.m3#L7933) | [5061](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L5061) | wip |  |
+| `start_call_indirect` | [672](../m3-sys/m3middle/src/M3CG_Ops.i3#L672) | [7744](../m3-sys/m3back/src/M3C.m3#L7744) | [5121](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L5121) | todo |  |
+| `call_indirect` | [676](../m3-sys/m3middle/src/M3CG_Ops.i3#L676) | [7953](../m3-sys/m3back/src/M3C.m3#L7953) | [5380](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L5380) | todo |  |
+| `start_try` | [680](../m3-sys/m3middle/src/M3CG_Ops.i3#L680) | [8020](../m3-sys/m3back/src/M3C.m3#L8020) | [4907](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4907) | todo |  |
+| `end_try` | [683](../m3-sys/m3middle/src/M3CG_Ops.i3#L683) | [8034](../m3-sys/m3back/src/M3C.m3#L8034) | [4912](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L4912) | todo |  |
+| `invoke_direct` | [686](../m3-sys/m3middle/src/M3CG_Ops.i3#L686) | [8051](../m3-sys/m3back/src/M3C.m3#L8051) | [5066](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L5066) | todo |  |
+| `invoke_indirect` | [691](../m3-sys/m3middle/src/M3CG_Ops.i3#L691) | [8065](../m3-sys/m3back/src/M3C.m3#L8065) | [5385](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L5385) | todo |  |
+| `landing_pad` | [697](../m3-sys/m3middle/src/M3CG_Ops.i3#L697) | [8080](../m3-sys/m3back/src/M3C.m3#L8080) | [5071](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L5071) | todo |  |
+| `pop_param` | [703](../m3-sys/m3middle/src/M3CG_Ops.i3#L703) | [7761](../m3-sys/m3back/src/M3C.m3#L7761) | [5391](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L5391) | wip |  |
+| `pop_struct` | [706](../m3-sys/m3middle/src/M3CG_Ops.i3#L706) | [7774](../m3-sys/m3back/src/M3C.m3#L7774) | [5407](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L5407) | todo |  |
+| `pop_static_link` | [719](../m3-sys/m3middle/src/M3CG_Ops.i3#L719) | [7808](../m3-sys/m3back/src/M3C.m3#L7808) | [5438](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L5438) | todo |  |
+
+## procedure and closure types
+
+| Op | Decl | M3C | M3CG_LLVM | Status | Notes |
+|---|---|---|---|---|---|
+| `load_procedure` | [724](../m3-sys/m3middle/src/M3CG_Ops.i3#L724) | [8097](../m3-sys/m3back/src/M3C.m3#L8097) | [5453](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L5453) | wip |  |
+| `load_static_link` | [727](../m3-sys/m3middle/src/M3CG_Ops.i3#L727) | [8108](../m3-sys/m3back/src/M3C.m3#L8108) | [5465](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L5465) | todo |  |
+
+## misc.
+
+| Op | Decl | M3C | M3CG_LLVM | Status | Notes |
+|---|---|---|---|---|---|
+| `comment` | [732](../m3-sys/m3middle/src/M3CG_Ops.i3#L732) | [8142](../m3-sys/m3back/src/M3C.m3#L8142) | [5498](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L5498) | wip |  |
+
+## atomics
+
+| Op | Decl | M3C | M3CG_LLVM | Status | Notes |
+|---|---|---|---|---|---|
+| `store_ordered` | [739](../m3-sys/m3middle/src/M3CG_Ops.i3#L739) | [8165](../m3-sys/m3back/src/M3C.m3#L8165) | [5535](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L5535) | todo |  |
+| `load_ordered` | [742](../m3-sys/m3middle/src/M3CG_Ops.i3#L742) | [8177](../m3-sys/m3back/src/M3C.m3#L8177) | [5555](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L5555) | todo |  |
+| `exchange` | [745](../m3-sys/m3middle/src/M3CG_Ops.i3#L745) | [8186](../m3-sys/m3back/src/M3C.m3#L8186) | [5579](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L5579) | todo |  |
+| `compare_exchange` | [748](../m3-sys/m3middle/src/M3CG_Ops.i3#L748) | [8197](../m3-sys/m3back/src/M3C.m3#L8197) | [5606](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L5606) | todo |  |
+| `fence` | [758](../m3-sys/m3middle/src/M3CG_Ops.i3#L758) | [8219](../m3-sys/m3back/src/M3C.m3#L8219) | [5649](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L5649) | todo |  |
+| `fetch_and_op` | [761](../m3-sys/m3middle/src/M3CG_Ops.i3#L761) | [8234](../m3-sys/m3back/src/M3C.m3#L8234) | [5662](../m3-sys/llvm/llvm22/src/M3CG_LLVM.m3#L5662) | todo |  |

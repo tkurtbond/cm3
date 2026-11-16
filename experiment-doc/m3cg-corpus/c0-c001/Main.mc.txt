@@ -1,0 +1,74 @@
+	begin_unit	 0
+	widechar_size	 16
+					-----FILE ../Main.m3  -----
+					-----LINE 9  -----
+	# module global constants
+	declare_segment	 * -1 T v.1
+	# module global data
+	declare_segment	 M_Main -1 F v.2
+					-----LINE 10  -----
+	declare_procedure	 Main_M3 1 Addr 0 0 T * p.1
+	declare_param	 mode 8 8 Int.64 425470580 F F 100 v.3
+	import_procedure	 Main_I3 1 Addr 0 p.2
+	declare_param	 mode 8 8 Int.64 425470580 F F 100 v.4
+	export_unit	 Main
+	import_procedure	 RTHooks_I3 1 Addr 0 p.3
+	declare_param	 mode 8 8 Int.64 425470580 F F 100 v.5
+	import_unit	 RTHooks
+	# Main_M3
+	# module main body Main_M3
+	begin_procedure	 p.1
+	load		 v.3 0 Int.64 Int.64
+	if_false	 Int.64 L.1 0
+	import_procedure	 alloca 1 Addr 0 p.4
+	declare_param	 * 8 8 Word.64 0 F F 0 v.6
+	import_global	 m3_jmpbuf_size 8 8 Word.64 0 v.7
+	# AllocateJmpbufs  try_count:0
+. L.1 F
+	load_address	 v.2 0
+	exit_proc	 Addr
+	end_procedure	 p.1
+	# global constant type descriptor
+	declare_record	 -1 384 0
+	# global data type descriptor
+	declare_record	 -1 1216 0
+	# module global constants
+	bind_segment	 v.1 48 16 Struct F T
+	begin_init	 v.1
+	# procedure names
+	init_chars	 0 "Main_M3"
+	# procedure table
+	init_proc	 8 p.1
+	init_var	 16 v.1 0
+	# file name
+	init_chars	 32 "../Main.m3"
+	end_init	 v.1
+	# module global data
+	bind_segment	 v.2 160 16 Struct F T
+	begin_init	 v.2
+	init_var	 0 v.1 32
+	init_var	 40 v.1 8
+	init_var	 72 v.2 104
+	init_proc	 88 p.1
+	init_int	 96 3 Int.64
+	init_proc	 112 p.2
+	init_var	 120 v.2 128
+	init_proc	 136 p.3
+	end_init	 v.2
+	# load map
+	# 
+	# 
+	#  global data allocation for M_Main
+	#      0   104  8  *module info*
+	#    104    24  8  import Main
+	#    128    24  8  import RTHooks
+	#    152     0  8  *TOTAL*
+	# 
+	# 
+	#  global constants for M_Main
+	#      0     8  8  *proc names*
+	#      8    24  8  *proc info*
+	#     32    11  1  *string*
+	#     48     0  8  *TOTAL*
+	# 
+	end_unit	

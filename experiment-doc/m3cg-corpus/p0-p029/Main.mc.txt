@@ -1,0 +1,292 @@
+	begin_unit	 0
+	widechar_size	 16
+					-----FILE ../Main.m3  -----
+					-----LINE 7  -----
+	# module global constants
+	declare_segment	 * -1 T v.1
+	# module global data
+	declare_segment	 M_Main -1 F v.2
+					-----LINE 50  -----
+	declare_procedure	 Main_M3 1 Addr 0 0 T * p.1
+	declare_param	 mode 8 8 Int.64 425470580 F F 100 v.3
+	declare_proctype	 -962091273 1 0 0 0
+	declare_formal	 p 425470580
+	declare_proctype	 -945314057 1 0 0 0
+	declare_formal	 q 425470580
+	declare_proctype	 -995645705 1 0 0 0
+	declare_formal	 r 425470580
+	declare_proctype	 -978868489 1 0 0 0
+	declare_formal	 s 425470580
+	import_procedure	 Main_I3 1 Addr 0 p.2
+	declare_param	 mode 8 8 Int.64 425470580 F F 100 v.4
+	export_unit	 Main
+	import_procedure	 Test_I3 1 Addr 0 p.3
+	declare_param	 mode 8 8 Int.64 425470580 F F 100 v.5
+	import_unit	 Test
+	import_procedure	 RTHooks_I3 1 Addr 0 p.4
+	declare_param	 mode 8 8 Int.64 425470580 F F 100 v.6
+	import_unit	 RTHooks
+	declare_proctype	 -1923834155 2 0 0 0
+	declare_formal	 i 425470580
+	declare_formal	 shouldBe 425470580
+	import_procedure	 Test__checkI 2 Void 0 p.5
+	declare_param	 i 8 8 Int.64 425470580 F F 50 v.7
+	declare_param	 shouldBe 8 8 Int.64 425470580 F F 50 v.8
+	declare_proctype	 2071511887 0 0 0 0
+	import_procedure	 Test__done 0 Void 0 p.6
+	declare_procedure	 Main__P 1 Void 0 0 F * p.7
+	declare_local	 pp 8 8 Int.64 425470580 F T 50 v.9
+	declare_local	 x 8 8 Int.64 425470580 F F 50 v.10
+	declare_param	 p 8 8 Int.64 425470580 F T 50 v.11
+	declare_procedure	 Main__P__Q 1 Void 1 0 F p.7 p.8
+	declare_local	 qq 8 8 Int.64 425470580 F T 50 v.12
+	declare_local	 x 8 8 Int.64 425470580 F F 50 v.13
+	declare_param	 q 8 8 Int.64 425470580 F T 50 v.14
+	declare_procedure	 Main__P__Q__R 1 Void 2 0 F p.8 p.9
+	declare_local	 rr 8 8 Int.64 425470580 F F 50 v.15
+	declare_local	 x 8 8 Int.64 425470580 F F 50 v.16
+	declare_param	 r 8 8 Int.64 425470580 F F 50 v.17
+	declare_procedure	 Main__P__S 1 Void 1 0 F p.7 p.10
+	declare_local	 ss 8 8 Int.64 425470580 F F 50 v.18
+	declare_local	 x 8 8 Int.64 425470580 F F 50 v.19
+	declare_param	 s 8 8 Int.64 425470580 F F 50 v.20
+	# P
+					-----LINE 13  -----
+	begin_procedure	 p.7
+	note_procedure_origin	 p.8
+	note_procedure_origin	 p.10
+	import_procedure	 alloca 1 Addr 0 p.11
+	declare_param	 * 8 8 Word.64 0 F F 0 v.21
+	import_global	 m3_jmpbuf_size 8 8 Word.64 0 v.22
+	# AllocateJmpbufs P try_count:0
+					-----LINE 15  -----
+					-----LINE 43  -----
+	load_integer	 Int.64 8
+	store		 v.9 0 Int.64 Int.64
+					-----LINE 44  -----
+	load		 v.9 0 Int.64 Int.64
+	load		 v.11 0 Int.64 Int.64
+	add		 Int.64
+	load		 v.2 104 Int.64 Int.64
+	add		 Int.64
+	store		 v.10 0 Int.64 Int.64
+					-----LINE 45  -----
+	start_call_direct	 p.5 0 Void
+	load		 v.10 0 Int.64 Int.64
+	pop_param	 Int.64
+	load_integer	 Int.64 56
+	pop_param	 Int.64
+	call_direct	 p.5 Void
+					-----LINE 46  -----
+	start_call_direct	 p.8 1 Void
+	load		 v.11 0 Int.64 Int.64
+	load_integer	 Int.64 2
+	multiply	 Int.64
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 47  -----
+	start_call_direct	 p.10 1 Void
+	load		 v.11 0 Int.64 Int.64
+	load_integer	 Int.64 2
+	multiply	 Int.64
+	pop_param	 Int.64
+	call_direct	 p.10 Void
+					-----LINE 48  -----
+	exit_proc	 Void
+	end_procedure	 p.7
+	# P.Q
+					-----LINE 15  -----
+	begin_procedure	 p.8
+	note_procedure_origin	 p.9
+	# AllocateJmpbufs Q try_count:0
+					-----LINE 17  -----
+					-----LINE 27  -----
+	load_integer	 Int.64 2
+	store		 v.12 0 Int.64 Int.64
+					-----LINE 28  -----
+	load		 v.9 0 Int.64 Int.64
+	load		 v.11 0 Int.64 Int.64
+	add		 Int.64
+	load		 v.14 0 Int.64 Int.64
+	add		 Int.64
+	load		 v.12 0 Int.64 Int.64
+	add		 Int.64
+	load		 v.2 104 Int.64 Int.64
+	add		 Int.64
+	store		 v.13 0 Int.64 Int.64
+					-----LINE 29  -----
+	start_call_direct	 p.5 0 Void
+	load		 v.13 0 Int.64 Int.64
+	pop_param	 Int.64
+	load_integer	 Int.64 122
+	pop_param	 Int.64
+	call_direct	 p.5 Void
+					-----LINE 30  -----
+	start_call_direct	 p.9 2 Void
+	load		 v.14 0 Int.64 Int.64
+	load_integer	 Int.64 2
+	multiply	 Int.64
+	pop_param	 Int.64
+	call_direct	 p.9 Void
+					-----LINE 31  -----
+	exit_proc	 Void
+	end_procedure	 p.8
+	# P.Q.R
+					-----LINE 17  -----
+	begin_procedure	 p.9
+	# AllocateJmpbufs R try_count:0
+					-----LINE 18  -----
+					-----LINE 20  -----
+	load_integer	 Int.64 1
+	store		 v.15 0 Int.64 Int.64
+					-----LINE 21  -----
+	load		 v.15 0 Int.64 Int.64
+	load		 v.17 0 Int.64 Int.64
+	add		 Int.64
+	load		 v.11 0 Int.64 Int.64
+	add		 Int.64
+	load		 v.9 0 Int.64 Int.64
+	add		 Int.64
+	load		 v.14 0 Int.64 Int.64
+	add		 Int.64
+	load		 v.12 0 Int.64 Int.64
+	add		 Int.64
+	load		 v.2 104 Int.64 Int.64
+	add		 Int.64
+	store		 v.16 0 Int.64 Int.64
+					-----LINE 22  -----
+	start_call_direct	 p.5 0 Void
+	load		 v.16 0 Int.64 Int.64
+	pop_param	 Int.64
+	load_integer	 Int.64 251
+	pop_param	 Int.64
+	call_direct	 p.5 Void
+					-----LINE 23  -----
+	exit_proc	 Void
+	end_procedure	 p.9
+	# P.S
+					-----LINE 33  -----
+	begin_procedure	 p.10
+	# AllocateJmpbufs S try_count:0
+					-----LINE 34  -----
+					-----LINE 36  -----
+	load_integer	 Int.64 4
+	store		 v.18 0 Int.64 Int.64
+					-----LINE 37  -----
+	load		 v.9 0 Int.64 Int.64
+	load		 v.11 0 Int.64 Int.64
+	add		 Int.64
+	load		 v.20 0 Int.64 Int.64
+	add		 Int.64
+	load		 v.18 0 Int.64 Int.64
+	add		 Int.64
+	load		 v.2 104 Int.64 Int.64
+	add		 Int.64
+	store		 v.19 0 Int.64 Int.64
+					-----LINE 38  -----
+	start_call_direct	 p.5 0 Void
+	load		 v.19 0 Int.64 Int.64
+	pop_param	 Int.64
+	load_integer	 Int.64 124
+	pop_param	 Int.64
+	call_direct	 p.5 Void
+					-----LINE 39  -----
+	exit_proc	 Void
+	end_procedure	 p.10
+	# Main_M3
+	# module main body Main_M3
+					-----LINE 50  -----
+	begin_procedure	 p.1
+	load		 v.3 0 Int.64 Int.64
+	if_false	 Int.64 L.1 0
+	# AllocateJmpbufs  try_count:0
+					-----LINE 51  -----
+	begin_block	
+	declare_local	 x 8 8 Int.64 425470580 F F 50 v.23
+					-----LINE 53  -----
+	load_integer	 Int.64 16
+	store		 v.2 104 Int.64 Int.64
+					-----LINE 54  -----
+	load_integer	 Int.64 32
+	store		 v.23 0 Int.64 Int.64
+					-----LINE 55  -----
+	start_call_direct	 p.5 0 Void
+	load		 v.23 0 Int.64 Int.64
+	pop_param	 Int.64
+	load_integer	 Int.64 32
+	pop_param	 Int.64
+	call_direct	 p.5 Void
+					-----LINE 56  -----
+	start_call_direct	 p.7 0 Void
+	load		 v.23 0 Int.64 Int.64
+	pop_param	 Int.64
+	call_direct	 p.7 Void
+	end_block	
+					-----LINE 59  -----
+	start_call_direct	 p.6 0 Void
+	call_direct	 p.6 Void
+. L.1 F
+	load_address	 v.2 0
+	exit_proc	 Addr
+	end_procedure	 p.1
+	# global constant type descriptor
+	declare_record	 -1 1024 0
+	# global data type descriptor
+	declare_record	 -1 1472 1
+	declare_field	 i 832 64 425470580
+	# module global constants
+	bind_segment	 v.1 128 16 Struct F T
+	begin_init	 v.1
+	# procedure names
+	init_chars	 0 "Main_M3"
+	init_chars	 8 "P"
+	init_chars	 10 "P.S"
+	init_chars	 14 "P.Q"
+	init_chars	 18 "P.Q.R"
+	# procedure table
+	init_proc	 24 p.1
+	init_var	 32 v.1 0
+	init_proc	 40 p.7
+	init_var	 48 v.1 8
+	init_proc	 56 p.10
+	init_var	 64 v.1 10
+	init_proc	 72 p.8
+	init_var	 80 v.1 14
+	init_proc	 88 p.9
+	init_var	 96 v.1 18
+	# file name
+	init_chars	 112 "../Main.m3"
+	end_init	 v.1
+	# module global data
+	bind_segment	 v.2 192 16 Struct F T
+	begin_init	 v.2
+	init_var	 0 v.1 112
+	init_var	 40 v.1 24
+	init_var	 72 v.2 112
+	init_proc	 88 p.1
+	init_int	 96 3 Int.64
+	init_proc	 120 p.2
+	init_var	 128 v.2 136
+	init_proc	 144 p.3
+	init_var	 152 v.2 160
+	init_proc	 168 p.4
+	end_init	 v.2
+	# load map
+	# 
+	# 
+	#  global data allocation for M_Main
+	#      0   104  8  *module info*
+	#    104     8  8  Main.i
+	#    112    24  8  import Main
+	#    136    24  8  import Test
+	#    160    24  8  import RTHooks
+	#    184     0  8  *TOTAL*
+	# 
+	# 
+	#  global constants for M_Main
+	#      0    24  8  *proc names*
+	#     24    88  8  *proc info*
+	#    112    11  1  *string*
+	#    128     0  8  *TOTAL*
+	# 
+	end_unit	

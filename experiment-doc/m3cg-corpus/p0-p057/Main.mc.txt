@@ -1,0 +1,162 @@
+	begin_unit	 0
+	widechar_size	 16
+					-----FILE ../Main.m3  -----
+					-----LINE 5  -----
+	# module global constants
+	declare_segment	 * -1 T v.1
+	# module global data
+	declare_segment	 M_Main -1 F v.2
+					-----LINE 17  -----
+	declare_procedure	 Main_M3 1 Addr 0 0 T * p.1
+	declare_param	 mode 8 8 Int.64 425470580 F F 100 v.3
+	declare_open_array	 -201264165 425470580 128
+	declare_pointer	 562018850 -201264165 * T
+	declare_indirect	 201264164 -201264165
+	declare_proctype	 242219725 1 0 0 0
+	declare_formal	 a 201264164
+	declare_subrange	 -2010631977 425470580 1 2 8
+	declare_array	 -768019982 -2010631977 425470580 128
+	import_procedure	 Main_I3 1 Addr 0 p.2
+	declare_param	 mode 8 8 Int.64 425470580 F F 100 v.4
+	export_unit	 Main
+	import_procedure	 Test_I3 1 Addr 0 p.3
+	declare_param	 mode 8 8 Int.64 425470580 F F 100 v.5
+	import_unit	 Test
+	import_procedure	 RTHooks_I3 1 Addr 0 p.4
+	declare_param	 mode 8 8 Int.64 425470580 F F 100 v.6
+	import_unit	 RTHooks
+	declare_proctype	 -1923834155 2 0 0 0
+	declare_formal	 i 425470580
+	declare_formal	 shouldBe 425470580
+	import_procedure	 Test__checkI 2 Void 0 p.5
+	declare_param	 i 8 8 Int.64 425470580 F F 50 v.7
+	declare_param	 shouldBe 8 8 Int.64 425470580 F F 50 v.8
+	declare_proctype	 2071511887 0 0 0 0
+	import_procedure	 Test__done 0 Void 0 p.6
+	declare_typename	 -201264165 Array
+	declare_procedure	 Main__Open 1 Void 0 0 F * p.7
+	declare_local	 c 8 8 Addr 562018850 F F 50 v.9
+	declare_param	 a 8 8 Addr 201264164 T F 50 v.10
+	# Open
+					-----LINE 11  -----
+	begin_procedure	 p.7
+					-----LINE 12  -----
+	declare_temp	 24 8 Struct T v.11
+	declare_proctype	 -1740963097 2 471614950 0 0
+	declare_formal	 t 138420323
+	declare_formal	 sizes 201264164
+	import_procedure	 RTHooks__AllocateOpenArray 2 Addr 0 p.8
+	declare_param	 t 8 8 Addr 138420323 F F 50 v.12
+	declare_param	 sizes 8 8 Addr 201264164 F F 50 v.13
+	set_runtime_proc	 AllocateOpenArray p.8
+	load_address	 v.11 16
+	store		 v.11 0 Addr Addr
+	load_integer	 Int.64 1
+	store		 v.11 8 Int.64 Int.64
+	load		 v.10 0 Addr Addr
+	load_indirect	 8 Int.64 Int.64
+	store		 v.11 16 Int.64 Int.64
+	start_call_direct	 p.8 0 Addr
+	load		 v.2 176 Addr Addr
+	pop_param	 Addr
+	load_address	 v.11 0
+	pop_param	 Addr
+	call_direct	 p.8 Addr
+	declare_temp	 8 8 Addr F v.14
+	store		 v.14 0 Addr Addr
+	load		 v.14 0 Addr Addr
+	store		 v.9 0 Addr Addr
+	import_procedure	 alloca 1 Addr 0 p.9
+	declare_param	 * 8 8 Word.64 0 F F 0 v.15
+	import_global	 m3_jmpbuf_size 8 8 Word.64 0 v.16
+	# AllocateJmpbufs Open try_count:0
+					-----LINE 14  -----
+	start_call_direct	 p.5 0 Void
+	load		 v.9 0 Addr Addr
+	load_indirect	 8 Int.64 Int.64
+	pop_param	 Int.64
+	load_integer	 Int.64 2
+	pop_param	 Int.64
+	call_direct	 p.5 Void
+					-----LINE 15  -----
+	exit_proc	 Void
+	free_temp	 v.14
+	free_temp	 v.11
+	end_procedure	 p.7
+	# Main_M3
+	# module main body Main_M3
+					-----LINE 17  -----
+	begin_procedure	 p.1
+	load		 v.3 0 Int.64 Int.64
+	if_false	 Int.64 L.1 0
+	# AllocateJmpbufs  try_count:0
+					-----LINE 18  -----
+	start_call_direct	 p.7 0 Void
+	load_address	 v.1 0
+	pop_param	 Addr
+	call_direct	 p.7 Void
+					-----LINE 19  -----
+	start_call_direct	 p.6 0 Void
+	call_direct	 p.6 Void
+. L.1 F
+	load_address	 v.2 0
+	exit_proc	 Addr
+	end_procedure	 p.1
+	# global constant type descriptor
+	declare_record	 -1 832 0
+	# global data type descriptor
+	declare_record	 -1 1536 0
+	# module global constants
+	bind_segment	 v.1 112 16 Struct F T
+	begin_init	 v.1
+	init_var	 0 v.1 16
+	init_int	 8 2 Int.64
+	init_int	 16 1 Int.64
+	init_int	 24 2 Int.64
+	# procedure names
+	init_chars	 32 "Main_M3"
+	init_chars	 40 "Open"
+	# procedure table
+	init_proc	 48 p.1
+	init_var	 56 v.1 32
+	init_proc	 64 p.7
+	init_var	 72 v.1 40
+	# file name
+	init_chars	 88 "../Main.m3"
+	end_init	 v.1
+	# module global data
+	bind_segment	 v.2 192 16 Struct F T
+	begin_init	 v.2
+	init_var	 0 v.1 88
+	init_var	 16 v.2 176
+	init_var	 40 v.1 48
+	init_var	 72 v.2 104
+	init_proc	 88 p.1
+	init_int	 96 3 Int.64
+	init_proc	 112 p.2
+	init_var	 120 v.2 128
+	init_proc	 136 p.3
+	init_var	 144 v.2 152
+	init_proc	 160 p.4
+	init_int	 184 562018850 Int.64
+	end_init	 v.2
+	# load map
+	# 
+	# 
+	#  global data allocation for M_Main
+	#      0   104  8  *module info*
+	#    104    24  8  import Main
+	#    128    24  8  import Test
+	#    152    24  8  import RTHooks
+	#    176    16  8  typecell ptr
+	#    192     0  8  *TOTAL*
+	# 
+	# 
+	#  global constants for M_Main
+	#      0    32  8  ArrayExpr
+	#     32    13  8  *proc names*
+	#     48    40  8  *proc info*
+	#     88    11  1  *string*
+	#    104     0  8  *TOTAL*
+	# 
+	end_unit	

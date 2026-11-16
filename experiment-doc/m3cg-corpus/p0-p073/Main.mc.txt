@@ -1,0 +1,1307 @@
+	begin_unit	 0
+	widechar_size	 16
+					-----FILE ../Main.m3  -----
+					-----LINE 5  -----
+	# module global constants
+	declare_segment	 * -1 T v.1
+	# module global data
+	declare_segment	 M_Main -1 F v.2
+					-----LINE 18  -----
+	declare_procedure	 Main_M3 1 Addr 0 0 T * p.1
+	declare_param	 mode 8 8 Int.64 425470580 F F 100 v.3
+	declare_subrange	 749164572 425470580 1 20 8
+	declare_subrange	 1563517881 425470580 -20 -1 8
+	import_procedure	 Main_I3 1 Addr 0 p.2
+	declare_param	 mode 8 8 Int.64 425470580 F F 100 v.4
+	export_unit	 Main
+	import_procedure	 RTIO_I3 1 Addr 0 p.3
+	declare_param	 mode 8 8 Int.64 425470580 F F 100 v.5
+	import_unit	 RTIO
+	import_procedure	 Test_I3 1 Addr 0 p.4
+	declare_param	 mode 8 8 Int.64 425470580 F F 100 v.6
+	import_unit	 Test
+	import_procedure	 RTHooks_I3 1 Addr 0 p.5
+	declare_param	 mode 8 8 Int.64 425470580 F F 100 v.7
+	import_unit	 RTHooks
+	declare_proctype	 -1413564917 1 0 0 0
+	declare_formal	 t 1358456180
+	import_procedure	 Test__msg 1 Void 0 p.6
+	declare_param	 t 8 8 Addr 1358456180 F F 50 v.8
+	declare_proctype	 1754757901 1 0 0 0
+	declare_formal	 b 509158269
+	import_procedure	 Test__check 1 Void 0 p.7
+	declare_param	 b 1 1 Word.8 509158269 F F 50 v.9
+	declare_proctype	 -1923834155 2 0 0 0
+	declare_formal	 i 425470580
+	declare_formal	 shouldBe 425470580
+	import_procedure	 Test__checkI 2 Void 0 p.8
+	declare_param	 i 8 8 Int.64 425470580 F F 50 v.10
+	declare_param	 shouldBe 8 8 Int.64 425470580 F F 50 v.11
+	declare_proctype	 2071511887 0 0 0 0
+	import_procedure	 Test__done 0 Void 0 p.9
+	# Main_M3
+	# module main body Main_M3
+	begin_procedure	 p.1
+	load		 v.3 0 Int.64 Int.64
+	if_false	 Int.64 L.1 0
+	import_procedure	 alloca 1 Addr 0 p.10
+	declare_param	 * 8 8 Word.64 0 F F 0 v.12
+	import_global	 m3_jmpbuf_size 8 8 Word.64 0 v.13
+	# AllocateJmpbufs  try_count:0
+					-----LINE 19  -----
+	start_call_direct	 p.6 0 Void
+	declare_opaque	 1837570855 1358456180
+	declare_record	 -1219438972 192 3
+	declare_field	 start 0 64 138420323
+	declare_field	 length 64 64 -1746782238
+	declare_field	 wide 128 8 509158269
+	declare_indirect	 1219438971 -1219438972
+	declare_proctype	 954162677 2 0 0 0
+	declare_formal	 t 1837570855
+	declare_formal	 i 1219438971
+	import_procedure	 RTHooks__TextLitInfo 2 Void 0 p.11
+	declare_param	 t 8 8 Addr 1837570855 F F 50 v.14
+	declare_param	 i 8 8 Addr 1219438971 F F 50 v.15
+	set_runtime_proc	 TextLitInfo p.11
+	declare_proctype	 -1184615045 2 1457612899 0 0
+	declare_formal	 t 1837570855
+	declare_formal	 i -1746782238
+	import_procedure	 RTHooks__TextLitGetChar 2 Word.8 0 p.12
+	declare_param	 t 8 8 Addr 1837570855 F F 50 v.16
+	declare_param	 i 8 8 Word.64 -1746782238 F F 50 v.17
+	set_runtime_proc	 TextLitGetChar p.12
+	declare_proctype	 -1858937369 2 -1997260292 0 0
+	declare_formal	 t 1837570855
+	declare_formal	 i -1746782238
+	import_procedure	 RTHooks__TextLitGetWideChar 2 Word.16 0 p.13
+	declare_param	 t 8 8 Addr 1837570855 F F 50 v.18
+	declare_param	 i 8 8 Word.64 -1746782238 F F 50 v.19
+	set_runtime_proc	 TextLitGetWideChar p.13
+	declare_open_array	 -1983040323 1457612899 128
+	declare_indirect	 1983040322 -1983040323
+	declare_proctype	 -907921720 3 0 0 0
+	declare_formal	 t 1837570855
+	declare_formal	 a 1983040322
+	declare_formal	 start -1746782238
+	import_procedure	 RTHooks__TextLitGetChars 3 Void 0 p.14
+	declare_param	 t 8 8 Addr 1837570855 F F 50 v.20
+	declare_param	 a 8 8 Addr 1983040322 F F 50 v.21
+	declare_param	 start 8 8 Word.64 -1746782238 F F 50 v.22
+	set_runtime_proc	 TextLitGetChars p.14
+	declare_open_array	 -1583621087 -1997260292 128
+	declare_indirect	 1583621086 -1583621087
+	declare_proctype	 -1771050881 3 0 0 0
+	declare_formal	 t 1837570855
+	declare_formal	 a 1583621086
+	declare_formal	 start -1746782238
+	import_procedure	 RTHooks__TextLitGetWideChars 3 Void 0 p.15
+	declare_param	 t 8 8 Addr 1837570855 F F 50 v.23
+	declare_param	 a 8 8 Addr 1583621086 F F 50 v.24
+	declare_param	 start 8 8 Word.64 -1746782238 F F 50 v.25
+	set_runtime_proc	 TextLitGetWideChars p.15
+	load_address	 v.1 48
+	pop_param	 Addr
+	call_direct	 p.6 Void
+					-----LINE 20  -----
+	load_integer	 Int.64 12
+	store		 v.2 104 Word.64 Word.8
+	load_integer	 Int.64 3
+	store		 v.2 105 Word.64 Word.8
+					-----LINE 21  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 104 Word.8 Int.64
+	load		 v.2 105 Word.8 Int.64
+	div		 Int.64 P P
+	pop_param	 Int.64
+	load_integer	 Int.64 4
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 105 Word.8 Int.64
+	load		 v.2 104 Word.8 Int.64
+	div		 Int.64 P P
+	pop_param	 Int.64
+	load_integer	 Int.64 0
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 22  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 104 Word.8 Int.64
+	load		 v.2 105 Word.8 Int.64
+	mod		 Int.64 P P
+	pop_param	 Int.64
+	load_integer	 Int.64 0
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 105 Word.8 Int.64
+	load		 v.2 104 Word.8 Int.64
+	mod		 Int.64 P P
+	pop_param	 Int.64
+	load_integer	 Int.64 3
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 23  -----
+	start_call_direct	 p.6 0 Void
+	load_address	 v.1 96
+	pop_param	 Addr
+	call_direct	 p.6 Void
+					-----LINE 24  -----
+	load_integer	 Int.64 12
+	store		 v.2 104 Word.64 Word.8
+	load_integer	 Int.64 5
+	store		 v.2 105 Word.64 Word.8
+					-----LINE 25  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 104 Word.8 Int.64
+	load		 v.2 105 Word.8 Int.64
+	div		 Int.64 P P
+	pop_param	 Int.64
+	load_integer	 Int.64 2
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 105 Word.8 Int.64
+	load		 v.2 104 Word.8 Int.64
+	div		 Int.64 P P
+	pop_param	 Int.64
+	load_integer	 Int.64 0
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 26  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 104 Word.8 Int.64
+	load		 v.2 105 Word.8 Int.64
+	mod		 Int.64 P P
+	pop_param	 Int.64
+	load_integer	 Int.64 2
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 105 Word.8 Int.64
+	load		 v.2 104 Word.8 Int.64
+	mod		 Int.64 P P
+	pop_param	 Int.64
+	load_integer	 Int.64 5
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 28  -----
+	start_call_direct	 p.6 0 Void
+	load_address	 v.1 144
+	pop_param	 Addr
+	call_direct	 p.6 Void
+					-----LINE 29  -----
+	load_integer	 Int.64 -12
+	store		 v.2 106 Int.64 Int.8
+	load_integer	 Int.64 -3
+	store		 v.2 107 Int.64 Int.8
+					-----LINE 30  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 106 Int.8 Int.64
+	load		 v.2 107 Int.8 Int.64
+	div		 Int.64 N N
+	pop_param	 Int.64
+	load_integer	 Int.64 4
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 107 Int.8 Int.64
+	load		 v.2 106 Int.8 Int.64
+	div		 Int.64 N N
+	pop_param	 Int.64
+	load_integer	 Int.64 0
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 31  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 106 Int.8 Int.64
+	load		 v.2 107 Int.8 Int.64
+	mod		 Int.64 N N
+	pop_param	 Int.64
+	load_integer	 Int.64 0
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 107 Int.8 Int.64
+	load		 v.2 106 Int.8 Int.64
+	mod		 Int.64 N N
+	pop_param	 Int.64
+	load_integer	 Int.64 -3
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 32  -----
+	start_call_direct	 p.6 0 Void
+	load_address	 v.1 192
+	pop_param	 Addr
+	call_direct	 p.6 Void
+					-----LINE 33  -----
+	load_integer	 Int.64 -12
+	store		 v.2 106 Int.64 Int.8
+	load_integer	 Int.64 -5
+	store		 v.2 107 Int.64 Int.8
+					-----LINE 34  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 106 Int.8 Int.64
+	load		 v.2 107 Int.8 Int.64
+	div		 Int.64 N N
+	pop_param	 Int.64
+	load_integer	 Int.64 2
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 107 Int.8 Int.64
+	load		 v.2 106 Int.8 Int.64
+	div		 Int.64 N N
+	pop_param	 Int.64
+	load_integer	 Int.64 0
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 35  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 106 Int.8 Int.64
+	load		 v.2 107 Int.8 Int.64
+	mod		 Int.64 N N
+	pop_param	 Int.64
+	load_integer	 Int.64 -2
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 107 Int.8 Int.64
+	load		 v.2 106 Int.8 Int.64
+	mod		 Int.64 N N
+	pop_param	 Int.64
+	load_integer	 Int.64 -5
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 37  -----
+	start_call_direct	 p.6 0 Void
+	load_address	 v.1 240
+	pop_param	 Addr
+	call_direct	 p.6 Void
+					-----LINE 38  -----
+	load_integer	 Int.64 -12
+	store		 v.2 106 Int.64 Int.8
+	load_integer	 Int.64 3
+	store		 v.2 105 Word.64 Word.8
+					-----LINE 39  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 106 Int.8 Int.64
+	load		 v.2 105 Word.8 Int.64
+	div		 Int.64 N P
+	pop_param	 Int.64
+	load_integer	 Int.64 -4
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 105 Word.8 Int.64
+	load		 v.2 106 Int.8 Int.64
+	div		 Int.64 P N
+	pop_param	 Int.64
+	load_integer	 Int.64 -1
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 40  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 106 Int.8 Int.64
+	load		 v.2 105 Word.8 Int.64
+	mod		 Int.64 N P
+	pop_param	 Int.64
+	load_integer	 Int.64 0
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 105 Word.8 Int.64
+	load		 v.2 106 Int.8 Int.64
+	mod		 Int.64 P N
+	pop_param	 Int.64
+	load_integer	 Int.64 -9
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 41  -----
+	start_call_direct	 p.6 0 Void
+	load_address	 v.1 288
+	pop_param	 Addr
+	call_direct	 p.6 Void
+					-----LINE 42  -----
+	load_integer	 Int.64 -12
+	store		 v.2 106 Int.64 Int.8
+	load_integer	 Int.64 5
+	store		 v.2 105 Word.64 Word.8
+					-----LINE 43  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 106 Int.8 Int.64
+	load		 v.2 105 Word.8 Int.64
+	div		 Int.64 N P
+	pop_param	 Int.64
+	load_integer	 Int.64 -3
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 105 Word.8 Int.64
+	load		 v.2 106 Int.8 Int.64
+	div		 Int.64 P N
+	pop_param	 Int.64
+	load_integer	 Int.64 -1
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 44  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 106 Int.8 Int.64
+	load		 v.2 105 Word.8 Int.64
+	mod		 Int.64 N P
+	pop_param	 Int.64
+	load_integer	 Int.64 3
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 105 Word.8 Int.64
+	load		 v.2 106 Int.8 Int.64
+	mod		 Int.64 P N
+	pop_param	 Int.64
+	load_integer	 Int.64 -7
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 46  -----
+	start_call_direct	 p.6 0 Void
+	load_address	 v.1 336
+	pop_param	 Addr
+	call_direct	 p.6 Void
+					-----LINE 47  -----
+	load_integer	 Int.64 12
+	store		 v.2 104 Word.64 Word.8
+	load_integer	 Int.64 -3
+	store		 v.2 107 Int.64 Int.8
+					-----LINE 48  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 104 Word.8 Int.64
+	load		 v.2 107 Int.8 Int.64
+	div		 Int.64 P N
+	pop_param	 Int.64
+	load_integer	 Int.64 -4
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 107 Int.8 Int.64
+	load		 v.2 104 Word.8 Int.64
+	div		 Int.64 N P
+	pop_param	 Int.64
+	load_integer	 Int.64 -1
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 49  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 104 Word.8 Int.64
+	load		 v.2 107 Int.8 Int.64
+	mod		 Int.64 P N
+	pop_param	 Int.64
+	load_integer	 Int.64 0
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 107 Int.8 Int.64
+	load		 v.2 104 Word.8 Int.64
+	mod		 Int.64 N P
+	pop_param	 Int.64
+	load_integer	 Int.64 9
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 50  -----
+	start_call_direct	 p.6 0 Void
+	load_address	 v.1 384
+	pop_param	 Addr
+	call_direct	 p.6 Void
+					-----LINE 51  -----
+	load_integer	 Int.64 12
+	store		 v.2 104 Word.64 Word.8
+	load_integer	 Int.64 -5
+	store		 v.2 107 Int.64 Int.8
+					-----LINE 52  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 104 Word.8 Int.64
+	load		 v.2 107 Int.8 Int.64
+	div		 Int.64 P N
+	pop_param	 Int.64
+	load_integer	 Int.64 -3
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 107 Int.8 Int.64
+	load		 v.2 104 Word.8 Int.64
+	div		 Int.64 N P
+	pop_param	 Int.64
+	load_integer	 Int.64 -1
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 53  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 104 Word.8 Int.64
+	load		 v.2 107 Int.8 Int.64
+	mod		 Int.64 P N
+	pop_param	 Int.64
+	load_integer	 Int.64 -3
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 107 Int.8 Int.64
+	load		 v.2 104 Word.8 Int.64
+	mod		 Int.64 N P
+	pop_param	 Int.64
+	load_integer	 Int.64 7
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 55  -----
+	start_call_direct	 p.6 0 Void
+	load_address	 v.1 432
+	pop_param	 Addr
+	call_direct	 p.6 Void
+					-----LINE 56  -----
+	load_integer	 Int.64 12
+	store		 v.2 112 Int.64 Int.64
+	load_integer	 Int.64 3
+	store		 v.2 120 Int.64 Int.64
+					-----LINE 57  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 112 Int.64 Int.64
+	load		 v.2 120 Int.64 Int.64
+	div		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 4
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 120 Int.64 Int.64
+	load		 v.2 112 Int.64 Int.64
+	div		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 0
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 58  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 112 Int.64 Int.64
+	load		 v.2 120 Int.64 Int.64
+	mod		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 0
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 120 Int.64 Int.64
+	load		 v.2 112 Int.64 Int.64
+	mod		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 3
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 59  -----
+	start_call_direct	 p.6 0 Void
+	load_address	 v.1 480
+	pop_param	 Addr
+	call_direct	 p.6 Void
+					-----LINE 60  -----
+	load_integer	 Int.64 12
+	store		 v.2 112 Int.64 Int.64
+	load_integer	 Int.64 5
+	store		 v.2 120 Int.64 Int.64
+					-----LINE 61  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 112 Int.64 Int.64
+	load		 v.2 120 Int.64 Int.64
+	div		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 2
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 120 Int.64 Int.64
+	load		 v.2 112 Int.64 Int.64
+	div		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 0
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 62  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 112 Int.64 Int.64
+	load		 v.2 120 Int.64 Int.64
+	mod		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 2
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 120 Int.64 Int.64
+	load		 v.2 112 Int.64 Int.64
+	mod		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 5
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 64  -----
+	start_call_direct	 p.6 0 Void
+	load_address	 v.1 528
+	pop_param	 Addr
+	call_direct	 p.6 Void
+					-----LINE 65  -----
+	load_integer	 Int.64 -12
+	store		 v.2 112 Int.64 Int.64
+	load_integer	 Int.64 -3
+	store		 v.2 120 Int.64 Int.64
+					-----LINE 66  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 112 Int.64 Int.64
+	load		 v.2 120 Int.64 Int.64
+	div		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 4
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 120 Int.64 Int.64
+	load		 v.2 112 Int.64 Int.64
+	div		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 0
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 67  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 112 Int.64 Int.64
+	load		 v.2 120 Int.64 Int.64
+	mod		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 0
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 120 Int.64 Int.64
+	load		 v.2 112 Int.64 Int.64
+	mod		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 -3
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 68  -----
+	start_call_direct	 p.6 0 Void
+	load_address	 v.1 576
+	pop_param	 Addr
+	call_direct	 p.6 Void
+					-----LINE 69  -----
+	load_integer	 Int.64 -12
+	store		 v.2 112 Int.64 Int.64
+	load_integer	 Int.64 -5
+	store		 v.2 120 Int.64 Int.64
+					-----LINE 70  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 112 Int.64 Int.64
+	load		 v.2 120 Int.64 Int.64
+	div		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 2
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 120 Int.64 Int.64
+	load		 v.2 112 Int.64 Int.64
+	div		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 0
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 71  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 112 Int.64 Int.64
+	load		 v.2 120 Int.64 Int.64
+	mod		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 -2
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 120 Int.64 Int.64
+	load		 v.2 112 Int.64 Int.64
+	mod		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 -5
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 73  -----
+	start_call_direct	 p.6 0 Void
+	load_address	 v.1 624
+	pop_param	 Addr
+	call_direct	 p.6 Void
+					-----LINE 74  -----
+	load_integer	 Int.64 -12
+	store		 v.2 112 Int.64 Int.64
+	load_integer	 Int.64 3
+	store		 v.2 120 Int.64 Int.64
+					-----LINE 75  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 112 Int.64 Int.64
+	load		 v.2 120 Int.64 Int.64
+	div		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 -4
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 120 Int.64 Int.64
+	load		 v.2 112 Int.64 Int.64
+	div		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 -1
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 76  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 112 Int.64 Int.64
+	load		 v.2 120 Int.64 Int.64
+	mod		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 0
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 120 Int.64 Int.64
+	load		 v.2 112 Int.64 Int.64
+	mod		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 -9
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 77  -----
+	start_call_direct	 p.6 0 Void
+	load_address	 v.1 672
+	pop_param	 Addr
+	call_direct	 p.6 Void
+					-----LINE 78  -----
+	load_integer	 Int.64 -12
+	store		 v.2 112 Int.64 Int.64
+	load_integer	 Int.64 5
+	store		 v.2 120 Int.64 Int.64
+					-----LINE 79  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 112 Int.64 Int.64
+	load		 v.2 120 Int.64 Int.64
+	div		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 -3
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 120 Int.64 Int.64
+	load		 v.2 112 Int.64 Int.64
+	div		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 -1
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 80  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 112 Int.64 Int.64
+	load		 v.2 120 Int.64 Int.64
+	mod		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 3
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 120 Int.64 Int.64
+	load		 v.2 112 Int.64 Int.64
+	mod		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 -7
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 82  -----
+	start_call_direct	 p.6 0 Void
+	load_address	 v.1 720
+	pop_param	 Addr
+	call_direct	 p.6 Void
+					-----LINE 83  -----
+	load_integer	 Int.64 12
+	store		 v.2 112 Int.64 Int.64
+	load_integer	 Int.64 -3
+	store		 v.2 120 Int.64 Int.64
+					-----LINE 84  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 112 Int.64 Int.64
+	load		 v.2 120 Int.64 Int.64
+	div		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 -4
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 120 Int.64 Int.64
+	load		 v.2 112 Int.64 Int.64
+	div		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 -1
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 85  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 112 Int.64 Int.64
+	load		 v.2 120 Int.64 Int.64
+	mod		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 0
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 120 Int.64 Int.64
+	load		 v.2 112 Int.64 Int.64
+	mod		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 9
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 86  -----
+	start_call_direct	 p.6 0 Void
+	load_address	 v.1 768
+	pop_param	 Addr
+	call_direct	 p.6 Void
+					-----LINE 87  -----
+	load_integer	 Int.64 12
+	store		 v.2 112 Int.64 Int.64
+	load_integer	 Int.64 -5
+	store		 v.2 120 Int.64 Int.64
+					-----LINE 88  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 112 Int.64 Int.64
+	load		 v.2 120 Int.64 Int.64
+	div		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 -3
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 120 Int.64 Int.64
+	load		 v.2 112 Int.64 Int.64
+	div		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 -1
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 89  -----
+	start_call_direct	 p.8 0 Void
+	load		 v.2 112 Int.64 Int.64
+	load		 v.2 120 Int.64 Int.64
+	mod		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 -3
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+	start_call_direct	 p.8 0 Void
+	load		 v.2 120 Int.64 Int.64
+	load		 v.2 112 Int.64 Int.64
+	mod		 Int.64 X X
+	pop_param	 Int.64
+	load_integer	 Int.64 7
+	pop_param	 Int.64
+	call_direct	 p.8 Void
+					-----LINE 91  -----
+	begin_block	
+	declare_local	 i 8 8 Int.64 425470580 F F 50 v.26
+	load_integer	 Int.64 -10
+	store		 v.26 0 Int.64 Int.64
+. L.2 F
+					-----LINE 92  -----
+	begin_block	
+	declare_local	 j 8 8 Int.64 425470580 F F 50 v.27
+	load_integer	 Int.64 -10
+	store		 v.27 0 Int.64 Int.64
+. L.3 F
+					-----LINE 93  -----
+	load_integer	 Int.64 0
+	load		 v.27 0 Int.64 Int.64
+	if_eq		 Int.64 L.4 20
+					-----LINE 94  -----
+	load		 v.26 0 Int.64 Int.64
+	load		 v.27 0 Int.64 Int.64
+	div		 Int.64 X X
+	store		 v.2 128 Int.64 Int.64
+					-----LINE 95  -----
+	load		 v.26 0 Int.64 Int.64
+	load		 v.27 0 Int.64 Int.64
+	mod		 Int.64 X X
+	store		 v.2 136 Int.64 Int.64
+					-----LINE 96  -----
+	load_integer	 Int.64 0
+	load		 v.26 0 Int.64 Int.64
+	if_ne		 Int.64 L.5 20
+					-----LINE 97  -----
+	start_call_direct	 p.7 0 Void
+	load_integer	 Int.64 0
+	load		 v.2 128 Int.64 Int.64
+	eq		 Int.64 Int.64
+	pop_param	 Word.8
+	call_direct	 p.7 Void
+					-----LINE 98  -----
+	start_call_direct	 p.7 0 Void
+	load_integer	 Int.64 0
+	load		 v.2 136 Int.64 Int.64
+	eq		 Int.64 Int.64
+	pop_param	 Word.8
+	call_direct	 p.7 Void
+	jump		 L.6
+. L.5 F
+					-----LINE 99  -----
+	load		 v.27 0 Int.64 Int.64
+	load		 v.26 0 Int.64 Int.64
+	if_ne		 Int.64 L.7 20
+					-----LINE 100  -----
+	start_call_direct	 p.7 0 Void
+	load_integer	 Int.64 1
+	load		 v.2 128 Int.64 Int.64
+	eq		 Int.64 Int.64
+	pop_param	 Word.8
+	call_direct	 p.7 Void
+					-----LINE 101  -----
+	start_call_direct	 p.7 0 Void
+	load_integer	 Int.64 0
+	load		 v.2 136 Int.64 Int.64
+	eq		 Int.64 Int.64
+	pop_param	 Word.8
+	call_direct	 p.7 Void
+	jump		 L.6
+. L.7 F
+					-----LINE 103  -----
+	load_integer	 Int.64 0
+	load		 v.26 0 Int.64 Int.64
+	if_le		 Int.64 L.8 20
+	load_integer	 Int.64 0
+	load		 v.27 0 Int.64 Int.64
+	if_le		 Int.64 L.8 20
+	start_call_direct	 p.7 0 Void
+	load_integer	 Int.64 0
+	load		 v.2 128 Int.64 Int.64
+	le		 Int.64 Int.64
+	pop_param	 Word.8
+	call_direct	 p.7 Void
+. L.8 F
+					-----LINE 104  -----
+	load_integer	 Int.64 0
+	load		 v.26 0 Int.64 Int.64
+	if_le		 Int.64 L.9 20
+	load_integer	 Int.64 0
+	load		 v.27 0 Int.64 Int.64
+	if_ge		 Int.64 L.9 20
+	start_call_direct	 p.7 0 Void
+	load_integer	 Int.64 0
+	load		 v.2 128 Int.64 Int.64
+	ge		 Int.64 Int.64
+	pop_param	 Word.8
+	call_direct	 p.7 Void
+. L.9 F
+					-----LINE 105  -----
+	load_integer	 Int.64 0
+	load		 v.26 0 Int.64 Int.64
+	if_ge		 Int.64 L.10 20
+	load_integer	 Int.64 0
+	load		 v.27 0 Int.64 Int.64
+	if_le		 Int.64 L.10 20
+	start_call_direct	 p.7 0 Void
+	load_integer	 Int.64 0
+	load		 v.2 128 Int.64 Int.64
+	ge		 Int.64 Int.64
+	pop_param	 Word.8
+	call_direct	 p.7 Void
+. L.10 F
+					-----LINE 106  -----
+	load_integer	 Int.64 0
+	load		 v.26 0 Int.64 Int.64
+	if_ge		 Int.64 L.11 20
+	load_integer	 Int.64 0
+	load		 v.27 0 Int.64 Int.64
+	if_ge		 Int.64 L.11 20
+	start_call_direct	 p.7 0 Void
+	load_integer	 Int.64 0
+	load		 v.2 128 Int.64 Int.64
+	le		 Int.64 Int.64
+	pop_param	 Word.8
+	call_direct	 p.7 Void
+. L.11 F
+. L.6 F
+					-----LINE 108  -----
+	load_integer	 Int.64 0
+	load		 v.2 136 Int.64 Int.64
+	if_eq		 Int.64 L.12 20
+					-----LINE 109  -----
+	start_call_direct	 p.7 0 Void
+	load_integer	 Int.64 0
+	load		 v.27 0 Int.64 Int.64
+	gt		 Int.64 Int.64
+	load_integer	 Int.64 0
+	load		 v.2 136 Int.64 Int.64
+	gt		 Int.64 Int.64
+	eq		 Word.64 Int.64
+	pop_param	 Word.8
+	call_direct	 p.7 Void
+					-----LINE 110  -----
+	start_call_direct	 p.7 0 Void
+	load_integer	 Int.64 0
+	load		 v.27 0 Int.64 Int.64
+	lt		 Int.64 Int.64
+	load_integer	 Int.64 0
+	load		 v.2 136 Int.64 Int.64
+	lt		 Int.64 Int.64
+	eq		 Word.64 Int.64
+	pop_param	 Word.8
+	call_direct	 p.7 Void
+. L.12 F
+					-----LINE 112  -----
+	start_call_direct	 p.7 0 Void
+	load		 v.2 128 Int.64 Int.64
+	load		 v.27 0 Int.64 Int.64
+	multiply	 Int.64
+	load		 v.2 136 Int.64 Int.64
+	add		 Int.64
+	load		 v.26 0 Int.64 Int.64
+	eq		 Int.64 Int.64
+	pop_param	 Word.8
+	call_direct	 p.7 Void
+					-----LINE 113  -----
+	load_integer	 Int.64 0
+	load		 v.26 0 Int.64 Int.64
+	if_ge		 Int.64 L.13 20
+	load_integer	 Int.64 10
+	load		 v.26 0 Int.64 Int.64
+	if_le		 Int.64 L.13 20
+	import_procedure	 RTIO__PutText 1 Void 0 p.16
+	declare_param	 t 8 8 Addr 1358456180 F F 50 v.28
+	start_call_direct	 p.16 0 Void
+	load_address	 v.1 816
+	pop_param	 Addr
+	call_direct	 p.16 Void
+. L.13 F
+					-----LINE 114  -----
+	declare_proctype	 665907971 2 0 0 0
+	declare_formal	 i 425470580
+	declare_formal	 width 425470580
+	import_procedure	 RTIO__PutInt 2 Void 0 p.17
+	declare_param	 i 8 8 Int.64 425470580 F F 50 v.29
+	declare_param	 width 8 8 Int.64 425470580 F F 50 v.30
+	start_call_direct	 p.17 0 Void
+	load		 v.26 0 Int.64 Int.64
+	pop_param	 Int.64
+	load_integer	 Int.64 0
+	pop_param	 Int.64
+	call_direct	 p.17 Void
+					-----LINE 115  -----
+	start_call_direct	 p.16 0 Void
+	load_address	 v.1 848
+	pop_param	 Addr
+	call_direct	 p.16 Void
+					-----LINE 116  -----
+	load_integer	 Int.64 0
+	load		 v.27 0 Int.64 Int.64
+	if_ge		 Int.64 L.14 20
+	load_integer	 Int.64 10
+	load		 v.27 0 Int.64 Int.64
+	if_le		 Int.64 L.14 20
+	start_call_direct	 p.16 0 Void
+	load_address	 v.1 816
+	pop_param	 Addr
+	call_direct	 p.16 Void
+. L.14 F
+					-----LINE 117  -----
+	start_call_direct	 p.17 0 Void
+	load		 v.27 0 Int.64 Int.64
+	pop_param	 Int.64
+	load_integer	 Int.64 0
+	pop_param	 Int.64
+	call_direct	 p.17 Void
+					-----LINE 118  -----
+	start_call_direct	 p.16 0 Void
+	load_address	 v.1 880
+	pop_param	 Addr
+	call_direct	 p.16 Void
+					-----LINE 119  -----
+	start_call_direct	 p.17 0 Void
+	load		 v.2 128 Int.64 Int.64
+	pop_param	 Int.64
+	load_integer	 Int.64 0
+	pop_param	 Int.64
+	call_direct	 p.17 Void
+					-----LINE 120  -----
+	start_call_direct	 p.16 0 Void
+	load_address	 v.1 912
+	pop_param	 Addr
+	call_direct	 p.16 Void
+					-----LINE 121  -----
+	load_integer	 Int.64 0
+	load		 v.26 0 Int.64 Int.64
+	if_ge		 Int.64 L.15 20
+	load_integer	 Int.64 10
+	load		 v.26 0 Int.64 Int.64
+	if_le		 Int.64 L.15 20
+	start_call_direct	 p.16 0 Void
+	load_address	 v.1 816
+	pop_param	 Addr
+	call_direct	 p.16 Void
+. L.15 F
+					-----LINE 122  -----
+	start_call_direct	 p.17 0 Void
+	load		 v.26 0 Int.64 Int.64
+	pop_param	 Int.64
+	load_integer	 Int.64 0
+	pop_param	 Int.64
+	call_direct	 p.17 Void
+					-----LINE 123  -----
+	start_call_direct	 p.16 0 Void
+	load_address	 v.1 944
+	pop_param	 Addr
+	call_direct	 p.16 Void
+					-----LINE 124  -----
+	load_integer	 Int.64 0
+	load		 v.27 0 Int.64 Int.64
+	if_ge		 Int.64 L.16 20
+	load_integer	 Int.64 10
+	load		 v.27 0 Int.64 Int.64
+	if_le		 Int.64 L.16 20
+	start_call_direct	 p.16 0 Void
+	load_address	 v.1 816
+	pop_param	 Addr
+	call_direct	 p.16 Void
+. L.16 F
+					-----LINE 125  -----
+	start_call_direct	 p.17 0 Void
+	load		 v.27 0 Int.64 Int.64
+	pop_param	 Int.64
+	load_integer	 Int.64 0
+	pop_param	 Int.64
+	call_direct	 p.17 Void
+					-----LINE 126  -----
+	start_call_direct	 p.16 0 Void
+	load_address	 v.1 880
+	pop_param	 Addr
+	call_direct	 p.16 Void
+					-----LINE 127  -----
+	start_call_direct	 p.17 0 Void
+	load		 v.2 136 Int.64 Int.64
+	pop_param	 Int.64
+	load_integer	 Int.64 0
+	pop_param	 Int.64
+	call_direct	 p.17 Void
+					-----LINE 128  -----
+	start_call_direct	 p.16 0 Void
+	load_address	 v.1 912
+	pop_param	 Addr
+	call_direct	 p.16 Void
+. L.4 F
+					-----LINE 92  -----
+	load_integer	 Int.64 1
+	load		 v.27 0 Int.64 Int.64
+	add		 Int.64
+	store		 v.27 0 Int.64 Int.64
+. L.17 F
+	load_integer	 Int.64 10
+	load		 v.27 0 Int.64 Int.64
+	if_ge		 Int.64 L.3 80
+. L.18 F
+	end_block	
+					-----LINE 91  -----
+	load_integer	 Int.64 1
+	load		 v.26 0 Int.64 Int.64
+	add		 Int.64
+	store		 v.26 0 Int.64 Int.64
+. L.19 F
+	load_integer	 Int.64 10
+	load		 v.26 0 Int.64 Int.64
+	if_ge		 Int.64 L.2 80
+. L.20 F
+	end_block	
+					-----LINE 133  -----
+	import_procedure	 RTIO__Flush 0 Void 0 p.18
+	start_call_direct	 p.18 0 Void
+	call_direct	 p.18 Void
+					-----LINE 134  -----
+	start_call_direct	 p.9 0 Void
+	call_direct	 p.9 Void
+. L.1 F
+	load_address	 v.2 0
+	exit_proc	 Addr
+	end_procedure	 p.1
+	# global constant type descriptor
+	declare_record	 -1 8128 0
+	# global data type descriptor
+	declare_record	 -1 1920 8
+	declare_field	 p1 832 8 749164572
+	declare_field	 p2 840 8 749164572
+	declare_field	 n1 848 8 1563517881
+	declare_field	 n2 856 8 1563517881
+	declare_field	 x1 896 64 425470580
+	declare_field	 x2 960 64 425470580
+	declare_field	 d 1024 64 425470580
+	declare_field	 m 1088 64 425470580
+	# module global constants
+	bind_segment	 v.1 1024 16 Struct F T
+	begin_init	 v.1
+	init_proc	 0 p.11
+	init_proc	 8 p.12
+	init_proc	 16 p.13
+	init_proc	 24 p.14
+	init_proc	 32 p.15
+	init_int	 40 2 Int.64
+	init_var	 48 v.1 0
+	init_int	 56 19 Int.64
+	init_chars	 64 "  p1 := 12; p2 := 3"
+	init_int	 88 2 Int.64
+	init_var	 96 v.1 0
+	init_int	 104 19 Int.64
+	init_chars	 112 "  p1 := 12; p2 := 5"
+	init_int	 136 2 Int.64
+	init_var	 144 v.1 0
+	init_int	 152 21 Int.64
+	init_chars	 160 "  n1 := -12; n2 := -3"
+	init_int	 184 2 Int.64
+	init_var	 192 v.1 0
+	init_int	 200 21 Int.64
+	init_chars	 208 "  n1 := -12; n2 := -5"
+	init_int	 232 2 Int.64
+	init_var	 240 v.1 0
+	init_int	 248 20 Int.64
+	init_chars	 256 "  n1 := -12; p2 := 3"
+	init_int	 280 2 Int.64
+	init_var	 288 v.1 0
+	init_int	 296 20 Int.64
+	init_chars	 304 "  n1 := -12; p2 := 5"
+	init_int	 328 2 Int.64
+	init_var	 336 v.1 0
+	init_int	 344 20 Int.64
+	init_chars	 352 "  p1 := 12; n2 := -3"
+	init_int	 376 2 Int.64
+	init_var	 384 v.1 0
+	init_int	 392 20 Int.64
+	init_chars	 400 "  p1 := 12; n2 := -5"
+	init_int	 424 2 Int.64
+	init_var	 432 v.1 0
+	init_int	 440 19 Int.64
+	init_chars	 448 "  x1 := 12; x2 := 3"
+	init_int	 472 2 Int.64
+	init_var	 480 v.1 0
+	init_int	 488 19 Int.64
+	init_chars	 496 "  x1 := 12; x2 := 5"
+	init_int	 520 2 Int.64
+	init_var	 528 v.1 0
+	init_int	 536 21 Int.64
+	init_chars	 544 "  x1 := -12; x2 := -3"
+	init_int	 568 2 Int.64
+	init_var	 576 v.1 0
+	init_int	 584 21 Int.64
+	init_chars	 592 "  x1 := -12; x2 := -5"
+	init_int	 616 2 Int.64
+	init_var	 624 v.1 0
+	init_int	 632 20 Int.64
+	init_chars	 640 "  x1 := -12; x2 := 3"
+	init_int	 664 2 Int.64
+	init_var	 672 v.1 0
+	init_int	 680 20 Int.64
+	init_chars	 688 "  x1 := -12; x2 := 5"
+	init_int	 712 2 Int.64
+	init_var	 720 v.1 0
+	init_int	 728 20 Int.64
+	init_chars	 736 "  x1 := 12; x2 := -3"
+	init_int	 760 2 Int.64
+	init_var	 768 v.1 0
+	init_int	 776 20 Int.64
+	init_chars	 784 "  x1 := 12; x2 := -5"
+	init_int	 808 2 Int.64
+	init_var	 816 v.1 0
+	init_int	 824 1 Int.64
+	init_chars	 832 " "
+	init_int	 840 2 Int.64
+	init_var	 848 v.1 0
+	init_int	 856 5 Int.64
+	init_chars	 864 " div "
+	init_int	 872 2 Int.64
+	init_var	 880 v.1 0
+	init_int	 888 3 Int.64
+	init_chars	 896 " = "
+	init_int	 904 2 Int.64
+	init_var	 912 v.1 0
+	init_int	 920 1 Int.64
+	init_chars	 928 "\012"
+	init_int	 936 2 Int.64
+	init_var	 944 v.1 0
+	init_int	 952 5 Int.64
+	init_chars	 960 " mod "
+	# procedure names
+	init_chars	 968 "Main_M3"
+	# procedure table
+	init_proc	 976 p.1
+	init_var	 984 v.1 968
+	# file name
+	init_chars	 1000 "../Main.m3"
+	end_init	 v.1
+	# module global data
+	bind_segment	 v.2 240 16 Struct F T
+	begin_init	 v.2
+	init_var	 0 v.1 1000
+	init_var	 40 v.1 976
+	init_var	 72 v.2 144
+	init_proc	 88 p.1
+	init_int	 96 3 Int.64
+	init_int	 104 1 Int.8
+	init_int	 105 1 Int.8
+	init_int	 106 -20 Int.8
+	init_int	 107 -20 Int.8
+	init_proc	 152 p.2
+	init_var	 160 v.2 168
+	init_proc	 176 p.3
+	init_var	 184 v.2 192
+	init_proc	 200 p.4
+	init_var	 208 v.2 216
+	init_proc	 224 p.5
+	end_init	 v.2
+	# load map
+	# 
+	# 
+	#  global data allocation for M_Main
+	#      0   104  8  *module info*
+	#    104     1  1  Main.p1
+	#    105     1  1  Main.p2
+	#    106     1  1  Main.n1
+	#    107     1  1  Main.n2
+	#    112     8  8  Main.x1
+	#    120     8  8  Main.x2
+	#    128     8  8  Main.d
+	#    136     8  8  Main.m
+	#    144    24  8  import Main
+	#    168    24  8  import RTIO
+	#    192    24  8  import Test
+	#    216    24  8  import RTHooks
+	#    240     0  8  *TOTAL*
+	# 
+	# 
+	#  global constants for M_Main
+	#      0    40  8  TEXT literal methods
+	#     40    44  8  *TEXT literal*
+	#     88    44  8  *TEXT literal*
+	#    136    46  8  *TEXT literal*
+	#    184    46  8  *TEXT literal*
+	#    232    45  8  *TEXT literal*
+	#    280    45  8  *TEXT literal*
+	#    328    45  8  *TEXT literal*
+	#    376    45  8  *TEXT literal*
+	#    424    44  8  *TEXT literal*
+	#    472    44  8  *TEXT literal*
+	#    520    46  8  *TEXT literal*
+	#    568    46  8  *TEXT literal*
+	#    616    45  8  *TEXT literal*
+	#    664    45  8  *TEXT literal*
+	#    712    45  8  *TEXT literal*
+	#    760    45  8  *TEXT literal*
+	#    808    26  8  *TEXT literal*
+	#    840    30  8  *TEXT literal*
+	#    872    28  8  *TEXT literal*
+	#    904    26  8  *TEXT literal*
+	#    936    30  8  *TEXT literal*
+	#    968     8  8  *proc names*
+	#    976    24  8  *proc info*
+	#   1000    11  1  *string*
+	#   1016     0  8  *TOTAL*
+	# 
+	end_unit	
