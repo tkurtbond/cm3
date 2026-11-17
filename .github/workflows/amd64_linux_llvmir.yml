@@ -4,7 +4,10 @@ name: AMD64_LINUX_LLVMIR
 # Phase 6): build everything with it and run the compiler tests, once
 # with the oldest supported LLVM (18) and once with the newest, and once
 # more with the newest and zero-cost exceptions (ex_stack, PLAN.md
-# Phase 7), which the AMD64_LINUX config leaves off by default.
+# Phase 7), which the AMD64_LINUX config leaves off by default, and
+# once more with everything (compiler, libraries and tests) optimized:
+# bugs that show up only under optimization usually mean undefined
+# behavior in the emitted IR.
 # Based on amd64_linux.yml.
 
 on:
@@ -23,7 +26,7 @@ on:
 jobs:
   build-and-test:
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    timeout-minutes: ${{ matrix.optimize && 90 || 60 }}
 
     strategy:
       fail-fast: false
@@ -38,6 +41,10 @@ jobs:
         - llvm: 22
           os: ubuntu-latest
           exceptions: ex_stack
+        # "cm3 -O2": clang -O2 on every unit.
+        - llvm: 22
+          os: ubuntu-latest
+          optimize: true
 
     env:
       CM3_TARGET: AMD64_LINUX
@@ -103,7 +110,7 @@ jobs:
     # in the installed cm3.cfg; everything after that uses LlvmIR.
     - name: Build everything
       run: |
-        scripts/concierge.py full-upgrade --backend llvmir -g0 all -caltech-other -caltech-parser -m3-scheme
+        scripts/concierge.py full-upgrade --backend llvmir -g0 ${{ matrix.optimize && '-O2' || '' }} all -caltech-other -caltech-parser -m3-scheme
 
     - name: Check the default back end
       run: |
@@ -119,13 +126,13 @@ jobs:
     - name: Run compiler validation suite
       continue-on-error: true
       run: |
-        cm3 -DHTML
+        cm3 -DHTML ${{ matrix.optimize && '-DM3TESTS_OPTIMIZE' || '' }}
       working-directory: m3-sys/m3tests
 
     - name: Generate test report
       uses: dorny/test-reporter@v3
       with:
-        name: ${{ format('m3tests ({0}, llvmir, LLVM {1}{2})', env.CM3_TARGET, matrix.llvm, matrix.exceptions && ', ex_stack' || '') }}
+        name: ${{ format('m3tests ({0}, llvmir, LLVM {1}{2}{3})', env.CM3_TARGET, matrix.llvm, matrix.exceptions && ', ex_stack' || '', matrix.optimize && ', -O2' || '') }}
         fail-on-error: false
         max-annotations: 49
         path: m3-sys/m3tests/m3tests-results.xml

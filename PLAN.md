@@ -849,7 +849,11 @@ Ordered by expected value. Each item is a separate mini-plan.
   to keep the ABI honest.
 - **Optimization levels**: run every suite at `-O0` and `-O2`. Bugs that
   only appear at `-O2` usually mean undefined behavior in the emitted
-  IR, such as poison or a missing `returns_twice`.
+  IR, such as poison or a missing `returns_twice`. In CI, a fourth job
+  in `amd64_linux_llvmir.yml` (LLVM 22) builds everything, the
+  compiler included, with `concierge.py ... -O2` (a pass-through flag
+  this fork adds, giving `cm3 -O2` and so `clang -O2`) and runs m3tests
+  with `-DM3TESTS_OPTIMIZE`.
 - **Bisecting a miscompile**: dump `.ll` files with `-keep`, then
   compare individual units between backends by mixing them.
 - **Prior art for the harness: Hostess**, the Oberon compiler test

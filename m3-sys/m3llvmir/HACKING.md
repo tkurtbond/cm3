@@ -21,7 +21,7 @@ commands.
 | `m3-sys/cminstall/src/config/Unix.common` | `LLVM_IR_CC`, `compile_llvm_ir`, and the `M3_LLVM_IR_VERIFY` check. |
 | `m3-sys/cminstall/src/config/cm3cfg.common` | Front-end flags for `LlvmIR` (`-unfold_nested_procs -check_procs`). |
 | `scripts/concierge.py` | `--backend llvmir`: the clang check, the C-then-LlvmIR bootstrap (`_doLlvmIR`), and the `cm3.cfg` default. |
-| `.github/workflows/amd64_linux_llvmir.yml` | CI: LLVM 18 and the newest LLVM; full build, m3tests, IR verification. |
+| `.github/workflows/amd64_linux_llvmir.yml` | CI: LLVM 18 and the newest LLVM; full build, m3tests, IR verification; also with ex_stack and at `-O2`. |
 | `experiment-doc/m3cg-ops-checklist.md` | Which M3CG operations are implemented. |
 | `experiment-doc/m3cg-corpus/` | Saved ASCII M3CG units for quick tests with `m3llir`. |
 | `experiment-doc/phase4-results.md`, `phase4/` | Self-hosting, timing and benchmark scripts and numbers. |
@@ -177,7 +177,10 @@ job, checks that `cm3.cfg` defaults to `LlvmIR`, and runs m3tests. The
 environment sets `M3_LLVM_IR_VERIFY`, so every `.ll` of the build and
 of the tests goes through `llvm-as`. The last step fails on any test
 failure not listed in `KNOWN_FAILURES`. When a new LLVM is released,
-bump the newest version in the matrix.
+bump the newest version in the matrix. Two more jobs, with the newest
+LLVM, turn on ex_stack (by uncommenting `M3_USE_STACK_WALKER` in the
+source config) and build everything and the tests at `-O2`
+(`concierge.py ... -O2`, `cm3 -DHTML -DM3TESTS_OPTIMIZE`).
 
 `m3llvmir` bundles `m3printers.py` with `m3bundle`, so in
 `scripts/pkginfo.txt`, which sets concierge's build order, it must

@@ -17,7 +17,8 @@ Developers working on the back end itself: see
   Xcode's, which has its own version numbers; the configs there label
   debug information as C for lldb.
 - **LLVM:** `clang` 18 or later on `PATH`. CI tests LLVM 18 and the
-  newest release. The IR uses opaque pointers throughout.
+  newest release, and on AMD64_LINUX also builds and tests everything
+  at `-O2`. The IR uses opaque pointers throughout.
 - **Exceptions:** the default `ex_frame` model (setjmp/longjmp) works,
   and so does the zero-cost `ex_stack` model (`README-ex_stack.md`):
   with `M3_USE_STACK_WALKER` set, the Linux and Darwin configs keep

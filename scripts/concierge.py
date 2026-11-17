@@ -1270,6 +1270,7 @@ class ConciergeCommand(WithPackageActions):
             "-verbose",    # list internal steps as they are performed
             "-why",        # explain why code is being recompiled
             "-g0",         # turn off debug generation in backends
+            "-O2",         # this fork: optimize in backends (clang -O2)
             "-O3"          # turn on full optimisation in backends
         ]
         flags   = [arg for arg in args if arg in cm3flags]
