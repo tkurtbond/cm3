@@ -229,10 +229,11 @@ jobs:
       uses: actions/checkout@v6
 
     # The release's compiler has no LlvmIR back end: upgrade it (with
-    # C) to this tree's compiler first.
+    # C) to this tree's compiler first.  concierge installs into
+    # CM3_INSTALL when it is set, in preference to the cm3 on PATH.
     - name: Make the IR bootstrap
       run: |
-        export PATH="${C_INSTALL}/bin:$PATH"
+        export PATH="${C_INSTALL}/bin:$PATH" CM3_INSTALL="${C_INSTALL}"
         scripts/concierge.py upgrade -g0
         mkdir ../tarball
         cd ../tarball

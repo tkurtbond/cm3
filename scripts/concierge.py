@@ -2192,6 +2192,7 @@ if __name__ == "__main__":
         Concierge().main()
     except FatalError as err:
         print(f"{err.message}")
+        sys.exit(1)             # This fork: fail, so that scripts stop.
     except UsageError as err:
         print(f"{err.message}\n")
         show_usage()
