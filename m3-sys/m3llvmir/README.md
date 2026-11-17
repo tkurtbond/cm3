@@ -19,9 +19,8 @@ Developers working on the back end itself: see
   and so does the zero-cost `ex_stack` model (`README-ex_stack.md`) on
   AMD64_LINUX: with `M3_USE_STACK_WALKER` set, the config keeps
   `LlvmIR` (it forces C for every other mode). With `ex_stack`, m3tests
-  passes 288 of 293; r001, r003, r004 and r005 fail as they do with
-  the C back end, because the `ex_stack` runtime doesn't report an
-  unhandled exception (C++ calls `std::terminate`).
+  passes 292 of 293, as with `ex_frame`, and an unhandled exception is
+  reported the same way.
 - **Tests:** m3tests passes 292 of 293, the same as the C back end
   (p047 fails with both). The compiler builds itself with `LlvmIR`, and
   its output reaches a fixed point.

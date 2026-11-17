@@ -781,15 +781,18 @@ Ordered by expected value. Each item is a separate mini-plan.
   catch globals were not used). The AMD64_LINUX config now keeps
   `LlvmIR` when `M3_USE_STACK_WALKER` is set, and links `-lstdc++`
   (`SYSTEM_LD` is still `gcc`, so ex_stack programs failed to link
-  with either back end). With ex_stack on, m3tests passes 288 of 293
-  with `LlvmIR`: p047 as always, and r001, r003, r004 and r005,
-  because the ex_stack runtime lets C++ call `std::terminate` for an
-  unhandled exception instead of reporting it. The C back end with
-  ex_stack fails those and 28 more (g++ warnings in expected-empty
+  with either back end). Unhandled exceptions are reported as with
+  ex_frame: `RTStackC.c` installs a `std::terminate` handler that
+  passes an uncaught `_M3Exc` to `RTException.InvokeBackstop` (the
+  stack is still intact then), and `RTExStack.DumpStack` prints the
+  stack only with `@M3stackdump`, as `RTExFrame` does. (One difference:
+  the backstop's RuntimeError.E (UnhandledException) can't be caught
+  by a handler, as it can with ex_frame.) With ex_stack on, m3tests
+  passes 292 of 293 with `LlvmIR`, as without it (p047 fails). The C
+  back end with ex_stack fails 28 (g++ warnings in expected-empty
   output, set tests, and crashes in p268, p270, p277, p280), and skips
   a FINALLY when a runtime error is raised in its body; LlvmIR runs
-  it. Not done: reporting unhandled exceptions (a runtime change),
-  ex_stack on ARM64_LINUX (not in m3core's `HAS_STACK_WALKER`), a CI
+  it. Not done: ex_stack on ARM64_LINUX (not in m3core's `HAS_STACK_WALKER`), a CI
   job, and making ex_stack the default.
 - **Debug information for exceptions** (from Phase 5): describe
   exception declarations and procedures' RAISES sets in the DWARF.

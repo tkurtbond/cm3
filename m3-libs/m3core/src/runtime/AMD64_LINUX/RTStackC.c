@@ -24,6 +24,7 @@
    satisfied because the layout is the same everywhere. */
 #ifdef __cplusplus
 struct _M3Exc { void* act; };
+#include <exception>
 #endif
 
 #ifdef __cplusplus
@@ -269,7 +270,42 @@ void show_backtrace (void) {
    expression needs C++ EH unwinding, not C abort semantics).  The
    extern "C" on the definition gives the symbol C linkage so that M3
    code can call it via the EXTERNAL pragma in RTStack.i3. */
+
+/* Reporting unhandled exceptions.  When no frame catches an _M3Exc, the
+   C++ runtime calls std::terminate before unwinding anything, so the
+   stack is still intact.  M3Terminate passes the activation to the
+   Modula-3 backstop, which prints the usual "Unhandled exception" report
+   and aborts, as with ex_frame.  The default backstop first re-raises
+   the activation as RuntimeError.E (UnhandledException); that second
+   throw is caught here and passed back to the backstop, which then
+   reports it.  Any other exception goes to the previous handler. */
+extern "C" void RTException__InvokeBackstop(void* act, unsigned char raises);
+
+static std::terminate_handler m3_prev_terminate;
+
+static void M3Terminate(void)
+{
+  void* act = 0;
+  std::exception_ptr p = std::current_exception();
+  if (p) {
+    try { std::rethrow_exception(p); }
+    catch (_M3Exc& e) { act = e.act; }
+    catch (...) { }
+  }
+  while (act) {
+    void* next = 0;
+    try { RTException__InvokeBackstop(act, 0); }
+    catch (_M3Exc& e) { next = e.act; }
+    act = next;
+  }
+  if (m3_prev_terminate) m3_prev_terminate();
+  abort();
+}
+
 extern "C" void RTStack__ThrowM3Exc(void* act) {
+  static const bool installed =
+    (m3_prev_terminate = std::set_terminate(M3Terminate), true);
+  (void)installed;
   throw _M3Exc{act};
 }
 #endif
