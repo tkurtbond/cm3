@@ -6,5 +6,30 @@ SYSTEM_CXXC = "g++ -g -fPIC" % C++ compiler
 
 readonly SYSTEM_ASM = "as" % Assembler
 
+% This fork: C++ zero-cost exception handling (ex_stack), as on
+% AMD64_LINUX.  Requires libunwind-dev: apt-get install libunwind-dev
+%M3_USE_STACK_WALKER = TRUE
+
+% ex_stack requires the C backend (or LlvmIR) and g++ with -x c++.
+% M3_BACKEND_MODE must be set before includes so cm3cfg.common's
+% "if not defined" guard fires correctly.
+if defined("M3_USE_STACK_WALKER")
+  if defined("M3_BACKEND_MODE")
+    if not equal(M3_BACKEND_MODE, "LlvmIR")
+      M3_BACKEND_MODE = "C"
+    end
+  else
+    M3_BACKEND_MODE = "C"
+  end
+end
+
 include("ARM64.common")
 include("Linux.common")
+
+if defined("M3_USE_STACK_WALKER")
+  % RTStackC.c and M3C.m3-generated files use C++ EH (catch/_M3Exc/throw),
+  % so SYSTEM_CC must invoke the C++ compiler with -x c++.
+  SYSTEM_CC = "g++ -g -fPIC -x c++"
+  % SYSTEM_LD is still gcc (Linux.common), so link libstdc++ explicitly.
+  SYSTEM_LIBS{"UNWIND"} = [ "-lunwind-aarch64", "-lunwind", "-lstdc++" ]
+end

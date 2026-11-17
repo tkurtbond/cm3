@@ -816,8 +816,13 @@ Ordered by expected value. Each item is a separate mini-plan.
   it. CI: a third job in
   `amd64_linux_llvmir.yml` (LLVM 22) uncomments `M3_USE_STACK_WALKER`
   in the source config before building, and checks that m3core has
-  ex_stack's runtime. Not done: ex_stack on ARM64_LINUX (not in
-  m3core's `HAS_STACK_WALKER`), and making ex_stack the default.
+  ex_stack's runtime. ARM64_LINUX: m3core's `HAS_STACK_WALKER` now
+  lists it, with `runtime/ARM64_LINUX/` a copy of AMD64_LINUX's
+  stack walker (the code is portable; libunwind links as
+  `-lunwind-aarch64`), and its config has the same commented-out
+  `M3_USE_STACK_WALKER` and the same guards as AMD64_LINUX's. A third
+  job in `arm64_linux_llvmir.yml` (LLVM 22) turns it on; its first
+  run is pending. Not done: making ex_stack the default.
 - **Debug information for exceptions** (from Phase 5): describe
   exception declarations and procedures' RAISES sets in the DWARF.
   Design it together with `ex_stack`, which decides how exceptions are

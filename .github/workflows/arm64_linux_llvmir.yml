@@ -2,7 +2,9 @@
 name: ARM64_LINUX_LLVMIR
 # This fork's LLVM IR back end (M3_BACKEND_MODE = "LlvmIR") on
 # ARM64_LINUX (PLAN.md, Phase 7): build everything with it and run the
-# compiler tests, with the oldest supported LLVM (18) and the newest.
+# compiler tests, with the oldest supported LLVM (18) and the newest,
+# and once more with the newest and zero-cost exceptions (ex_stack),
+# which the ARM64_LINUX config leaves off by default.
 # Based on amd64_linux_llvmir.yml.
 #
 # There is no ARM64_LINUX bootstrap release, so the first job makes one
@@ -79,7 +81,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        llvm: [18, 22]
+        include:
+        - llvm: 18
+        - llvm: 22
+        - llvm: 22
+          exceptions: ex_stack
 
     env:
       CM3_TARGET: ARM64_LINUX
@@ -94,7 +100,7 @@ jobs:
     - name: Install prerequisites
       run: |
         sudo apt-get update --quiet
-        sudo apt-get install --quiet --assume-yes libglu1-mesa-dev ninja-build xorg-dev binutils-gold lsb-release wget software-properties-common gnupg
+        sudo apt-get install --quiet --assume-yes libglu1-mesa-dev ninja-build xorg-dev binutils-gold libunwind-dev lsb-release wget software-properties-common gnupg
 
     - name: Install LLVM ${{ matrix.llvm }}
       run: |
@@ -134,6 +140,15 @@ jobs:
     - name: Fetch sources
       uses: actions/checkout@v6
 
+    # The installed config is copied from the source tree, so this turns
+    # ex_stack on for the whole build and for m3tests.  (The bootstrap,
+    # made by the first job, uses ex_frame.)
+    - name: Turn on ex_stack
+      if: ${{ matrix.exceptions == 'ex_stack' }}
+      run: |
+        sed -i 's/^%M3_USE_STACK_WALKER = TRUE/M3_USE_STACK_WALKER = TRUE/' m3-sys/cminstall/src/config/ARM64_LINUX
+        grep -n '^M3_USE_STACK_WALKER = TRUE' m3-sys/cminstall/src/config/ARM64_LINUX
+
     # "--backend llvmir" builds the compiler with the C back end once,
     # then rebuilds it twice with LlvmIR, and makes LlvmIR the default
     # in the installed cm3.cfg; everything after that uses LlvmIR.
@@ -145,6 +160,12 @@ jobs:
       run: |
         cm3 -version
         grep -n 'M3_BACKEND_MODE = "LlvmIR"' "${CM3_INSTALL}/bin/cm3.cfg"
+        if [ "${{ matrix.exceptions }}" = ex_stack ]; then
+          grep -n '^M3_USE_STACK_WALKER = TRUE' "${CM3_INSTALL}/bin/config/ARM64_LINUX"
+          # m3core was built with ex_stack's runtime (RTExStack), not
+          # ex_frame's.
+          nm "${CM3_INSTALL}/lib/libm3core.a" | grep -q 'RTStack__ThrowM3Exc'
+        fi
 
     - name: Run compiler validation suite
       continue-on-error: true
@@ -155,7 +176,7 @@ jobs:
     - name: Generate test report
       uses: dorny/test-reporter@v3
       with:
-        name: ${{ format('m3tests ({0}, llvmir, LLVM {1})', env.CM3_TARGET, matrix.llvm) }}
+        name: ${{ format('m3tests ({0}, llvmir, LLVM {1}{2})', env.CM3_TARGET, matrix.llvm, matrix.exceptions && ', ex_stack' || '') }}
         fail-on-error: false
         max-annotations: 49
         path: m3-sys/m3tests/m3tests-results.xml

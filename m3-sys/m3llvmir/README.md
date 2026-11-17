@@ -19,12 +19,13 @@ Developers working on the back end itself: see
 - **LLVM:** `clang` 18 or later on `PATH`. CI tests LLVM 18 and the
   newest release. The IR uses opaque pointers throughout.
 - **Exceptions:** the default `ex_frame` model (setjmp/longjmp) works,
-  and so does the zero-cost `ex_stack` model (`README-ex_stack.md`) on
-  AMD64_LINUX: with `M3_USE_STACK_WALKER` set, the config keeps
-  `LlvmIR` (it forces C for every other mode). With `ex_stack`, m3tests
+  and so does the zero-cost `ex_stack` model (`README-ex_stack.md`):
+  with `M3_USE_STACK_WALKER` set, the Linux and Darwin configs keep
+  `LlvmIR` (they force C for every other mode). With `ex_stack`, m3tests
   passes 292 of 293, as with `ex_frame`, and an unhandled exception is
-  reported the same way. CI tests it on AMD64_LINUX and on Darwin,
-  whose configs turn it on by default.
+  reported the same way. CI tests it on AMD64_LINUX, on ARM64_LINUX
+  (where it is new in this fork; uncomment `M3_USE_STACK_WALKER` in
+  the config), and on Darwin, whose configs turn it on by default.
 - **Tests:** m3tests passes 292 of 293, the same as the C back end
   (p047 fails with both). The compiler builds itself with `LlvmIR`, and
   its output reaches a fixed point.
