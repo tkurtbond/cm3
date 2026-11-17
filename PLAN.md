@@ -652,8 +652,13 @@ its variables can be printed in gdb.
 
 **Phase 6 as built:**
 
-- *Exit not yet confirmed.* The workflow has been written and its
-  pieces tested locally, but it first runs on GitHub after the push.
+- *Exit met.* The `integration` run for e564f1996 (run 43962787893)
+  is green, both `LlvmIR` jobs (LLVM 18 on Ubuntu 24.04, LLVM 22 on
+  Ubuntu 26.04) included. Getting there took the build-order fix and
+  the runner change below, and e041 as a known failure. One upstream
+  job, AMD64_NT, failed once with a flaky crash of the Windows
+  bootstrap compiler (`suspend_cnt = 0` in `ThreadWin32.m3`, then a
+  stack overflow) and passed when rerun.
 - **concierge.** `--backend llvmir` (or `-llvmir`) is accepted by every
   command and falls back to C on targets other than AMD64_LINUX.
   - `check_clang` fails unless `clang` on `PATH` reports version 18 or
