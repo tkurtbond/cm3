@@ -1,0 +1,10 @@
+% Library half of the mixed-linking test (../../run-tests.sh): built
+% with one back end and linked into mixprog built with the other.
+% Ops has the operations that are easy to lower wrongly (their IR is
+% also checked with FileCheck, ../../Ops.check); Abi passes every kind
+% of value across the library boundary.
+
+import ("libm3")
+Module ("Ops")
+Module ("Abi")
+library ("mixlib")

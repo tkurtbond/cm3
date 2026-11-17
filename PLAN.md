@@ -841,12 +841,29 @@ Ordered by expected value. Each item is a separate mini-plan.
   Same test, two backends: the outputs must match.
 - **IR validity**: run every `.ll` through `opt -passes=verify` in the
   test harness. A verifier error is always our bug.
-- **Golden IR tests** through the standalone driver: small M3CG inputs
-  with expected `.ll` output, for operations that are easy to get
-  subtly wrong (shifts, `DIV`/`MOD`, `extract`/`insert`, set operations,
-  `case_jump`).
-- **Mixed linking**: some packages built with C and some with `LlvmIR`,
-  to keep the ABI honest.
+- **Golden IR tests**: FileCheck patterns (`m3-sys/m3llvmir/tests/Ops.check`)
+  for operations that are easy to get subtly wrong (shifts, `DIV`/`MOD`,
+  `extract`/`insert`, packed fields, set operations, `case_jump`, real
+  conversions). Done, but not through the standalone driver as first
+  planned: they check the `.ll` that `cm3 -keep` leaves for a real
+  package, so there is no saved M3CG to go stale. Patterns, not whole
+  expected files, so unrelated changes (numbering, debug metadata)
+  don't break them.
+- **Mixed linking**: done in `m3-sys/m3llvmir/tests/run-tests.sh`, which
+  builds a library (`mixlib`: the same operations, plus calling
+  conventions: small and large records and arrays by value, open
+  arrays, REALs and EXTENDED, many arguments, nested procedures passed
+  as values, exceptions and FINALLY across the boundary, objects with
+  overridden methods) and a program that calls it, in all four
+  combinations of C and `LlvmIR`, and compares the output. CI runs it
+  in every `amd64_linux_llvmir.yml` job. It found five places where
+  the C back end is wrong and `LlvmIR` right: `Word.Extract(x, 0, 64)`
+  gives 0, `Word.Insert(x, y, 0, 64)` gives x, `a*b <= a` and
+  `a*b < a` on a four-word set give FALSE (as if the operands were
+  swapped), and `{0, 31} + {3 .. 9}` on a one-word set gives
+  `{0, 3 .. 31}`.
+  `expected-output.clib` records the C results for when the library
+  is built with C.
 - **Optimization levels**: run every suite at `-O0` and `-O2`. Bugs that
   only appear at `-O2` usually mean undefined behavior in the emitted
   IR, such as poison or a missing `returns_twice`. In CI, a fourth job

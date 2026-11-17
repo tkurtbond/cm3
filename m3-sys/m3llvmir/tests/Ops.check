@@ -1,0 +1,235 @@
+; FileCheck checks on the LLVM IR that LlvmIR emits for
+; mixed/mixlib/src/Ops.m3 (the Ops.m3.ll that "cm3 -keep" leaves);
+; run-tests.sh runs them.  They pin down how the operations that are easy
+; to get subtly wrong are lowered: an out-of-range shift count must give
+; 0, not poison; DIV and MOD round toward negative infinity; bit fields
+; mask and sign-extend; set operations pass their operands in order.
+; mixprog checks the same procedures' results.
+;
+; Calls to @llvm.dbg.declare appear unless the unit is built with -g0, so
+; a CHECK-NOT must name what it excludes, not just "call".
+;
+; Write the checks against the meaning, not the numbering: match values
+; with [[NAME:%t\.[0-9]+]] and match parameters through %p.N/%v.N.
+
+; Word.Shift: left for n > 0, right for n < 0, and 0 once |n| >= 64.
+; CHECK-LABEL: define i64 @Ops__Shift(
+; CHECK:      [[NEG:%t\.[0-9]+]] = sub i64 0, [[N:%t\.[0-9]+]]
+; CHECK:      [[LEFT:%t\.[0-9]+]] = icmp sgt i64 [[N]], 0
+; CHECK:      [[SHL:%t\.[0-9]+]] = shl i64 [[X:%t\.[0-9]+]], [[N]]
+; CHECK:      [[SHR:%t\.[0-9]+]] = lshr i64 [[X]], [[NEG]]
+; CHECK:      [[R:%t\.[0-9]+]] = select i1 [[LEFT]], i64 [[SHL]], i64 [[SHR]]
+; CHECK:      [[ABS:%t\.[0-9]+]] = select i1 [[LEFT]], i64 [[N]], i64 [[NEG]]
+; CHECK:      [[BIG:%t\.[0-9]+]] = icmp uge i64 [[ABS]], 64
+; CHECK:      [[RES:%t\.[0-9]+]] = select i1 [[BIG]], i64 0, i64 [[R]]
+; CHECK:      ret i64 [[RES]]
+
+; Word.Rotate: a funnel shift, which takes the count modulo 64.
+; CHECK-LABEL: define i64 @Ops__Rotate(
+; CHECK:      [[R:%t\.[0-9]+]] = call i64 @llvm.fshl.i64(i64 [[X:%t\.[0-9]+]], i64 [[X]], i64 {{%t\.[0-9]+}})
+; CHECK:      ret i64 [[R]]
+
+; CHECK-LABEL: define i64 @Ops__LeftShift(
+; CHECK:      [[BIG:%t\.[0-9]+]] = icmp uge i64 [[N:%t\.[0-9]+]], 64
+; CHECK:      [[S:%t\.[0-9]+]] = shl i64 {{%t\.[0-9]+}}, [[N]]
+; CHECK:      select i1 [[BIG]], i64 0, i64 [[S]]
+
+; CHECK-LABEL: define i64 @Ops__RightShift(
+; CHECK:      [[BIG:%t\.[0-9]+]] = icmp uge i64 [[N:%t\.[0-9]+]], 64
+; CHECK:      [[S:%t\.[0-9]+]] = lshr i64 {{%t\.[0-9]+}}, [[N]]
+; CHECK:      select i1 [[BIG]], i64 0, i64 [[S]]
+
+; Long.Shift is lowered like Word.Shift.
+; CHECK-LABEL: define i64 @Ops__LongShift(
+; CHECK:      icmp uge i64 {{%t\.[0-9]+}}, 64
+; CHECK:      select i1 {{%t\.[0-9]+}}, i64 0,
+
+; DIV: truncating sdiv, minus 1 when the remainder is nonzero and its
+; sign differs from the divisor's.
+; CHECK-LABEL: define i64 @Ops__Div(
+; CHECK:      [[Q:%t\.[0-9]+]] = sdiv i64 [[A:%t\.[0-9]+]], [[B:%t\.[0-9]+]]
+; CHECK:      [[R:%t\.[0-9]+]] = srem i64 [[A]], [[B]]
+; CHECK:      [[NZ:%t\.[0-9]+]] = icmp ne i64 [[R]], 0
+; CHECK:      [[X:%t\.[0-9]+]] = xor i64 [[R]], [[B]]
+; CHECK:      [[NEG:%t\.[0-9]+]] = icmp slt i64 [[X]], 0
+; CHECK:      [[ADJ:%t\.[0-9]+]] = and i1 [[NZ]], [[NEG]]
+; CHECK:      [[QM1:%t\.[0-9]+]] = sub i64 [[Q]], 1
+; CHECK:      [[RES:%t\.[0-9]+]] = select i1 [[ADJ]], i64 [[QM1]], i64 [[Q]]
+; CHECK:      ret i64 [[RES]]
+
+; MOD: srem, plus the divisor under the same condition.
+; CHECK-LABEL: define i64 @Ops__Mod(
+; CHECK:      [[R:%t\.[0-9]+]] = srem i64 [[A:%t\.[0-9]+]], [[B:%t\.[0-9]+]]
+; CHECK:      [[NZ:%t\.[0-9]+]] = icmp ne i64 [[R]], 0
+; CHECK:      [[X:%t\.[0-9]+]] = xor i64 [[R]], [[B]]
+; CHECK:      [[NEG:%t\.[0-9]+]] = icmp slt i64 [[X]], 0
+; CHECK:      [[ADJ:%t\.[0-9]+]] = and i1 [[NZ]], [[NEG]]
+; CHECK:      [[RB:%t\.[0-9]+]] = add i64 [[R]], [[B]]
+; CHECK:      [[RES:%t\.[0-9]+]] = select i1 [[ADJ]], i64 [[RB]], i64 [[R]]
+; CHECK:      ret i64 [[RES]]
+
+; By a power of two: an arithmetic shift and a mask, no division.
+; CHECK-LABEL: define i64 @Ops__Div8(
+; CHECK-NOT:  div
+; CHECK:      ashr i64 {{%t\.[0-9]+}}, 3
+; CHECK-LABEL: define i64 @Ops__Mod8(
+; CHECK-NOT:  rem
+; CHECK:      and i64 7, {{%t\.[0-9]+}}
+
+; CHECK-LABEL: define i64 @Ops__LongDiv(
+; CHECK:      sdiv i64
+; CHECK:      sub i64 {{%t\.[0-9]+}}, 1
+; CHECK-LABEL: define i64 @Ops__LongMod(
+; CHECK:      srem i64
+; CHECK-LABEL: define i64 @Ops__UDiv(
+; CHECK:      udiv i64 [[A:%t\.[0-9]+]], [[B:%t\.[0-9]+]]
+; CHECK-LABEL: define i64 @Ops__UMod(
+; CHECK:      urem i64
+
+; Word.LT is unsigned: b > a.
+; CHECK-LABEL: define zeroext i8 @Ops__ULess(
+; CHECK-SAME: i64 %p.[[A:[0-9]+]], i64 %p.[[B:[0-9]+]])
+; CHECK-DAG:  [[VB:%t\.[0-9]+]] = load i64, ptr %v.[[B]]
+; CHECK-DAG:  [[VA:%t\.[0-9]+]] = load i64, ptr %v.[[A]]
+; CHECK:      icmp ugt i64 [[VB]], [[VA]]
+
+; Word.Extract(x, i, n): checks i + n <= 64, then (x >> i) & ~(-1 << n),
+; with both shifts guarded, so that n = 64 gives all of x.
+; CHECK-LABEL: define i64 @Ops__Extract(
+; CHECK:      icmp sgt i64 {{%t\.[0-9]+}}, 64
+; CHECK:      call void @RTHooks__ReportFault(
+; CHECK-NEXT: unreachable
+; CHECK:      [[IBIG:%t\.[0-9]+]] = icmp uge i64 [[I:%t\.[0-9]+]], 64
+; CHECK:      [[SH:%t\.[0-9]+]] = lshr i64 {{%t\.[0-9]+}}, [[I]]
+; CHECK:      [[V:%t\.[0-9]+]] = select i1 [[IBIG]], i64 0, i64 [[SH]]
+; CHECK:      [[NBIG:%t\.[0-9]+]] = icmp uge i64 [[N:%t\.[0-9]+]], 64
+; CHECK:      [[M:%t\.[0-9]+]] = shl i64 -1, [[N]]
+; CHECK:      [[M2:%t\.[0-9]+]] = select i1 [[NBIG]], i64 0, i64 [[M]]
+; CHECK:      [[MASK:%t\.[0-9]+]] = xor i64 [[M2]], -1
+; CHECK:      and i64 [[V]], [[MASK]]
+
+; With constant i and n: a shift and a constant mask.
+; CHECK-LABEL: define i64 @Ops__Extract3_5(
+; CHECK:      [[S:%t\.[0-9]+]] = lshr i64 {{%t\.[0-9]+}}, 3
+; CHECK:      and i64 [[S]], 31
+
+; CHECK-LABEL: define i64 @Ops__Insert(
+; CHECK:      icmp sgt i64 {{%t\.[0-9]+}}, 64
+; CHECK:      call void @RTHooks__ReportFault(
+; CHECK:      icmp uge i64 {{%t\.[0-9]+}}, 64
+; CHECK:      shl i64 -1,
+; CHECK:      select i1 {{%t\.[0-9]+}}, i64 0,
+; CHECK:      or i64
+
+; CHECK-LABEL: define i64 @Ops__Insert60_4(
+
+; Packed fields: c is 7 bits at bit 8, signed; sign-extend it by shifting
+; up to bit 63 and back.
+; CHECK-LABEL: define i64 @Ops__GetC(
+; CHECK:      [[S:%t\.[0-9]+]] = shl i64 {{%t\.[0-9]+}}, 57
+; CHECK:      ashr i64 [[S]], 57
+; CHECK-LABEL: define void @Ops__SetC(
+; CHECK:      and i64 {{%t\.[0-9]+}}, 127
+; CHECK:      and i64 {{%t\.[0-9]+}}, -128
+; CHECK:      trunc i64 {{%t\.[0-9]+}} to i8
+; CHECK:      store i8
+
+; Sets of more than one word use the internal helpers, over 4 words
+; (200 bits), with the operands in source order.
+; CHECK-LABEL: define void @Ops__Union(
+; CHECK:      call void @m3_set_union(i64 4,
+; CHECK-LABEL: define void @Ops__Difference(
+; CHECK-SAME: ptr %p.{{[0-9]+}}, ptr %p.[[A:[0-9]+]], ptr %p.[[B:[0-9]+]])
+; CHECK:      call void @m3_set_difference(i64 4, ptr %v.{{[0-9]+}}, ptr %v.[[A]], ptr %v.[[B]])
+; CHECK-LABEL: define void @Ops__Intersection(
+; CHECK:      call void @m3_set_intersection(i64 4,
+; CHECK-LABEL: define void @Ops__SymDifference(
+; CHECK:      call void @m3_set_sym_difference(i64 4,
+; CHECK-LABEL: define void @Ops__Range(
+; CHECK:      call void @m3_set_range(ptr
+
+; set_singleton and set_member are inline: word i DIV 64, bit i MOD 64.
+; CHECK-LABEL: define void @Ops__Singleton(
+; CHECK-NOT:  call void @m3_set
+; CHECK:      udiv i64 {{%t\.[0-9]+}}, 64
+; CHECK:      urem i64 {{%t\.[0-9]+}}, 64
+; CHECK:      shl i64 1,
+; CHECK-LABEL: define zeroext i8 @Ops__Member(
+; CHECK-NOT:  call {{.*}}@m3_set
+; CHECK:      [[W:%t\.[0-9]+]] = udiv i64 [[I:%t\.[0-9]+]], 64
+; CHECK:      [[B:%t\.[0-9]+]] = urem i64 [[I]], 64
+; CHECK:      getelementptr i64, ptr {{%t\.[0-9]+}}, i64 [[W]]
+; CHECK:      lshr i64 {{%t\.[0-9]+}}, [[B]]
+; CHECK:      and i64 {{%t\.[0-9]+}}, 1
+
+; a <= b is m3_set_le(a, b), not (b, a).
+; CHECK-LABEL: define zeroext i8 @Ops__Subset(
+; CHECK-SAME: ptr %p.[[A:[0-9]+]], ptr %p.[[B:[0-9]+]])
+; CHECK-DAG:  [[VB:%t\.[0-9]+]] = load ptr, ptr %v.[[B]]
+; CHECK-DAG:  [[VA:%t\.[0-9]+]] = load ptr, ptr %v.[[A]]
+; CHECK:      call i1 @m3_set_le(i64 4, ptr [[VA]], ptr [[VB]])
+; CHECK-LABEL: define zeroext i8 @Ops__ProperSubset(
+; CHECK-SAME: ptr %p.[[A:[0-9]+]], ptr %p.[[B:[0-9]+]])
+; CHECK-DAG:  [[VB:%t\.[0-9]+]] = load ptr, ptr %v.[[B]]
+; CHECK-DAG:  [[VA:%t\.[0-9]+]] = load ptr, ptr %v.[[A]]
+; CHECK:      [[LE:%t\.[0-9]+]] = call i1 @m3_set_le(i64 4, ptr [[VA]], ptr [[VB]])
+; CHECK:      [[EQ:%t\.[0-9]+]] = call i1 @m3_set_eq(i64 4, ptr [[VA]], ptr [[VB]])
+; CHECK:      [[NE:%t\.[0-9]+]] = xor i1 [[EQ]], true
+; CHECK:      and i1 [[LE]], [[NE]]
+
+; One-word sets are integers: no helpers.
+; CHECK-LABEL: define i32 @Ops__SmallUnion(i32
+; CHECK-NOT:  call {{.*}}@m3_set
+; CHECK:      or i64
+; CHECK-LABEL: define i32 @Ops__SmallRange(
+; CHECK-NOT:  call {{.*}}@m3_set
+; CHECK:      lshr i64 -1,
+; CHECK:      shl i64 -1,
+; CHECK-LABEL: define zeroext i8 @Ops__SmallMember(i32
+; CHECK-NOT:  call {{.*}}@m3_set
+; CHECK:      shl i64 1,
+; CHECK-LABEL: define zeroext i8 @Ops__SmallSubset(
+; CHECK-SAME: i32 %p.[[A:[0-9]+]], i32 %p.[[B:[0-9]+]])
+; CHECK-NOT:  call {{.*}}@m3_set
+; CHECK:      icmp eq i64
+
+; A dense CASE becomes a switch whose default (no label matched, after
+; the range checks) is unreachable.
+; CHECK-LABEL: define ptr @Ops__ClassifyChar(
+; CHECK:      switch i64 {{%t\.[0-9]+}}, label %[[NOCASE:nocase\.[0-9]+]] [
+; CHECK:      [[NOCASE]]:
+; CHECK-NEXT: unreachable
+
+; FLOOR, CEILING, ROUND (half away from zero) and TRUNC.
+; CHECK-LABEL: define i64 @Ops__Floor(double
+; CHECK:      [[F:%t\.[0-9]+]] = call double @llvm.floor.f64(
+; CHECK:      fptosi double [[F]] to i64
+; CHECK-LABEL: define i64 @Ops__Ceiling(double
+; CHECK:      [[F:%t\.[0-9]+]] = call double @llvm.ceil.f64(
+; CHECK:      fptosi double [[F]] to i64
+; CHECK-LABEL: define i64 @Ops__Round(double
+; CHECK:      call i64 @llvm.llround.i64.f64(
+; CHECK-LABEL: define i64 @Ops__Trunc(double
+; CHECK-NOT:  @llvm.{{[a-z]+}}.f64
+; CHECK:      fptosi double
+
+; CHECK-LABEL: define float @Ops__RealMod(float
+; CHECK:      fdiv float
+; CHECK:      call float @llvm.floor.f32(
+; CHECK:      fmul float
+; CHECK:      fsub float
+
+; CHECK-LABEL: define i64 @Ops__Abs(
+; CHECK:      [[NEG:%t\.[0-9]+]] = sub i64 0, [[X:%t\.[0-9]+]]
+; CHECK:      [[LT:%t\.[0-9]+]] = icmp slt i64 [[X]], 0
+; CHECK:      select i1 [[LT]], i64 [[NEG]], i64 [[X]]
+; CHECK-LABEL: define i64 @Ops__Min(
+; CHECK:      icmp slt i64
+; CHECK-LABEL: define i64 @Ops__Max(
+; CHECK:      icmp sgt i64
+
+; The set helpers are internal to the unit, so units built by LlvmIR and
+; by the C back end can't clash over them.
+; CHECK-LABEL: define internal i1 @m3_set_le(i64 %n, ptr %a, ptr %b)
+; CHECK:      [[NB:%[a-z0-9]+]] = xor i64 %vb, -1
+; CHECK:      and i64 %va, [[NB]]

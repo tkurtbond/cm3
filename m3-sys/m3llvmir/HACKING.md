@@ -21,7 +21,8 @@ commands.
 | `m3-sys/cminstall/src/config/Unix.common` | `LLVM_IR_CC`, `compile_llvm_ir`, and the `M3_LLVM_IR_VERIFY` check. |
 | `m3-sys/cminstall/src/config/cm3cfg.common` | Front-end flags for `LlvmIR` (`-unfold_nested_procs -check_procs`). |
 | `scripts/concierge.py` | `--backend llvmir`: the clang check, the C-then-LlvmIR bootstrap (`_doLlvmIR`), and the `cm3.cfg` default. |
-| `.github/workflows/amd64_linux_llvmir.yml` | CI: LLVM 18 and the newest LLVM; full build, m3tests, IR verification; also with ex_stack and at `-O2`. |
+| `.github/workflows/amd64_linux_llvmir.yml` | CI: LLVM 18 and the newest LLVM; full build, `tests/`, m3tests, IR verification; also with ex_stack and at `-O2`. |
+| `m3-sys/m3llvmir/tests/` | The back end's own tests (`run-tests.sh`): mixed C/`LlvmIR` linking and FileCheck checks on the IR. See its `README.md`. |
 | `experiment-doc/m3cg-ops-checklist.md` | Which M3CG operations are implemented. |
 | `experiment-doc/m3cg-corpus/` | Saved ASCII M3CG units for quick tests with `m3llir`. |
 | `experiment-doc/phase4-results.md`, `phase4/` | Self-hosting, timing and benchmark scripts and numbers. |
@@ -140,15 +141,21 @@ The full checks, roughly in order of cost:
    -keep -commands`, then look at `AMD64_LINUX/Foo.m3.ll`. Set
    `M3_LLVM_IR_VERIFY=1` in the environment to run `llvm-as` on every
    `.ll` before clang sees it.
-2. **m3tests:** `cd m3-sys/m3tests && cm3 -DHTML
+2. **The back end's own tests:** `m3-sys/m3llvmir/tests/run-tests.sh
+   WORKDIR` (a few seconds; `-O` for `cm3 -O`). It builds a small
+   library and a program with each combination of `LlvmIR` and C,
+   compares the output, and checks the IR of the library's tricky
+   operations with FileCheck (`tests/Ops.check`). Needs `FileCheck`
+   (Fedora: package `llvm`; Debian and Ubuntu: `llvm-N-tools`).
+3. **m3tests:** `cd m3-sys/m3tests && cm3 -DHTML
    -DM3_BACKEND_MODE=LlvmIR` (add `-DM3TESTS_OPTIMIZE` for `-O`,
    `-DM3_DEBUG_LANGUAGE=C` for C-labeled debug information). Expect
    292 of 293; p047 fails with the C back end too
    (`experiment-doc/m3tests-baseline-c.md`). Run a subset while
    iterating.
-3. **Self-hosting:** `experiment-doc/phase4/` builds the compiler in
+4. **Self-hosting:** `experiment-doc/phase4/` builds the compiler in
    stages and checks that the stages' `.ll` files are identical.
-4. **The whole tree with `LlvmIR` as default:** what CI does. Don't do
+5. **The whole tree with `LlvmIR` as default:** what CI does. Don't do
    this to your real installation; copy it:
 
    ```sh
@@ -173,7 +180,8 @@ For LLVM 18 (on Ubuntu 24.04, from its archive) and the newest LLVM
 (on `ubuntu-latest`, from its archive or else apt.llvm.org), it
 builds the bootstrap release, runs `concierge.py full-upgrade
 --backend llvmir` on the same package set as upstream's AMD64_LINUX
-job, checks that `cm3.cfg` defaults to `LlvmIR`, and runs m3tests. The
+job, checks that `cm3.cfg` defaults to `LlvmIR`, runs `tests/run-tests.sh`
+(with `llvm-N-tools` installed for FileCheck), and runs m3tests. The
 environment sets `M3_LLVM_IR_VERIFY`, so every `.ll` of the build and
 of the tests goes through `llvm-as`. The last step fails on any test
 failure not listed in `KNOWN_FAILURES`. When a new LLVM is released,

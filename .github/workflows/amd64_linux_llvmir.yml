@@ -74,6 +74,8 @@ jobs:
           wget --quiet https://apt.llvm.org/llvm.sh
           sudo bash llvm.sh ${{ matrix.llvm }}
         fi
+        # FileCheck, for m3-sys/m3llvmir/tests.
+        sudo apt-get install --quiet --assume-yes llvm-${{ matrix.llvm }}-tools
         echo "/usr/lib/llvm-${{ matrix.llvm }}/bin" >> $GITHUB_PATH
 
     - name: Show LLVM
@@ -122,6 +124,11 @@ jobs:
           # ex_frame's.
           nm "${CM3_INSTALL}/lib/libm3core.a" | grep -q 'RTStack__ThrowM3Exc'
         fi
+
+    # Mixed C/LlvmIR linking and FileCheck checks on the IR.
+    - name: Run LlvmIR's own tests
+      run: |
+        m3-sys/m3llvmir/tests/run-tests.sh ${{ matrix.optimize && '-O' || '' }} "${RUNNER_TEMP}/m3llvmir-tests"
 
     - name: Run compiler validation suite
       continue-on-error: true

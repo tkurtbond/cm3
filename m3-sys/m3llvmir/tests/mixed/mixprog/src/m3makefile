@@ -1,0 +1,9 @@
+% Program half of the mixed-linking test (../../run-tests.sh).  It
+% uses the mixlib next to it, wherever the two are copied.
+
+import ("libm3")
+override ("mixlib", path () & SL & ".." & SL & "..")
+import ("mixlib")
+build_standalone ()   % link mixlib statically: no LD_LIBRARY_PATH
+implementation ("Main")
+program ("mixprog")
