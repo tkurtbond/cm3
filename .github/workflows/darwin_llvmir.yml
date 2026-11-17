@@ -3,9 +3,12 @@ name: DARWIN_LLVMIR
 # This fork's LLVM IR back end (M3_BACKEND_MODE = "LlvmIR") on macOS
 # (PLAN.md, Phase 7): build everything with it and run the compiler
 # tests.  ARM64_DARWIN with the oldest supported LLVM (18) and the
-# newest; AMD64_DARWIN (Intel runners) with the newest.  LLVM comes from
-# Homebrew, not Xcode: Apple's clang has its own version numbers and
-# lags LLVM.  The Darwin configs turn on zero-cost exceptions (ex_stack),
+# newest; AMD64_DARWIN (Intel runners) with the newest LLVM release that
+# has Intel macOS binaries.  LLVM doesn't come from Xcode: Apple's clang
+# has its own version numbers and lags LLVM.  On ARM64 it comes from
+# Homebrew; on Intel, Homebrew no longer has bottles and builds from
+# source (past the job's timeout), so it comes from LLVM's releases.
+# The "headless" package set needs no X11 libraries.  The Darwin configs turn on zero-cost exceptions (ex_stack),
 # so this also tests LlvmIR's ex_stack support there.
 # Based on amd64_darwin.yml, arm64_darwin.yml and amd64_linux_llvmir.yml.
 
@@ -33,27 +36,50 @@ jobs:
         - target: ARM64_DARWIN
           os: macos-latest
           llvm: 22
+        # 20.1.7 is the newest LLVM release with an Intel macOS build.
         - target: AMD64_DARWIN
           os: macos-15-intel
-          llvm: 22
+          llvm: 20
+          llvm_release: 20.1.7
 
     env:
       CM3_TARGET: ${{ matrix.target }}
       # Unix.common's compile_llvm_ir checks every .ll with llvm-as
       # (LLVM's IR verifier) before compiling it.
       M3_LLVM_IR_VERIFY: 1
-      # m3tests that fail with the C back end too.
-      KNOWN_FAILURES: p047
+      # m3tests that fail with the C back end too.  On macOS, besides
+      # p047: the shell reports signals as "Abort trap: 6" and
+      # "Segmentation fault: 11", not "Aborted" and "Segmentation fault"
+      # (e020, r001 to r005), and p223's expected output names Linux
+      # shared libraries (.so, not .dylib).
+      KNOWN_FAILURES: p047 e020 p223 r001 r002 r003 r004 r005
       RELEASE: ${{ inputs.release || 'https://github.com/modula3/cm3/releases/download/d5.12.0' }}
       BOOTSTRAP: cm3-boot-${{ matrix.target }}-d5.12.0.tar.xz
 
     steps:
-    - name: Install prerequisites
+    - name: Install prerequisites (Homebrew)
+      if: ${{ !matrix.llvm_release }}
       run: |
         brew update
-        brew install libxaw libxft ninja xquartz llvm@${{ matrix.llvm }}
+        brew install ninja llvm@${{ matrix.llvm }}
         # Keg-only: put this LLVM's clang and llvm-as first on PATH.
         echo "$(brew --prefix llvm@${{ matrix.llvm }})/bin" >> $GITHUB_PATH
+
+    - name: Install prerequisites (release binaries)
+      if: ${{ matrix.llvm_release }}
+      run: |
+        mkdir -p ../tools/bin ../llvm
+        curl --location --silent --fail \
+          "https://github.com/llvm/llvm-project/releases/download/llvmorg-${{ matrix.llvm_release }}/LLVM-${{ matrix.llvm_release }}-macOS-X64.tar.xz" \
+          | gtar Jxf - --directory=../llvm --strip-components=1
+        curl --location --silent --fail -o ../ninja-mac.zip \
+          https://github.com/ninja-build/ninja/releases/download/v1.12.1/ninja-mac.zip
+        unzip -q ../ninja-mac.zip -d ../tools/bin
+        echo "$(cd ../llvm/bin && pwd)" >> $GITHUB_PATH
+        echo "$(cd ../tools/bin && pwd)" >> $GITHUB_PATH
+        # LLVM's own clang, unlike Homebrew's, isn't set up to find
+        # the macOS SDK.
+        echo "SDKROOT=$(xcrun --show-sdk-path)" >> $GITHUB_ENV
 
     - name: Show LLVM
       run: |

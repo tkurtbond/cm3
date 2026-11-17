@@ -771,7 +771,28 @@ Ordered by expected value. Each item is a separate mini-plan.
   ARM64_LINUX`) and the next builds it on `ubuntu-24.04-arm`, then does
   the LlvmIR full-upgrade and m3tests with LLVM 18 and 22 (known
   failures p047 and e041).
-- **Darwin targets** (AMD64 and ARM64).
+- **Darwin targets (AMD64_DARWIN, ARM64_DARWIN): done for ARM64,
+  AMD64 untested.** The backend's changes are small: Mach-O target
+  triples (`arm64-apple-macosx`, `x86_64-apple-macosx`; clang fills
+  in the OS version) and datalayouts (`m:o`), DWARF 4 rather than 5,
+  and no `.debug_gdb_scripts` section (Mach-O has no COMDATs, and
+  lldb, not gdb, is the debugger there). The Darwin configs force
+  the C backend for every mode but `LlvmIR`, and set
+  `M3_DEBUG_LANGUAGE = "C"` for lldb. They also turn on ex_stack
+  (`M3_USE_STACK_WALKER`), as upstream does, so Darwin runs LlvmIR's
+  zero-cost exceptions, against libc++ rather than libstdc++.
+
+  Results (CI, `macos-latest`, LLVM 18 and 22 from Homebrew):
+  ARM64_DARWIN builds everything with LlvmIR, self-hosting included,
+  and m3tests fails 8 (p047 e020 p223 r001 r002 r003 r004 r005), all
+  of which fail with the C backend too (it fails 23). Except p047 they
+  are platform differences in expected output: the shell's "Abort
+  trap: 6" and "Segmentation fault: 11", and p223's Linux `.so` names.
+  Unhandled exceptions are reported correctly. CI:
+  `.github/workflows/darwin_llvmir.yml`, called from `integration.yml`.
+  AMD64_DARWIN uses LLVM 20.1.7, the newest release with Intel macOS
+  binaries (Homebrew no longer has Intel bottles and building LLVM
+  from source exceeds the job's timeout); its first run is pending.
 - **Zero-cost exceptions (`ex_stack`): done for AMD64_LINUX.** Inside
   a try region every call that can raise, including `ReportFault`,
   is an `invoke` that unwinds to the region's landing pad, a

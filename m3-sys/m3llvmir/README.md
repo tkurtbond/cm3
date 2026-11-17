@@ -11,8 +11,11 @@ Developers working on the back end itself: see
 
 ## Requirements and status
 
-- **Target:** AMD64_LINUX and ARM64_LINUX, both tested in CI.
-  Darwin is planned (see PLAN.md, Phase 7).
+- **Target:** AMD64_LINUX, ARM64_LINUX and ARM64_DARWIN, all tested
+  in CI; AMD64_DARWIN too, but not yet verified (see PLAN.md,
+  Phase 7). On Darwin, use LLVM's clang (from Homebrew, say), not
+  Xcode's, which has its own version numbers; the configs there label
+  debug information as C for lldb.
 - **LLVM:** `clang` 18 or later on `PATH`. CI tests LLVM 18 and the
   newest release. The IR uses opaque pointers throughout.
 - **Exceptions:** the default `ex_frame` model (setjmp/longjmp) works,
