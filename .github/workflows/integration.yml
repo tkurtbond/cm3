@@ -26,6 +26,9 @@ jobs:
   AMD64_LINUX_LLVMIR:
     uses: ./.github/workflows/amd64_linux_llvmir.yml
 
+  ARM64_LINUX_LLVMIR:
+    uses: ./.github/workflows/arm64_linux_llvmir.yml
+
   AMD64_MINGW:
     uses: modula3/cm3/.github/workflows/amd64_mingw.yml@master
 
