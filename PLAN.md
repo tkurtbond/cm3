@@ -771,8 +771,7 @@ Ordered by expected value. Each item is a separate mini-plan.
   ARM64_LINUX`) and the next builds it on `ubuntu-24.04-arm`, then does
   the LlvmIR full-upgrade and m3tests with LLVM 18 and 22 (known
   failures p047 and e041).
-- **Darwin targets (AMD64_DARWIN, ARM64_DARWIN): done for ARM64,
-  AMD64 untested.** The backend's changes are small: Mach-O target
+- **Darwin targets (AMD64_DARWIN, ARM64_DARWIN): done.** The backend's changes are small: Mach-O target
   triples (`arm64-apple-macosx`, `x86_64-apple-macosx`; clang fills
   in the OS version) and datalayouts (`m:o`), DWARF 4 rather than 5,
   and no `.debug_gdb_scripts` section (Mach-O has no COMDATs, and
@@ -792,7 +791,11 @@ Ordered by expected value. Each item is a separate mini-plan.
   `.github/workflows/darwin_llvmir.yml`, called from `integration.yml`.
   AMD64_DARWIN uses LLVM 20.1.7, the newest release with Intel macOS
   binaries (Homebrew no longer has Intel bottles and building LLVM
-  from source exceeds the job's timeout); its first run is pending.
+  from source exceeds the job's timeout). It passes as ARM64_DARWIN
+  does. Bootstraps of LLVM IR for both Darwin targets, cross-made on
+  Linux by `make-release.yml` and made natively in
+  `darwin_llvmir.yml`'s `ir-bootstrap` job, build with clang, build
+  everything with their compiler, and pass m3tests the same way.
 - **Zero-cost exceptions (`ex_stack`): done for AMD64_LINUX.** Inside
   a try region every call that can raise, including `ReportFault`,
   is an `invoke` that unwinds to the region's landing pad, a
