@@ -23,7 +23,8 @@ Developers working on the back end itself: see
   AMD64_LINUX: with `M3_USE_STACK_WALKER` set, the config keeps
   `LlvmIR` (it forces C for every other mode). With `ex_stack`, m3tests
   passes 292 of 293, as with `ex_frame`, and an unhandled exception is
-  reported the same way.
+  reported the same way. CI tests it on AMD64_LINUX and on Darwin,
+  whose configs turn it on by default.
 - **Tests:** m3tests passes 292 of 293, the same as the C back end
   (p047 fails with both). The compiler builds itself with `LlvmIR`, and
   its output reaches a fixed point.
