@@ -4624,6 +4624,12 @@ BEGIN
             endif(x);
         END;
     END;
+    (* This fork: set_compare casts its operands to SET too, so a unit
+       whose only set operations are <, <=, > or >= needs the typedef. *)
+    IF NOT setAny AND self.op_counts[Op.set_compare] > 0 THEN
+        print(x, "typedef WORD_T* SET;\n#define SET_GRAIN (sizeof(WORD_T) * 8)\n");
+        setAny := TRUE;
+    END;
     FOR i := FIRST(OpsThatCanFault) TO LAST(OpsThatCanFault) DO
         IF self.op_counts[OpsThatCanFault[i]] > 0 THEN
             no_return(x);
@@ -4864,8 +4870,10 @@ BEGIN
 END HelperFunctions_cvt_int;
 
 PROCEDURE HelperFunctions_set_compare(self: HelperFunctions_t; <*UNUSED*>byte_size: ByteSize; op: CompareOp; <*UNUSED*>type: IType) =
-CONST text_le = "static WORD_T __stdcall m3_set_le(WORD_T n_words,WORD_T*b,WORD_T*a){WORD_T i=0;for(;i<n_words;++i)if(a[i]&(~b[i]))return 0;return 1;}";
-CONST text_lt = "static WORD_T __stdcall m3_set_lt(WORD_T n_words,WORD_T*b,WORD_T*a){WORD_T i=0,eq=0;for(;i<n_words;++i)if(a[i]&(~b[i]))return 0;else eq|=(a[i]^b[i]);return(eq!=0);}";
+(* This fork: the parameters were (n_words, b, a), but set_compare passes
+   (n, s1, s0) for s1 <= s0, so these computed s0 <= s1. *)
+CONST text_le = "static WORD_T __stdcall m3_set_le(WORD_T n_words,WORD_T*a,WORD_T*b){WORD_T i=0;for(;i<n_words;++i)if(a[i]&(~b[i]))return 0;return 1;}";
+CONST text_lt = "static WORD_T __stdcall m3_set_lt(WORD_T n_words,WORD_T*a,WORD_T*b){WORD_T i=0,eq=0;for(;i<n_words;++i)if(a[i]&(~b[i]))return 0;else eq|=(a[i]^b[i]);return(eq!=0);}";
 BEGIN
     CASE op OF
         | CompareOp.EQ, CompareOp.NE => (* nothing *)
@@ -4903,7 +4911,11 @@ BEGIN
 END HelperFunctions_rotate_right;
 
 PROCEDURE HelperFunctions_extract(self: HelperFunctions_t; type: IType; sign_extend: BOOLEAN) =
-CONST text = "#define m3_extract(T, value, offset, count) ((((T)(value))>>((WORD_T)(offset)))&~(((~(T)0))<<((WORD_T)(count))))";
+(* This fork: Word.Extract(x, 0, 64) shifted by 64, which is undefined in
+   C (x86 gave 0).  A function, so that offset and count are evaluated
+   once; T is unsigned, so the value is zero-extended to 64 bits. *)
+CONST text = "static UINT64 __stdcall m3_extract_bits(UINT64 v,WORD_T offset,WORD_T count,WORD_T bits){if(offset>=bits)return 0;v>>=offset;if(count<bits)v&=~((~(UINT64)0)<<count);return v;}\n"
+           & "#define m3_extract(T, value, offset, count) ((T)m3_extract_bits((UINT64)(T)(value),(WORD_T)(offset),(WORD_T)(count),sizeof(T)*8))";
 CONST text_sign_extend = "#define m3_sign_extend_T(T) static T __stdcall m3_sign_extend_##T(T value,WORD_T count){return(value|((value&(((T)-1)<<(count-1)))?(((T)-1)<<(count-1)):0));}";
 BEGIN
     HelperFunctions_helper_with_boolean(self, self.data.extract, text);
@@ -4923,7 +4935,10 @@ BEGIN
 END HelperFunctions_extract_mn;
 
 PROCEDURE HelperFunctions_insert(self: HelperFunctions_t; type: IType) =
-CONST text = "#define m3_insert_T(T) static T __stdcall m3_insert_##T(T x,T y,WORD_T offset,WORD_T count){T mask=(~((~(T)0)<<count))<<offset;return(((y<<offset)&mask)|(x&~mask));}";
+(* This fork: Word.Insert(x, y, 0, 64) shifted by 64, which is undefined in
+   C (x86 gave x); and for signed T, ~(T)0 << count is undefined too.
+   Compute in UINT64; converting back to T keeps the low bits. *)
+CONST text = "#define m3_insert_T(T) static T __stdcall m3_insert_##T(T x,T y,WORD_T offset,WORD_T count){const WORD_T bits=sizeof(T)*8;UINT64 mask;if(offset>=bits)return x;mask=count>=bits?~(UINT64)0:~((~(UINT64)0)<<count);mask<<=offset;return(T)((((UINT64)y<<offset)&mask)|((UINT64)x&~mask));}";
 BEGIN
     HelperFunctions_helper_with_type(self, "insert", type, self.data.insert, text);
 END HelperFunctions_insert;
@@ -7138,7 +7153,8 @@ VAR swap := (op IN SET OF CompareOp{CompareOp.GT, CompareOp.GE});
     s0 := cast(get(self, ORD(swap)), CGType.Addr, "SET");
     s1 := cast(get(self, ORD(NOT swap)), CGType.Addr, "SET");
     target_word_bytes := Target.Word.bytes;
-    eq := ARRAY BOOLEAN OF TEXT{"==0", "!=0"}[op = CompareOp.EQ];
+    (* This fork: was {"==0", "!=0"}, which made = test inequality. *)
+    eq := ARRAY BOOLEAN OF TEXT{"!=0", "==0"}[op = CompareOp.EQ];
 BEGIN
     IF debug THEN
       self.comment("set_compare");
@@ -7263,7 +7279,22 @@ BEGIN
     shift is unsigned, casts are applied on input and output
     int i; i << n; => (int) (((unsigned)i) << n)
     *)
-    shift_left_or_right(self, type, "shift_right", ">>");
+    (* This fork: M3CG's shift_right is logical (Word.RightShift), but C's
+       >> on a signed type is arithmetic, so -1 >> n stayed -1 (set ranges
+       came out wrong).  Shift as unsigned, as casted_shift_left does. *)
+    IF typeToUnsigned[type] # type THEN
+      VAR s0 := cast(get(self, 0), Target.Word.cg_type);
+          s1 := cast(cast(get(self, 1), type), typeToUnsigned[type]);
+      BEGIN
+        IF debug THEN
+          self.comment("shift_right");
+        END;
+        pop(self, 2);
+        push(self, type, cast(CTextToExpr(s1.CText() & ">>" & s0.CText()), type));
+      END;
+    ELSE
+      shift_left_or_right(self, type, "shift_right", ">>");
+    END;
 END shift_right;
 
 PROCEDURE shift_or_rotate(self: T; type: IType; which: TEXT; count_type: CGType) =

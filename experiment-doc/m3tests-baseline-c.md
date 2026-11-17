@@ -96,3 +96,14 @@ p282 p286 p287 p288 p289 p291 p292 p293 p295 r001 r002 r003 r004 r005
 - The corpus test p0/p053 (`experiment-doc/m3cg-corpus/p0-p053`) is one
   the C backend can't compile. Its M3CG IR is still valid, which makes
   it a good early test of whether `LlvmIR` can do better.
+
+## Update, 2026-11-17: M3C fixes
+
+This fork has since fixed several of the C back end's bugs in
+`m3-sys/m3back/src/M3C.m3` (marked "This fork"; see the mixed-linking
+item in `PLAN.md`): the `SET` typedef, inverted set `=`/`#`, set
+`<=`/`<` operand order, `Word.Extract`/`Insert` with a count of 64, and
+`shift_right` on signed types. With them, the same run fails 22 tests
+instead of 27: p053, p156, p159, p160 and p162 pass, and p137 fails
+only on the `-Wvolatile` warning. The list above is the baseline as
+recorded before the fixes.

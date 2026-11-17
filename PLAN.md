@@ -857,13 +857,20 @@ Ordered by expected value. Each item is a separate mini-plan.
   overridden methods) and a program that calls it, in all four
   combinations of C and `LlvmIR`, and compares the output. CI runs it
   in every `amd64_linux_llvmir.yml` job. It found five places where
-  the C back end is wrong and `LlvmIR` right: `Word.Extract(x, 0, 64)`
-  gives 0, `Word.Insert(x, y, 0, 64)` gives x, `a*b <= a` and
-  `a*b < a` on a four-word set give FALSE (as if the operands were
-  swapped), and `{0, 31} + {3 .. 9}` on a one-word set gives
-  `{0, 3 .. 31}`.
-  `expected-output.clib` records the C results for when the library
-  is built with C.
+  the C back end was wrong and `LlvmIR` right, now fixed in `M3C.m3`
+  (marked "This fork"): `Word.Extract(x, 0, 64)` gave 0 and
+  `Word.Insert(x, y, 0, 64)` gave x (shifts by 64, undefined in C);
+  `<=` and `<` on sets of more than one word compared the operands the
+  wrong way round (`m3_set_le` and `m3_set_lt` named their parameters
+  in the opposite order to the call); and `{0, 31} + {3 .. 9}` on a
+  one-word set gave `{0, 3 .. 31}` (`shift_right` used C's `>>` on a
+  signed type, which is arithmetic). These are upstream bugs too.
+  Two more M3C fixes came out of checking these against m3tests: a
+  unit whose only set operations are comparisons lacked the `SET`
+  typedef (p053 and p160 didn't compile), and set `=` and `#` on sets
+  in memory were inverted. With all of them, m3tests with C fails 22
+  tests instead of 27: p053, p156, p159, p160 and p162 now pass, and
+  p137 fails only on GCC's `-Wvolatile` warning.
 - **Optimization levels**: run every suite at `-O0` and `-O2`. Bugs that
   only appear at `-O2` usually mean undefined behavior in the emitted
   IR, such as poison or a missing `returns_twice`. In CI, a fourth job

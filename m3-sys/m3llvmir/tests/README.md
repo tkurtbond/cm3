@@ -27,15 +27,12 @@ up afterwards.
 - **Golden IR** (`Ops.check`): FileCheck patterns for the IR that
   `LlvmIR` emits for `Ops.m3`. Every `.ll` also goes through `llvm-as`.
 
-`expected-output` holds the correct results, which `LlvmIR` gives. The
-C back end gets five of them wrong (`diff expected-output
-expected-output.clib`), so when `mixlib` is built with C the output is
-compared with `expected-output.clib`. If the C back end is fixed,
-delete that file and the line of `run-tests.sh` that uses it.
+`expected-output` holds the correct results; both back ends must give
+them. (Writing these tests turned up five wrong results from the C back
+end, since fixed in `m3-sys/m3back/src/M3C.m3`.)
 
 To regenerate `expected-output` after adding tests, run the script,
-check `WORKDIR/L-L/output` by hand, and copy it here; the same for
-`WORKDIR/C-C/output` and `expected-output.clib`.
+check `WORKDIR/L-L/output` by hand, and copy it here.
 
 To add a FileCheck check, look at `WORKDIR/L-L/mixlib/AMD64_LINUX/Ops.m3.ll`.
 Match values with captures (`[[X:%t\.[0-9]+]]`), not their numbers.

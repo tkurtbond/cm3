@@ -5,9 +5,7 @@
 #
 # 1. Mixed linking: builds mixed/mixlib and mixed/mixprog with every
 #    combination of the LlvmIR and C back ends, runs mixprog, and
-#    compares its output with expected-output.  The C back end gets a
-#    few operations wrong (see expected-output.clib), so when mixlib is
-#    built with C the output is compared with expected-output.clib.
+#    compares its output with expected-output.
 # 2. Golden IR: checks the Ops.m3.ll that the LlvmIR build of mixlib
 #    leaves with FileCheck against Ops.check, and every .ll with llvm-as.
 #
@@ -80,7 +78,6 @@ for combo in L-L L-C C-L C-C; do
   build "$lib" "$prog" || continue
   dir=$work/$combo
   expected=$here/expected-output
-  if [ "$lib" = C ]; then expected=$here/expected-output.clib; fi
   bin=$(target_dir "$dir/mixprog")/mixprog
   status=0
   "$bin" > "$dir/output" 2>&1 || status=$?
