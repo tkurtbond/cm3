@@ -4,7 +4,11 @@ name: integration
 
 on:
   pull_request: {branches: master}
-  push:
+  # This fork: full CI only on master (work happens on dev, which is
+  # fast-forwarded into master); run it on another branch by hand with
+  # "gh workflow run integration --ref dev".
+  push: {branches: master}
+  workflow_dispatch:
 
 concurrency: ci
 
