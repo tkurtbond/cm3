@@ -66,6 +66,7 @@ Override("m3back", "m3-sys")
 Override("m3core", "m3-libs")
 Override("m3front", "m3-sys")
 Override("m3linker", "m3-sys")
+Override("m3llvmir", "m3-sys") % LLVM IR backend
 Override("m3markup", "m3-tools")
 Override("m3middle", "m3-sys")
 Override("m3objfile", "m3-sys")

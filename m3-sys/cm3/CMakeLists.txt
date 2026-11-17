@@ -7,6 +7,7 @@ target_link_libraries(cm3 PRIVATE
    m3back
    m3front
    m3linker
+   m3llvmir
    m3objfile
    m3quake
    set
