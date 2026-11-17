@@ -2007,7 +2007,12 @@ endif()
     def tag(self):
         "Get the version from the current tag"
         try:
-            return subprocess.check_output(["git", "describe", "--abbrev=0", "--tags"], errors="ignore").rstrip()
+            # This fork: ask the source tree, not the current directory
+            # (make-bootstrap writes its tarball there, often outside the
+            # tree).  Without tags (a clone that didn't fetch them),
+            # there is no version.
+            return subprocess.check_output(["git", "-C", str(self.source()), "describe", "--abbrev=0", "--tags"],
+                                           errors="ignore", stderr=subprocess.DEVNULL).rstrip() or None
         except:
             return None
 
