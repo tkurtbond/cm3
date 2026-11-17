@@ -236,6 +236,10 @@ installation's default backend.  "make-bootstrap --backend llvmir"
 makes a bootstrap of LLVM IR (cm3-boot-TARGET-llvmir-VERSION.tar.xz)
 instead of C; building it needs clang 18 or later as CMake's C compiler
 (cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++).
+Without a backend option, the default is llvmir if the installation's
+cm3.cfg selects LlvmIR, or if there is no cm3.cfg yet and the cm3 was
+built from such a bootstrap; otherwise c.  (make-bootstrap and
+make-dist still default to c.)
 
 BACKEND_OPTION = --backend (c|gcc|integrated|llvm|llvmir) | -c | -gcc | -integrated | -llvm | -llvmir
 
@@ -444,8 +448,9 @@ class Cm3:
         # The script is used to locate the source directory.
         self._script  = script
 
-        # Defines the backend to use when compiling packages.
-        self._backend = backend
+        # Defines the backend to use when compiling packages.  This
+        # fork: None (no --backend option) means the installation's.
+        self._backend = backend if backend else self._installed_backend()
 
         # Various CM3 compiler options requested by the user.
         self._defines = defines or []
@@ -593,6 +598,26 @@ class Cm3:
 
         # If there's a problem, we'll make our best guess.
         return Platform()
+
+    def _installed_backend(self):
+        """This fork: the backend to use when none is given: "llvmir" if
+        the installation's cm3.cfg (as concierge writes it) selects
+        LlvmIR, or, before any cm3.cfg exists, if the cm3 was built from
+        a bootstrap of LLVM IR, which installs share/cm3/bootstrap-backend;
+        otherwise "c", as before."""
+        try:
+            cfg = self.install("bin", "cm3.cfg")
+            if cfg.is_file():
+                if 'M3_BACKEND_MODE = "LlvmIR"' in cfg.read_text(errors="ignore"):
+                    return "llvmir"
+                return "c"
+            marker = self.install("share", "cm3", "bootstrap-backend")
+            if marker.is_file() and marker.read_text().strip() == "llvmir":
+                print(f"backend llvmir, as {marker} says")
+                return "llvmir"
+        except (Error, OSError):
+            pass
+        return "c"
 
     def install(self, *paths):
         "Relative to root of current installation directory"
@@ -1229,8 +1254,9 @@ class ConciergeCommand(WithPackageActions):
     def _parse_backend(cls, args, namespace):
         "Look for any command-line argument specifying a backend"
 
-        # Default.
-        backend = "c"
+        # Default.  This fork: None, which Cm3 replaces by the
+        # installation's backend (Cm3._installed_backend).
+        backend = None
 
         tail = args[:]
         args.clear()
@@ -1247,7 +1273,7 @@ class ConciergeCommand(WithPackageActions):
             else:
                 args.append(head)
 
-        if backend not in ["c", "gcc", "integrated", "llvm", "llvmir"]:
+        if backend is not None and backend not in ["c", "gcc", "integrated", "llvm", "llvmir"]:
             raise UsageError(f"{backend} is not a recognized backend")
 
         setattr(namespace, "_backend", backend)
@@ -1962,6 +1988,10 @@ if(NOT ((CMAKE_C_COMPILER_ID STREQUAL "Clang"
       "as the C compiler, not ${{CMAKE_C_COMPILER_ID}} ${{CMAKE_C_COMPILER_VERSION}}: "
       "cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ...")
 endif()
+# Tell concierge.py to default to the LlvmIR backend with this cm3.
+file(WRITE "${{CMAKE_CURRENT_BINARY_DIR}}/bootstrap-backend" "llvmir\\n")
+install(FILES "${{CMAKE_CURRENT_BINARY_DIR}}/bootstrap-backend"
+        DESTINATION "${{CMAKE_INSTALL_DATADIR}}/cm3")
 """
         if not self.no_action():
             with open(Path(bootstrap_dir) / "CMakeLists.txt", "w") as cmake:

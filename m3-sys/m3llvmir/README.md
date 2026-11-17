@@ -120,7 +120,16 @@ cmake --build build && cmake --install build
 CMake has no language for LLVM IR, so each package's `sources.lst`
 marks the `.ll` files as C (so that CMake hands them to clang) and adds
 `-x ir` (so that clang reads them as IR). Like the C bootstrap, the
-IR is for one target only.
+IR is for one target only; `--target ARM64_LINUX` makes one for that
+target on another machine.
+
+Besides `cm3`, the bootstrap installs `share/cm3/bootstrap-backend`,
+which says `llvmir`. Given no backend option, concierge uses `llvmir`
+when that file is there and there is no `bin/cm3.cfg` yet, and
+afterwards whenever the installed `cm3.cfg` selects `LlvmIR`. So
+`scripts/concierge.py full-upgrade` with the bootstrap's `cm3` first on
+`PATH` gives an installation that defaults to `LlvmIR`; pass
+`--backend c` for one that defaults to C.
 
 ## Debugging
 
