@@ -10,9 +10,9 @@ name: DARWIN_LLVMIR
 # source (past the job's timeout), so it comes from LLVM's releases.
 # The "headless" package set needs no X11 libraries.  The Darwin configs turn on zero-cost exceptions (ex_stack),
 # so this also tests LlvmIR's ex_stack support there.
-# The ir-bootstrap job makes an ARM64_DARWIN bootstrap of LLVM IR
-# ("concierge.py make-bootstrap --backend llvmir"), builds it with
-# Homebrew's clang, and builds and tests everything from it.
+# The ir-bootstrap job makes bootstraps of LLVM IR for ARM64_DARWIN and
+# AMD64_DARWIN ("concierge.py make-bootstrap --backend llvmir"), builds
+# them with clang, and builds and tests everything from them.
 # Based on amd64_darwin.yml, arm64_darwin.yml and amd64_linux_llvmir.yml.
 
 on:
@@ -147,31 +147,62 @@ jobs:
             sys.exit("unexpected failures: " + " ".join(unexpected))
         EOF
 
-  # A bootstrap of LLVM IR for ARM64_DARWIN, as make-release.yml makes
-  # it: upgrade the C bootstrap release to this tree's compiler, make
-  # the IR bootstrap with it, build that with Homebrew's clang, and then
-  # build everything with its compiler.  The bootstrap installs a marker
-  # (share/cm3/bootstrap-backend) that makes concierge default to LlvmIR,
-  # so full-upgrade runs without "--backend llvmir".  See README-DARWIN-
-  # LLVM-IR.md.
+  # Bootstraps of LLVM IR for ARM64_DARWIN and AMD64_DARWIN, as
+  # make-release.yml makes them: upgrade the C bootstrap release to this
+  # tree's compiler, make the IR bootstrap with it, build that with
+  # clang, and then build everything with its compiler.  The bootstrap
+  # installs a marker (share/cm3/bootstrap-backend) that makes concierge
+  # default to LlvmIR, so full-upgrade runs without "--backend llvmir".
+  # LLVM comes from Homebrew on ARM64 and from LLVM's releases on Intel,
+  # as in build-and-test.  See README-DARWIN-LLVM-IR.md.
   ir-bootstrap:
-    runs-on: macos-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 90
 
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - target: ARM64_DARWIN
+          os: macos-latest
+          llvm: 22
+          triple: arm64-apple-macosx
+        - target: AMD64_DARWIN
+          os: macos-15-intel
+          llvm: 20
+          llvm_release: 20.1.7
+          triple: x86_64-apple-macosx
+
     env:
-      CM3_TARGET: ARM64_DARWIN
+      CM3_TARGET: ${{ matrix.target }}
       M3_LLVM_IR_VERIFY: 1
       KNOWN_FAILURES: p047 e020 p223 r001 r002 r003 r004 r005
-      LLVM: 22
       RELEASE: ${{ inputs.release || 'https://github.com/modula3/cm3/releases/download/d5.12.0' }}
-      BOOTSTRAP: cm3-boot-ARM64_DARWIN-d5.12.0.tar.xz
+      BOOTSTRAP: cm3-boot-${{ matrix.target }}-d5.12.0.tar.xz
 
     steps:
-    - name: Install prerequisites
+    - name: Install prerequisites (Homebrew)
+      if: ${{ !matrix.llvm_release }}
       run: |
         brew update
-        brew install ninja llvm@${LLVM}
-        echo "$(brew --prefix llvm@${LLVM})/bin" >> $GITHUB_PATH
+        brew install ninja llvm@${{ matrix.llvm }}
+        echo "$(brew --prefix llvm@${{ matrix.llvm }})/bin" >> $GITHUB_PATH
+
+    - name: Install prerequisites (release binaries)
+      if: ${{ matrix.llvm_release }}
+      run: |
+        mkdir -p ../tools/bin ../llvm
+        curl --location --silent --fail --retry 3 \
+          "https://github.com/llvm/llvm-project/releases/download/llvmorg-${{ matrix.llvm_release }}/LLVM-${{ matrix.llvm_release }}-macOS-X64.tar.xz" \
+          | gtar Jxf - --directory=../llvm --strip-components=1
+        curl --location --silent --fail --retry 3 -o ../ninja-mac.zip \
+          https://github.com/ninja-build/ninja/releases/download/v1.12.1/ninja-mac.zip
+        unzip -q ../ninja-mac.zip -d ../tools/bin
+        echo "$(cd ../llvm/bin && pwd)" >> $GITHUB_PATH
+        echo "$(cd ../tools/bin && pwd)" >> $GITHUB_PATH
+        # LLVM's own clang, unlike Homebrew's, isn't set up to find
+        # the macOS SDK.
+        echo "SDKROOT=$(xcrun --show-sdk-path)" >> $GITHUB_ENV
 
     - name: Show LLVM
       run: |
@@ -208,13 +239,13 @@ jobs:
         "${GITHUB_WORKSPACE}/scripts/concierge.py" make-bootstrap --backend llvmir
         ls -l
         gtar Jtf cm3-boot-${CM3_TARGET}-llvmir-*.tar.xz | grep -c '\.ll$'
-        gtar Jxf cm3-boot-${CM3_TARGET}-llvmir-*.tar.xz --wildcards --to-stdout '*/m3core/RTHooks.m3.ll' | grep '^target triple = "arm64-apple-macosx'
+        gtar Jxf cm3-boot-${CM3_TARGET}-llvmir-*.tar.xz --wildcards --to-stdout '*/m3core/RTHooks.m3.ll' | grep '^target triple = "${{ matrix.triple }}'
         rm -rf "${GITHUB_WORKSPACE}/bootstrap"
 
     - name: Upload the IR bootstrap
       uses: actions/upload-artifact@v4
       with:
-        name: cm3-boot-ARM64_DARWIN-llvmir
+        name: cm3-boot-${{ matrix.target }}-llvmir
         path: ../tarball/cm3-boot-*.tar.xz
         retention-days: 7
 
@@ -243,7 +274,7 @@ jobs:
     - name: Generate test report
       uses: dorny/test-reporter@v3
       with:
-        name: m3tests (ARM64_DARWIN, llvmir, LLVM 22, IR bootstrap)
+        name: ${{ format('m3tests ({0}, llvmir, LLVM {1}, IR bootstrap)', matrix.target, matrix.llvm) }}
         fail-on-error: false
         max-annotations: 49
         path: m3-sys/m3tests/m3tests-results.xml

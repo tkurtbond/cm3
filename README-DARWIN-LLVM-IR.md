@@ -1,10 +1,12 @@
-# cm3 with the LLVM IR back end on macOS (ARM64_DARWIN)
+# cm3 with the LLVM IR back end on macOS
 
 This fork's `LlvmIR` back end (package `m3-sys/m3llvmir`; user guide
 in [`m3-sys/m3llvmir/README.md`](m3-sys/m3llvmir/README.md)) works on
-Apple silicon Macs. CI (`.github/workflows/darwin_llvmir.yml`) builds
-and tests it there with LLVM 18 and 22. These notes say how to get an
-installation that uses it by default.
+Apple silicon Macs (ARM64_DARWIN) and Intel Macs (AMD64_DARWIN). CI
+(`.github/workflows/darwin_llvmir.yml`) builds and tests it on Apple
+silicon with LLVM 18 and 22, and on Intel with LLVM 20. These notes say
+how to get an installation that uses it by default. The commands are
+for Apple silicon; see "Intel Macs" below for the differences.
 
 ## Prerequisites
 
@@ -58,13 +60,14 @@ This works now, with no release of this fork.
 
 ## From a bootstrap of LLVM IR
 
-`make-release.yml` also makes `cm3-boot-ARM64_DARWIN-llvmir-VERSION.tar.xz`,
-the compiler's sources as LLVM IR (`.ll` files) instead of C. (There
-is no release of this fork with it yet; `darwin_llvmir.yml`'s
-`ir-bootstrap` job uploads one as an artifact, and you can make one
-yourself, on any machine with this fork's compiler and clang 18 or
-later: `scripts/concierge.py make-bootstrap --backend llvmir --target
-ARM64_DARWIN`.) It skips the round through the C back end, and its
+`make-release.yml` also makes `cm3-boot-ARM64_DARWIN-llvmir-VERSION.tar.xz`
+and `cm3-boot-AMD64_DARWIN-llvmir-VERSION.tar.xz`, the compiler's
+sources as LLVM IR (`.ll` files) instead of C. (There is no release of
+this fork with them yet; `darwin_llvmir.yml`'s `ir-bootstrap` job
+uploads them as artifacts, and you can make one yourself, on any
+machine with this fork's compiler and clang 18 or later:
+`scripts/concierge.py make-bootstrap --backend llvmir --target
+ARM64_DARWIN`, or `--target AMD64_DARWIN`.) It skips the round through the C back end, and its
 `cm3` defaults to `LlvmIR` from the start:
 
 ```sh
@@ -102,9 +105,21 @@ bootstrap of LLVM IR" in the user guide).
 - CI builds and tests only the `headless` package set (without
   `m3gdb`). The GUI packages (`all`) would need XQuartz's X11
   libraries, and no one has tried them with `LlvmIR` on macOS.
-- **AMD64_DARWIN (Intel Macs):** the source route works the same way,
-  with the AMD64_DARWIN C bootstrap. Homebrew has no LLVM bottles for
-  Intel any more, so use a release from LLVM itself (20.1.7 is the
-  newest with an Intel macOS build); that clang needs
-  `export SDKROOT=$(xcrun --show-sdk-path)` to find the SDK. There is
-  no bootstrap of LLVM IR for AMD64_DARWIN.
+
+## Intel Macs (AMD64_DARWIN)
+
+Both routes work the same way, with `AMD64_DARWIN` in place of
+`ARM64_DARWIN` in the bootstrap names. The difference is clang:
+Homebrew has no LLVM bottles for Intel any more (it builds LLVM from
+source, which takes hours), so use a release from LLVM itself. 20.1.7
+is the newest with an Intel macOS build, and is what CI uses:
+
+```sh
+mkdir -p ~/llvm
+curl -L https://github.com/llvm/llvm-project/releases/download/llvmorg-20.1.7/LLVM-20.1.7-macOS-X64.tar.xz \
+  | tar Jxf - -C ~/llvm --strip-components=1
+export PATH=~/llvm/bin:$PATH
+export SDKROOT=$(xcrun --show-sdk-path)   # LLVM's clang doesn't find the SDK itself
+```
+
+Keep `SDKROOT` set whenever you use cm3, as well as `PATH`.
