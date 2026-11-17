@@ -123,6 +123,21 @@ marks the `.ll` files as C (so that CMake hands them to clang) and adds
 IR is for one target only; `--target ARM64_LINUX` makes one for that
 target on another machine.
 
+When a release of this fork is tagged, `make-release.yml` makes
+bootstraps of LLVM IR for four targets (there is no such release yet).
+CI makes each of them too, builds it, builds everything with its
+compiler, and runs m3tests:
+
+| Bootstrap | Made on | Tested by |
+|-----------|---------|-----------|
+| `cm3-boot-AMD64_LINUX-llvmir-VERSION.tar.xz` | Linux | `amd64_linux_llvmir.yml` (`ir-bootstrap`) |
+| `cm3-boot-ARM64_LINUX-llvmir-VERSION.tar.xz` | Linux (cross) | `arm64_linux_llvmir.yml` |
+| `cm3-boot-ARM64_DARWIN-llvmir-VERSION.tar.xz` | macOS | `darwin_llvmir.yml` (`ir-bootstrap`) |
+| `cm3-boot-AMD64_DARWIN-llvmir-VERSION.tar.xz` | macOS (cross) | `darwin_llvmir.yml` (`ir-bootstrap`, on Intel) |
+
+On macOS, build them with LLVM's clang (from Homebrew on Apple silicon,
+from LLVM's releases on Intel), not Xcode's; see below.
+
 Besides `cm3`, the bootstrap installs `share/cm3/bootstrap-backend`,
 which says `llvmir`. Given no backend option, concierge uses `llvmir`
 when that file is there and there is no `bin/cm3.cfg` yet, and
@@ -131,7 +146,9 @@ afterwards whenever the installed `cm3.cfg` selects `LlvmIR`. So
 `PATH` gives an installation that defaults to `LlvmIR`; pass
 `--backend c` for one that defaults to C.
 
-For macOS, see [`README-DARWIN-LLVM-IR.md`](../../README-DARWIN-LLVM-IR.md).
+For macOS, including the clang to use and building from the Darwin
+bootstraps of LLVM IR, see
+[`README-DARWIN-LLVM-IR.md`](../../README-DARWIN-LLVM-IR.md).
 
 ## Debugging
 
