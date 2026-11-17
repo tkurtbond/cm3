@@ -154,7 +154,7 @@ jobs:
   # installs a marker (share/cm3/bootstrap-backend) that makes concierge
   # default to LlvmIR, so full-upgrade runs without "--backend llvmir".
   # LLVM comes from Homebrew on ARM64 and from LLVM's releases on Intel,
-  # as in build-and-test.  See README-DARWIN-LLVM-IR.md.
+  # as in build-and-test.  See README-macOS.md.
   ir-bootstrap:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90

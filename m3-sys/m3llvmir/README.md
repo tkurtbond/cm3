@@ -148,7 +148,7 @@ afterwards whenever the installed `cm3.cfg` selects `LlvmIR`. So
 
 For macOS, including the clang to use and building from the Darwin
 bootstraps of LLVM IR, see
-[`README-DARWIN-LLVM-IR.md`](../../README-DARWIN-LLVM-IR.md).
+[`README-macOS.md`](../../README-macOS.md).
 
 ## Debugging
 

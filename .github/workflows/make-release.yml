@@ -113,7 +113,7 @@ jobs:
         scripts/concierge.py make-dist --target AMD64_DARWIN
 
     # This fork: bootstraps of LLVM IR for the Darwin targets as well (see
-    # README-DARWIN-LLVM-IR.md).  They need clang 18 or later to make,
+    # README-macOS.md).  They need clang 18 or later to make,
     # from Homebrew: Xcode's clang has its own version numbers.
     # darwin_llvmir.yml's ir-bootstrap job tests them.
     - name: Build LLVM IR bootstrap
