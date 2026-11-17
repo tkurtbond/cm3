@@ -956,6 +956,12 @@ PROCEDURE GdbScripts (wr: Wr.T) =
                       & "], section \"llvm.metadata\"" & Wr.EOL);
   END GdbScripts;
 
+PROCEDURE IsDarwin (): BOOLEAN =
+  VAR n := Target.System_name;  k := Text.Length (n);
+  BEGIN
+    RETURN k > 7 AND Text.Equal (Text.Sub (n, k - 7), "_DARWIN");
+  END IsDarwin;
+
 CONST LangName = ARRAY Language OF TEXT {"DW_LANG_Modula2", "DW_LANG_C99"};
 
 PROCEDURE SetLanguage (name: TEXT): BOOLEAN =
@@ -994,8 +1000,15 @@ PROCEDURE Finish (t: T; wr: Wr.T; file: TEXT) =
                        & "isOptimized: false, runtimeVersion: 0, "
                        & "emissionKind: FullDebug, globals: !{"
                        & t.gves & "}, nameTableKind: None)");
-    GdbScripts (wr);
-    flags1 := Node (t, "!{i32 7, !\"Dwarf Version\", i32 5}");
+    (* Mach-O has no COMDATs and no .debug_gdb_scripts (and macOS uses
+       lldb), so Darwin gets no embedded gdb script, and DWARF 4, which
+       is clang's default there. *)
+    IF IsDarwin () THEN
+      flags1 := Node (t, "!{i32 7, !\"Dwarf Version\", i32 4}");
+    ELSE
+      GdbScripts (wr);
+      flags1 := Node (t, "!{i32 7, !\"Dwarf Version\", i32 5}");
+    END;
     flags2 := Node (t, "!{i32 2, !\"Debug Info Version\", i32 3}");
     Wr.PutText (wr, Wr.EOL & "!llvm.dbg.cu = !{" & t.cu & "}" & Wr.EOL);
     Wr.PutText (wr, "!llvm.module.flags = !{" & flags1 & ", " & flags2

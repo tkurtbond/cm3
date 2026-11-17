@@ -228,8 +228,8 @@ COMPILER_DEFINE = -D<name> | -D<name>=<value>
 Select the backend to use for compliation.  Breaking from tradition,
 the "c" backend is used as the default if nothing is specified, and
 the gcc or llvm backend is only built when explicitly requested.
-The llvmir backend (LLVM IR compiled by clang 18 or later; AMD64_LINUX
-and ARM64_LINUX only) is part of cm3 itself: upgrade first builds cm3 with the C
+The llvmir backend (LLVM IR compiled by clang 18 or later; AMD64_LINUX,
+ARM64_LINUX, AMD64_DARWIN and ARM64_DARWIN only) is part of cm3 itself: upgrade first builds cm3 with the C
 backend, then rebuilds everything with llvmir, and makes llvmir the
 installation's default backend.
 
@@ -389,7 +389,8 @@ class Platform:
 
     def has_llvmir_backend(self):
         "The LlvmIR backend (this fork) knows only these targets so far"
-        return self.name() in ["AMD64_LINUX", "ARM64_LINUX"]
+        return self.name() in ["AMD64_LINUX", "ARM64_LINUX",
+                               "AMD64_DARWIN", "ARM64_DARWIN"]
 
     def has_serial(self):
         return self.is_win32()

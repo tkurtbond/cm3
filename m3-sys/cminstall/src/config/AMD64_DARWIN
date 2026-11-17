@@ -19,7 +19,21 @@ DarwinArch = "x86_64"
 % Use the C backend.  Darwin.common defaults to "3" (native x86 assembler
 % backend), but the C backend is more portable and required for ex_stack EH.
 % Must be set before including Darwin.common so its guard fires correctly.
-M3_BACKEND_MODE = "C"
+% This fork: the LLVM IR backend (M3_BACKEND_MODE = "LlvmIR", set in
+% cm3.cfg by "concierge.py upgrade --backend llvmir" or with
+% "cm3 -DM3_BACKEND_MODE=LlvmIR") is kept; it supports ex_stack too.
+% Its debug information says C by default here, since macOS has lldb
+% (see m3-sys/m3llvmir/README.md).
+if defined("M3_BACKEND_MODE")
+  if not equal(M3_BACKEND_MODE, "LlvmIR")
+    M3_BACKEND_MODE = "C"
+  end
+else
+  M3_BACKEND_MODE = "C"
+end
+if not defined("M3_DEBUG_LANGUAGE")
+  M3_DEBUG_LANGUAGE = "C"
+end
 
 % Enable C++ zero-cost exception handling (ex_stack).
 % Must be set before including Darwin.common so its guard fires correctly.

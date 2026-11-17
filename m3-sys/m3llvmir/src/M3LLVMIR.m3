@@ -322,6 +322,10 @@ PROCEDURE TargetTriple (): TEXT =
       RETURN "x86_64-unknown-linux-gnu";
     ELSIF Text.Equal (Target.System_name, "ARM64_LINUX") THEN
       RETURN "aarch64-unknown-linux-gnu";
+    ELSIF Text.Equal (Target.System_name, "AMD64_DARWIN") THEN
+      RETURN "x86_64-apple-macosx";
+    ELSIF Text.Equal (Target.System_name, "ARM64_DARWIN") THEN
+      RETURN "arm64-apple-macosx";
     END;
     RETURN NIL;
   END TargetTriple;
@@ -337,6 +341,13 @@ PROCEDURE DataLayout (): TEXT =
          address spaces) accepts it too. *)
       RETURN "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32"
                & "-i64:64-i128:128-n32:64-S128-Fn32";
+    ELSIF Text.Equal (Target.System_name, "AMD64_DARWIN") THEN
+      (* Mach-O ("m:o"); from clang 22. *)
+      RETURN "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128"
+               & "-f80:128-n8:16:32:64-S128";
+    ELSIF Text.Equal (Target.System_name, "ARM64_DARWIN") THEN
+      RETURN "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128"
+               & "-n32:64-S128-Fn32";
     END;
     RETURN NIL;
   END DataLayout;
