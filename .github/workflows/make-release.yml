@@ -18,7 +18,9 @@ jobs:
     - name: Install prerequisites
       run: |
         sudo apt-get update --quiet
-        sudo apt-get install --quiet --assume-yes ninja-build
+        # This fork: binutils-gold too (Linux.common links with
+        # -fuse-ld=gold, and ubuntu-26.04 doesn't have it).
+        sudo apt-get install --quiet --assume-yes ninja-build binutils-gold
 
     - name: Define install location
       run: |
