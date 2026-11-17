@@ -15,9 +15,13 @@ Developers working on the back end itself: see
   Darwin is planned (see PLAN.md, Phase 7).
 - **LLVM:** `clang` 18 or later on `PATH`. CI tests LLVM 18 and the
   newest release. The IR uses opaque pointers throughout.
-- **Exceptions:** the default `ex_frame` model (setjmp/longjmp) works.
-  The zero-cost `ex_stack` model (`README-ex_stack.md`) still needs the
-  C back end; if `M3_USE_STACK_WALKER` is set, the config forces C.
+- **Exceptions:** the default `ex_frame` model (setjmp/longjmp) works,
+  and so does the zero-cost `ex_stack` model (`README-ex_stack.md`) on
+  AMD64_LINUX: with `M3_USE_STACK_WALKER` set, the config keeps
+  `LlvmIR` (it forces C for every other mode). With `ex_stack`, m3tests
+  passes 288 of 293; r001, r003, r004 and r005 fail as they do with
+  the C back end, because the `ex_stack` runtime doesn't report an
+  unhandled exception (C++ calls `std::terminate`).
 - **Tests:** m3tests passes 292 of 293, the same as the C back end
   (p047 fails with both). The compiler builds itself with `LlvmIR`, and
   its output reaches a fixed point.

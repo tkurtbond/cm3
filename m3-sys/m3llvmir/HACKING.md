@@ -73,6 +73,14 @@ static data, atomics.
   atomics with explicit memory orders. PLAN.md's design decision 8
   lists them; the C back end (`m3-sys/m3back/src/M3C.m3`) is the
   reference for what the result must be.
+- **Zero-cost exceptions** (`ex_stack`, PLAN.md Phase 7): between
+  `start_try` and `end_try`, `EmitCall` turns every call that can
+  raise (including `ReportFault`) into an `invoke` that unwinds to the
+  region's landing pad. `landing_pad` starts that block: a
+  `landingpad` that catches the C++ `_M3Exc` (typeinfo `_ZTI6_M3Exc`,
+  thrown by `RTStack__ThrowM3Exc` in `RTStackC.c`), then
+  `__cxa_begin_catch`/`__cxa_end_catch`, and pushes the activation.
+  Such procedures get `personality ptr @__gxx_personality_v0`.
 - **Targets.** `TargetTriple` and `DataLayout` know AMD64_LINUX and
   ARM64_LINUX; a new target starts there (PLAN.md, Phase 7). Little
   else depends on the target: EXTENDED is `fp128` (with libquadmath's

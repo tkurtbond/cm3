@@ -60,7 +60,10 @@ The native x86 assembly backend (`M3_BACKEND_MODE = "3"`, used by
 at code-generation time on any `TRY` statement.
 
 **Always pair `M3_USE_STACK_WALKER = TRUE` with `M3_BACKEND_MODE =
-"C"`.**
+"C"`** (or, in this fork, `"LlvmIR"`: its backend in
+`m3-sys/m3llvmir` lowers these operations to LLVM `invoke` and
+`landingpad` instructions that catch the same `_M3Exc`; see PLAN.md,
+Phase 7).
 
 Both Darwin targets discussed here use `M3_BACKEND_MODE = "C"`, as
 does `AMD64_LINUX`.

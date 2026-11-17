@@ -14,13 +14,19 @@ readonly SYSTEM_ASM = "as --64" % Assembler
 % LLVM IR backend (this fork): M3_BACKEND_MODE = "LlvmIR" compiles with
 % clang (LLVM 18 or later) instead of the C compiler.  Set it in
 % cm3.cfg ("concierge.py upgrade --backend llvmir" does) or with
-% "cm3 -DM3_BACKEND_MODE=LlvmIR".  ex_stack, below, still forces C.
+% "cm3 -DM3_BACKEND_MODE=LlvmIR".  It also supports ex_stack, below.
 
-% ex_stack requires the C backend and g++ with -x c++.
+% ex_stack requires the C backend (or LlvmIR) and g++ with -x c++.
 % M3_BACKEND_MODE must be set before includes so cm3cfg.common's
 % "if not defined" guard fires correctly.
 if defined("M3_USE_STACK_WALKER")
-  M3_BACKEND_MODE = "C"
+  if defined("M3_BACKEND_MODE")
+    if not equal(M3_BACKEND_MODE, "LlvmIR") % this fork: LlvmIR keeps it
+      M3_BACKEND_MODE = "C"
+    end
+  else
+    M3_BACKEND_MODE = "C"
+  end
 end
 
 include("AMD64.common")
@@ -32,5 +38,6 @@ if defined("M3_USE_STACK_WALKER")
   % RTStackC.c and M3C.m3-generated files use C++ EH (catch/_M3Exc/throw),
   % so SYSTEM_CC must invoke the C++ compiler with -x c++.
   SYSTEM_CC = "g++ -g -m64 -fPIC -x c++"
-  SYSTEM_LIBS{"UNWIND"} = [ "-lunwind-x86_64", "-lunwind" ]
+  % SYSTEM_LD is still gcc (Linux.common), so link libstdc++ explicitly.
+  SYSTEM_LIBS{"UNWIND"} = [ "-lunwind-x86_64", "-lunwind", "-lstdc++" ]
 end

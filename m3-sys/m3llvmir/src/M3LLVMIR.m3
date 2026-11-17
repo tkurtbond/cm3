@@ -75,6 +75,7 @@ TYPE
     frame_used : BOOLEAN := FALSE;
     returns_twice : BOOLEAN := FALSE;  (* setjmp *)
     calls_setjmp  : BOOLEAN := FALSE;
+    has_eh        : BOOLEAN := FALSE;  (* has a landing pad (Phase 7) *)
     (* debug information (Phase 5) *)
     m3name     : TEXT := NIL;     (* the symbol, unquoted *)
     ret_typeid : TypeUID := 0;
@@ -87,6 +88,14 @@ TYPE
   END;
 
   TextList = REF RECORD t: TEXT;  next: TextList END;
+
+  (* A try region (Phase 7, ex_stack): every call in it unwinds to its
+     landing pad "lpad". *)
+  TryList  = REF RECORD
+    lpad    : TEXT;
+    handler : Label := M3CG.No_label;  (* from invoke_*, if any *)
+    next    : TryList;
+  END;
 
   VarList  = REF RECORD v: LVar;  next: VarList  END;
   ProcList = REF RECORD p: LProc; next: ProcList END;
@@ -122,6 +131,8 @@ TYPE
     allocas     : TextWr.T;    (* entry block of cur_proc *)
     body        : TextWr.T;    (* rest of cur_proc *)
     terminated  := FALSE;      (* last instruction was a terminator *)
+    try_open    : TryList := NIL;  (* open try regions, innermost first *)
+    try_last    : TryList := NIL;  (* the region end_try closed last *)
 
     (* the procedure that receives declare_param *)
     decl_proc   : LProc := NIL;
@@ -295,6 +306,12 @@ TYPE
     compare_exchange := compare_exchange;
     fence := fence;
     fetch_and_op := fetch_and_op;
+    (* Phase 7: zero-cost exceptions (ex_stack) *)
+    start_try := start_try;
+    end_try := end_try;
+    invoke_direct := invoke_direct;
+    invoke_indirect := invoke_indirect;
+    landing_pad := landing_pad;
   END;
 
 (*------------------------------------------------------------ targets ---*)
@@ -1250,6 +1267,8 @@ PROCEDURE begin_procedure (u: U; proc: Proc) =
     u.body := TextWr.New ();
     u.terminated := FALSE;
     u.sp := 0;
+    u.try_open := NIL;
+    u.try_last := NIL;
     DebugProc (u, p);
     FOR i := 0 TO p.n_declared - 1 DO
       v := p.params[i];
@@ -1277,6 +1296,7 @@ PROCEDURE end_procedure (u: U; proc: Proc) =
   VAR p := NARROW (proc, LProc);  frame := "";  body, sp := "";
   BEGIN
     IF p # u.cur_proc THEN Fatal (u, "end_procedure does not match") END;
+    IF u.try_open # NIL THEN Fatal (u, "unclosed try region") END;
     IF NOT u.terminated THEN
       IF p.return = Type.Void
         THEN EmitTerm (u, "ret void");
@@ -1298,6 +1318,9 @@ PROCEDURE end_procedure (u: U; proc: Proc) =
       body := Replace (body, "  store ", "  store volatile ");
     END;
     IF p.dbg_sp # NIL THEN sp := " !dbg " & p.dbg_sp END;
+    IF p.has_eh THEN  (* Phase 7, ex_stack *)
+      sp := " personality ptr @__gxx_personality_v0" & sp;
+    END;
     Wr.PutText (u.funcs, "define " & Linkage (p.exported)
                            & Signature (p, TRUE) & " #0" & sp & " {"
                            & Wr.EOL & "entry:" & Wr.EOL & frame
@@ -1488,10 +1511,10 @@ PROCEDURE call_direct (u: U; proc: Proc; type: Type) =
     call := "call " & ReturnType (p) & " " & p.name & "("
               & u.call_args & ")" & attr;
     IF type = Type.Void THEN
-      Emit (u, call);
+      EmitCall (u, NIL, call, NOT p.returns_twice);
     ELSE
       r := NewTemp (u);
-      Emit (u, r & " = " & call);
+      EmitCall (u, r, call, NOT p.returns_twice);
       IF p.returns_twice
         THEN r := Cvt (u, r, Type.Int32, StackType (type));
         ELSE r := Cvt (u, r, p.return, StackType (type));
@@ -1680,8 +1703,10 @@ PROCEDURE Fault (u: U; code: RuntimeError) =
       u.module_data.used := TRUE;
       m := u.module_data.name;
     END;
-    Emit (u, "call void " & p.name & "(ptr " & m & ", i64 "
-               & Fmt.Int (info) & ")");
+    (* ReportFault raises RuntimeError.E: inside a try region it must
+       unwind to the region's landing pad. *)
+    EmitCall (u, NIL, "call void " & p.name & "(ptr " & m & ", i64 "
+                        & Fmt.Int (info) & ")");
     EmitTerm (u, "unreachable");
   END Fault;
 
@@ -2608,9 +2633,10 @@ PROCEDURE call_indirect (u: U; t: Type; <*UNUSED*> cc: CallingConvention) =
     IF Text.Length (attr) > 0 THEN attr := Text.Sub (attr, 1) & " " END;
     call := "call " & attr & LType (t) & " " & f & "(" & u.call_args & ")";
     IF t = Type.Void THEN
-      Emit (u, call);
+      EmitCall (u, NIL, call);
     ELSE
-      r := Instr (u, call);
+      r := NewTemp (u);
+      EmitCall (u, r, call);
       Push (u, StackType (t), Cvt (u, r, t, StackType (t)));
     END;
     EndCall (u);
@@ -2801,6 +2827,119 @@ PROCEDURE fetch_and_op (u: U; op: AtomicOp; t: MType; z: ZType;
                      & ", align " & Fmt.Int (NatAlign (m)));
     Push (u, z, Cvt (u, r, m, z));
   END fetch_and_op;
+
+(*============================== Phase 7: zero-cost exceptions (ex_stack) ===*)
+(* With M3_USE_STACK_WALKER the front end brackets the body of each TRY,
+   TRY FINALLY and LOCK statement with start_try/end_try and follows it
+   with "set_label (handler); landing_pad (handler)".  The runtime raises
+   a Modula-3 exception by throwing a C++ "_M3Exc" (struct { void *act; },
+   see RTStack__ThrowM3Exc), so, as in the C back end's "try { ... }
+   catch (_M3Exc&)", every call in an open region becomes an LLVM invoke
+   that unwinds to the region's landing pad, which catches _M3Exc with
+   __gxx_personality_v0 and pushes its activation.
+
+   The front end jumps to a region's handler label only through the
+   landing pad (unmatched exceptions go to the enclosing handler's body,
+   after its landing pad), so the landing pad needs no other entry. *)
+
+PROCEDURE EmitCall (u: U; result, call: TEXT; mayRaise := TRUE) =
+  (* Emit "result = call" ("call" alone if "result" is NIL), the text
+     "call" starting with "call ".  Inside a try region it becomes an
+     invoke that unwinds to the innermost region's landing pad. *)
+  VAR cont, lhs := "";
+  BEGIN
+    IF result # NIL THEN lhs := result & " = " END;
+    IF u.try_open = NIL OR NOT mayRaise THEN Emit (u, lhs & call); RETURN END;
+    cont := NewBlock (u, "cont.");
+    EmitTerm (u, lhs & "invoke" & Text.Sub (call, 4) & " to label %" & cont
+                   & " unwind label %" & u.try_open.lpad);
+    StartBlock (u, cont);
+    u.cur_proc.has_eh := TRUE;
+    UseEH (u);
+  END EmitCall;
+
+PROCEDURE UseEH (u: U) =
+  (* Declare what invoke and landingpad need. *)
+  BEGIN
+    AddDecl (u, "@__gxx_personality_v0",
+             "declare i32 @__gxx_personality_v0(...)");
+    AddDecl (u, "@__cxa_begin_catch",
+             "declare ptr @__cxa_begin_catch(ptr)");
+    AddDecl (u, "@__cxa_end_catch", "declare void @__cxa_end_catch()");
+    AddDecl (u, "@_ZTVN10__cxxabiv117__class_type_infoE",
+             "@_ZTVN10__cxxabiv117__class_type_infoE = external global [0 x ptr]");
+    (* typeinfo for "struct _M3Exc", as C++ emits it in every unit that
+       catches it *)
+    AddDecl (u, "@_ZTS6_M3Exc",
+             "@_ZTS6_M3Exc = linkonce_odr constant [8 x i8] c\"6_M3Exc\\00\", align 1");
+    AddDecl (u, "@_ZTI6_M3Exc",
+             "@_ZTI6_M3Exc = linkonce_odr constant { ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), ptr @_ZTS6_M3Exc }, align 8");
+  END UseEH;
+
+PROCEDURE start_try (u: U) =
+  BEGIN
+    u.try_open := NEW (TryList, lpad := NewBlock (u, "lpad."),
+                       next := u.try_open);
+  END start_try;
+
+PROCEDURE end_try (u: U) =
+  BEGIN
+    IF u.try_open = NIL THEN Fatal (u, "end_try without start_try") END;
+    u.try_last := u.try_open;
+    u.try_open := u.try_open.next;
+    u.try_last.next := NIL;
+  END end_try;
+
+PROCEDURE NoteHandler (u: U; handler: Label) =
+  (* An invoke's handler is that of the innermost open region. *)
+  VAR r := u.try_open;
+  BEGIN
+    IF r = NIL THEN Fatal (u, "invoke outside a try region") END;
+    IF r.handler = M3CG.No_label THEN
+      r.handler := handler;
+    ELSIF r.handler # handler THEN
+      Fatal (u, "invoke: handler differs from its region's");
+    END;
+  END NoteHandler;
+
+PROCEDURE invoke_direct (u: U; p: Proc; t: Type;
+                         <*UNUSED*> next: Label; handler: Label) =
+  (* The front end follows this with set_label (next). *)
+  BEGIN
+    NoteHandler (u, handler);
+    call_direct (u, p, t);
+  END invoke_direct;
+
+PROCEDURE invoke_indirect (u: U; t: Type; cc: CallingConvention;
+                           <*UNUSED*> next: Label; handler: Label) =
+  BEGIN
+    NoteHandler (u, handler);
+    call_indirect (u, t, cc);
+  END invoke_indirect;
+
+PROCEDURE landing_pad (u: U; t: ZType; handler: Label;
+                       <*UNUSED*> READONLY catches: ARRAY OF TypeUID) =
+  (* Catch the _M3Exc thrown in the region end_try closed last and push
+     its activation ("catches" is checked by the handler code). *)
+  VAR r := u.try_last;  x, obj, act: TEXT;
+  BEGIN
+    IF r = NIL THEN Fatal (u, "landing_pad without a try region") END;
+    IF r.handler # M3CG.No_label AND r.handler # handler THEN
+      Fatal (u, "landing_pad: handler differs from its region's");
+    END;
+    u.try_last := NIL;
+    (* The handler label's block has no other entry. *)
+    IF NOT u.terminated THEN EmitTerm (u, "unreachable") END;
+    StartBlock (u, r.lpad);
+    u.cur_proc.has_eh := TRUE;
+    UseEH (u);
+    x := Instr (u, "landingpad { ptr, i32 } catch ptr @_ZTI6_M3Exc");
+    obj := Instr (u, "extractvalue { ptr, i32 } " & x & ", 0");
+    obj := Instr (u, "call ptr @__cxa_begin_catch(ptr " & obj & ")");
+    act := Instr (u, "load ptr, ptr " & obj & ", align 8");
+    Emit (u, "call void @__cxa_end_catch()");
+    Push (u, t, act);
+  END landing_pad;
 
 BEGIN
 END M3LLVMIR.

@@ -430,13 +430,7 @@ Phase 3 as built:
 - `init_label` and `init_offset` are no-ops, as in M3C and M3CG_LLVM:
   only the old stack walker reads those words.
 - **Deferred: `ex_stack`** (`start_try`, `end_try`, `invoke_direct`,
-  `invoke_indirect`, `landing_pad`). It is off by default, and testing
-  it needs an `m3core` built with `M3_USE_STACK_WALKER`, which takes the
-  two-stage bootstrap in `README-ex_stack.md`. The lowering would be
-  `invoke` to a `landingpad` with `__gxx_personality_v0` that catches
-  `_M3Exc` (`RTStackC.c`). It is the `ex_stack` item in Phase 7, and
-  must be done before AMD64_LINUX switches its default exception
-  model to `ex_stack`.
+  `invoke_indirect`, `landing_pad`): done later, in Phase 7.
 - Not yet run: the `c*` and `x0` tests.
 
 ### Phase 4: self-hosting and performance
@@ -778,10 +772,25 @@ Ordered by expected value. Each item is a separate mini-plan.
   the LlvmIR full-upgrade and m3tests with LLVM 18 and 22 (known
   failures p047 and e041).
 - **Darwin targets** (AMD64 and ARM64).
-- **Zero-cost exceptions (`ex_stack`)** through `invoke`/`landingpad`
-  with the C++ personality, interoperating with `RTStackC.c`. See
-  `README-ex_stack.md`. The old LLVM backend's `invoke_direct` and
-  `landing_pad` are the starting reference.
+- **Zero-cost exceptions (`ex_stack`): done for AMD64_LINUX.** Inside
+  a try region every call that can raise, including `ReportFault`,
+  is an `invoke` that unwinds to the region's landing pad, a
+  `landingpad` that catches the C++ `_M3Exc` thrown by
+  `RTStack__ThrowM3Exc` (`RTStackC.c`) under `__gxx_personality_v0`
+  (as M3C's `catch (_M3Exc&)`; the old LLVM backend's per-exception
+  catch globals were not used). The AMD64_LINUX config now keeps
+  `LlvmIR` when `M3_USE_STACK_WALKER` is set, and links `-lstdc++`
+  (`SYSTEM_LD` is still `gcc`, so ex_stack programs failed to link
+  with either back end). With ex_stack on, m3tests passes 288 of 293
+  with `LlvmIR`: p047 as always, and r001, r003, r004 and r005,
+  because the ex_stack runtime lets C++ call `std::terminate` for an
+  unhandled exception instead of reporting it. The C back end with
+  ex_stack fails those and 28 more (g++ warnings in expected-empty
+  output, set tests, and crashes in p268, p270, p277, p280), and skips
+  a FINALLY when a runtime error is raised in its body; LlvmIR runs
+  it. Not done: reporting unhandled exceptions (a runtime change),
+  ex_stack on ARM64_LINUX (not in m3core's `HAS_STACK_WALKER`), a CI
+  job, and making ex_stack the default.
 - **Debug information for exceptions** (from Phase 5): describe
   exception declarations and procedures' RAISES sets in the DWARF.
   Design it together with `ex_stack`, which decides how exceptions are
