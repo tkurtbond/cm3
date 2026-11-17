@@ -31,10 +31,19 @@ jobs:
       CM3_TARGET: AMD64_DARWIN
 
     steps:
+    # This fork: Homebrew no longer has bottles for Intel macOS and
+    # built libxaw, libxft and ninja from source, past the job's
+    # timeout.  XQuartz is a cask (prebuilt) and has all the X11
+    # libraries the AMD64_DARWIN config links from /opt/X11/lib;
+    # ninja comes from its release.
     - name: Install prerequisites
       run: |
-        brew update
-        brew install libxaw libxft ninja xquartz
+        brew install --cask xquartz
+        mkdir -p ../tools/bin
+        curl --location --silent --fail -o ../ninja-mac.zip \
+          https://github.com/ninja-build/ninja/releases/download/v1.12.1/ninja-mac.zip
+        unzip -q ../ninja-mac.zip -d ../tools/bin
+        echo "$(cd ../tools/bin && pwd)" >> $GITHUB_PATH
 
     - name: Define install location
       run: |
