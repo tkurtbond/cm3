@@ -147,8 +147,9 @@ jobs:
             sys.exit("unexpected failures: " + " ".join(unexpected))
         EOF
 
-  # Bootstraps of LLVM IR for ARM64_DARWIN and AMD64_DARWIN, as
-  # make-release.yml makes them: upgrade the C bootstrap release to this
+  # Bootstraps of LLVM IR for ARM64_DARWIN and AMD64_DARWIN, made as
+  # make-release.yml makes them, but here on each Mac rather than cross
+  # on Linux (the IR is the same): upgrade the C bootstrap release to this
   # tree's compiler, make the IR bootstrap with it, build that with
   # clang, and then build everything with its compiler.  The bootstrap
   # installs a marker (share/cm3/bootstrap-backend) that makes concierge

@@ -11,9 +11,8 @@ Developers working on the back end itself: see
 
 ## Requirements and status
 
-- **Target:** AMD64_LINUX, ARM64_LINUX and ARM64_DARWIN, all tested
-  in CI; AMD64_DARWIN too, but not yet verified (see PLAN.md,
-  Phase 7). On Darwin, use LLVM's clang (from Homebrew, say), not
+- **Target:** AMD64_LINUX, ARM64_LINUX, ARM64_DARWIN and AMD64_DARWIN,
+  all tested in CI. On Darwin, use LLVM's clang (from Homebrew, say), not
   Xcode's, which has its own version numbers; the configs there label
   debug information as C for lldb.
 - **LLVM:** `clang` 18 or later on `PATH`. CI tests LLVM 18 and the
@@ -124,16 +123,18 @@ IR is for one target only; `--target ARM64_LINUX` makes one for that
 target on another machine.
 
 When a release of this fork is tagged, `make-release.yml` makes
-bootstraps of LLVM IR for four targets (there is no such release yet).
-CI makes each of them too, builds it, builds everything with its
-compiler, and runs m3tests:
+bootstraps of LLVM IR for four targets, all in its Linux job (there is
+no such release yet). Cross-made IR is the same as IR made on the
+target, apart from source file paths and version stamps. CI makes each
+bootstrap too, builds it, builds everything with its compiler, and runs
+m3tests:
 
-| Bootstrap | Made on | Tested by |
-|-----------|---------|-----------|
+| Bootstrap | Made by CI on | Tested by |
+|-----------|---------------|-----------|
 | `cm3-boot-AMD64_LINUX-llvmir-VERSION.tar.xz` | Linux | `amd64_linux_llvmir.yml` (`ir-bootstrap`) |
 | `cm3-boot-ARM64_LINUX-llvmir-VERSION.tar.xz` | Linux (cross) | `arm64_linux_llvmir.yml` |
 | `cm3-boot-ARM64_DARWIN-llvmir-VERSION.tar.xz` | macOS | `darwin_llvmir.yml` (`ir-bootstrap`) |
-| `cm3-boot-AMD64_DARWIN-llvmir-VERSION.tar.xz` | macOS (cross) | `darwin_llvmir.yml` (`ir-bootstrap`, on Intel) |
+| `cm3-boot-AMD64_DARWIN-llvmir-VERSION.tar.xz` | macOS | `darwin_llvmir.yml` (`ir-bootstrap`, on Intel) |
 
 On macOS, build them with LLVM's clang (from Homebrew on Apple silicon,
 from LLVM's releases on Intel), not Xcode's; see below.

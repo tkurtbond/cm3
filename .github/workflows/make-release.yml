@@ -50,17 +50,22 @@ jobs:
         scripts/concierge.py make-dist --target I386_LINUX
         scripts/concierge.py make-dist --target I386_NT
 
-    # This fork: bootstraps of LLVM IR as well, for AMD64_LINUX and
-    # ARM64_LINUX (cm3-boot-TARGET-llvmir-VERSION.tar.xz; see "A
-    # bootstrap of LLVM IR" in m3-sys/m3llvmir/README.md).  They need
-    # clang 18 or later to make and to build; amd64_linux_llvmir.yml's
-    # ir-bootstrap job and arm64_linux_llvmir.yml test them.
+    # This fork: bootstraps of LLVM IR as well
+    # (cm3-boot-TARGET-llvmir-VERSION.tar.xz; see "A bootstrap of LLVM
+    # IR" in m3-sys/m3llvmir/README.md), all made here: the IR for the
+    # other targets is cross-made, and is the same as IR made on them
+    # apart from source paths and version stamps.  They need clang 18 or
+    # later to make and to build.  amd64_linux_llvmir.yml's ir-bootstrap
+    # job, arm64_linux_llvmir.yml and darwin_llvmir.yml's ir-bootstrap
+    # job test them.
     - name: Build LLVM IR bootstrap
       run: |
         sudo apt-get install --quiet --assume-yes clang
         clang --version
         scripts/concierge.py make-bootstrap --backend llvmir --target AMD64_LINUX
         scripts/concierge.py make-bootstrap --backend llvmir --target ARM64_LINUX
+        scripts/concierge.py make-bootstrap --backend llvmir --target ARM64_DARWIN
+        scripts/concierge.py make-bootstrap --backend llvmir --target AMD64_DARWIN
         ls -l *.tar.xz
 
     - name: Upload artifacts
@@ -111,19 +116,6 @@ jobs:
       run: |
         scripts/concierge.py make-dist --target ARM64_DARWIN
         scripts/concierge.py make-dist --target AMD64_DARWIN
-
-    # This fork: bootstraps of LLVM IR for the Darwin targets as well (see
-    # README-macOS.md).  They need clang 18 or later to make,
-    # from Homebrew: Xcode's clang has its own version numbers.
-    # darwin_llvmir.yml's ir-bootstrap job tests them.
-    - name: Build LLVM IR bootstrap
-      run: |
-        brew install llvm
-        export PATH="$(brew --prefix llvm)/bin:$PATH"
-        clang --version
-        scripts/concierge.py make-bootstrap --backend llvmir --target ARM64_DARWIN
-        scripts/concierge.py make-bootstrap --backend llvmir --target AMD64_DARWIN
-        ls -l *.tar.xz
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
