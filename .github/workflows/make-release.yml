@@ -126,6 +126,12 @@ jobs:
 
   create-release:
     needs: [build-linux, build-macos]
+    # This fork: release even if build-macos fails or is cancelled
+    # (macOS runners are scarce); its files can be added to the draft
+    # later.  The release needs a token that can write.
+    if: ${{ always() && needs.build-linux.result == 'success' }}
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
 
     steps:
@@ -135,6 +141,7 @@ jobs:
         name: dist-linux
 
     - name: Download macOS artifacts
+      if: ${{ needs.build-macos.result == 'success' }}
       uses: actions/download-artifact@v4
       with:
         name: dist-macos
