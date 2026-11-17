@@ -235,8 +235,8 @@ jobs:
       run: |
         export PATH="${C_INSTALL}/bin:$PATH" CM3_INSTALL="${C_INSTALL}"
         scripts/concierge.py upgrade -g0
-        mkdir ../tarball
-        cd ../tarball
+        mkdir ${{ runner.temp }}/tarball
+        cd ${{ runner.temp }}/tarball
         "${GITHUB_WORKSPACE}/scripts/concierge.py" make-bootstrap --backend llvmir
         ls -l
         gtar Jtf cm3-boot-${CM3_TARGET}-llvmir-*.tar.xz | grep -c '\.ll$'
@@ -247,13 +247,13 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: cm3-boot-${{ matrix.target }}-llvmir
-        path: ../tarball/cm3-boot-*.tar.xz
+        path: ${{ runner.temp }}/tarball/cm3-boot-*.tar.xz
         retention-days: 7
 
     - name: Build the IR bootstrap
       run: |
         mkdir ../bootstrap
-        gtar Jxf ../tarball/cm3-boot-${CM3_TARGET}-llvmir-*.tar.xz --directory=../bootstrap --strip-components=1
+        gtar Jxf ${{ runner.temp }}/tarball/cm3-boot-${CM3_TARGET}-llvmir-*.tar.xz --directory=../bootstrap --strip-components=1
         cmake -S ../bootstrap -B ../build -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_INSTALL_PREFIX="${CM3_INSTALL}"
         cmake --build ../build
         cmake --install ../build

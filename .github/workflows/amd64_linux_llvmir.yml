@@ -221,8 +221,8 @@ jobs:
       run: |
         export PATH="${C_INSTALL}/bin:$PATH" CM3_INSTALL="${C_INSTALL}"
         scripts/concierge.py upgrade -g0
-        mkdir ../tarball
-        cd ../tarball
+        mkdir ${{ runner.temp }}/tarball
+        cd ${{ runner.temp }}/tarball
         "${GITHUB_WORKSPACE}/scripts/concierge.py" make-bootstrap --backend llvmir
         ls -l
         tar Jtf cm3-boot-${CM3_TARGET}-llvmir-*.tar.xz | grep -c '\.ll$'
@@ -232,12 +232,12 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: cm3-boot-AMD64_LINUX-llvmir
-        path: ../tarball/cm3-boot-*.tar.xz
+        path: ${{ runner.temp }}/tarball/cm3-boot-*.tar.xz
 
     - name: Build the IR bootstrap
       run: |
         mkdir ../bootstrap
-        tar Jxf ../tarball/cm3-boot-${CM3_TARGET}-llvmir-*.tar.xz --directory=../bootstrap --strip-components=1
+        tar Jxf ${{ runner.temp }}/tarball/cm3-boot-${CM3_TARGET}-llvmir-*.tar.xz --directory=../bootstrap --strip-components=1
         # It must refuse a C compiler other than clang.
         if CC=gcc CXX=g++ cmake -S ../bootstrap -B ../gcc-build -G Ninja > ../gcc-build.log 2>&1; then
           cat ../gcc-build.log
