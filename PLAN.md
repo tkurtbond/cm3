@@ -265,7 +265,8 @@ Phase 1 as built:
   marks the implemented operations `wip`.
 - Target: `LlvmIR` lays out data and calls like the C backend
   (`Target.CLayout` in `Target.m3`), so the output links with C-built
-  libraries. Only AMD64_LINUX has a triple and datalayout so far.
+  libraries. Only AMD64_LINUX has a triple and datalayout so far
+  (ARM64_LINUX was added in Phase 7).
 - `m3-sys/m3llir`: `m3llir [-a] [-b] [-t TARGET] [-o OUT] [IN]` reads
   ASCII (`-a`) or binary M3CG and writes `.ll`. All `_m3main` units and
   the c001 and p066 `Main` units in `experiment-doc/m3cg-corpus/`
@@ -747,6 +748,30 @@ Ordered by expected value. Each item is a separate mini-plan.
 - **ARM64_LINUX.** This should be mostly the triple, datalayout and
   ABI details (by-value structs, varargs if any). It's the cheapest
   check that the backend isn't accidentally x86-specific.
+
+  *Done (on a Raspberry Pi 400: aarch64, Debian 13, 4 GB RAM,
+  clang 19, GCC 14).* The backend needed only the triple and datalayout
+  (`TargetTriple`, `DataLayout`); concierge's `has_llvmir_backend`
+  needed ARM64_LINUX too. Nothing else was x86-specific: EXTENDED is
+  `double` off AMD64_LINUX, the jmp_buf's size comes from m3core at run
+  time, structures are passed by pointer, and there are no variadic
+  calls. d5.12.0 has no ARM64_LINUX bootstrap, so one was made with
+  `concierge.py make-bootstrap --target ARM64_LINUX`, which needed a
+  `CMakeLists.txt` and `m3overrides` entries for m3llvmir (cm3 imports
+  it). The Pi also needed `binutils-gold` (Linux.common links with
+  gold; Debian 13 doesn't install it) and, for the GUI packages,
+  `xorg-dev` and `libglu1-mesa-dev`.
+
+  Results: `full-upgrade --backend llvmir -g0 all -caltech-other
+  -caltech-parser -m3-scheme` (CI's arguments, with
+  `M3_LLVM_IR_VERIFY=1`) builds everything, self-hosting included, and
+  m3tests passes 291 of 293 (p047 and e041), as on AMD64_LINUX. With
+  the C backend m3tests fails 16 (those two and p053 p109 p137 p156
+  p159 p160 p162 p201 p227 p268 p269 p270 p277 p280), the same 16 as
+  upstream's C job on Ubuntu; with GCC 14 the C backend's output fails
+  to compile (p053: "`SET` was not declared") or misbehaves (p137:
+  "LONGINT value check failed"). Still to do: a CI job (on
+  `ubuntu-24.04-arm`).
 - **Darwin targets** (AMD64 and ARM64).
 - **Zero-cost exceptions (`ex_stack`)** through `invoke`/`landingpad`
   with the C++ personality, interoperating with `RTStackC.c`. See

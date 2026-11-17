@@ -73,8 +73,14 @@ static data, atomics.
   atomics with explicit memory orders. PLAN.md's design decision 8
   lists them; the C back end (`m3-sys/m3back/src/M3C.m3`) is the
   reference for what the result must be.
-- **Targets.** `TargetTriple` and `DataLayout` know only AMD64_LINUX;
-  a new target starts there (PLAN.md, Phase 7).
+- **Targets.** `TargetTriple` and `DataLayout` know AMD64_LINUX and
+  ARM64_LINUX; a new target starts there (PLAN.md, Phase 7). Little
+  else depends on the target: EXTENDED is `fp128` (with libquadmath's
+  `llroundq`, `floorq`, `ceilq`) only on AMD64_LINUX and `double`
+  elsewhere (`Target.Init`); the jmp_buf's size comes from m3core at
+  run time (`m3_jmpbuf_size`); structures are passed by pointer; and
+  the backend emits no variadic calls, inline asm or target
+  intrinsics.
 
 Rules for the IR:
 

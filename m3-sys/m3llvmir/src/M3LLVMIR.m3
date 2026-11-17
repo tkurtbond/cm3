@@ -303,6 +303,8 @@ PROCEDURE TargetTriple (): TEXT =
   BEGIN
     IF Text.Equal (Target.System_name, "AMD64_LINUX") THEN
       RETURN "x86_64-unknown-linux-gnu";
+    ELSIF Text.Equal (Target.System_name, "ARM64_LINUX") THEN
+      RETURN "aarch64-unknown-linux-gnu";
     END;
     RETURN NIL;
   END TargetTriple;
@@ -313,6 +315,11 @@ PROCEDURE DataLayout (): TEXT =
       (* From clang 22; LLVM 18 and later accept it. *)
       RETURN "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128"
                & "-f80:128-n8:16:32:64-S128";
+    ELSIF Text.Equal (Target.System_name, "ARM64_LINUX") THEN
+      (* From clang 22; clang 19 (whose own string lacks the p27x
+         address spaces) accepts it too. *)
+      RETURN "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32"
+               & "-i64:64-i128:128-n32:64-S128-Fn32";
     END;
     RETURN NIL;
   END DataLayout;
