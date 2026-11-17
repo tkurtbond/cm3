@@ -95,6 +95,33 @@ m3llir [-a] [-g] [-l LANG] [-t TARGET] [-o out.ll] in.mc
 `-a` reads ASCII M3CG (as `m3cgcat` writes it), `-g` adds debug
 information, and `-l C` labels it as C (see below).
 
+### A bootstrap of LLVM IR
+
+`concierge.py make-bootstrap` normally compiles the compiler's sources
+to C. With `--backend llvmir` it uses `LlvmIR` instead (without debug
+information), and the tarball, `cm3-boot-TARGET-llvmir-VERSION.tar.xz`
+in the current directory, holds `.ll` files where the C one holds
+`.cpp` files:
+
+```sh
+scripts/concierge.py make-bootstrap --backend llvmir [--target TARGET]
+```
+
+Build it as you would the C bootstrap, but with clang 18 or later
+(Apple clang 17 or later) as CMake's compilers; the generated
+`CMakeLists.txt` refuses any other C compiler:
+
+```sh
+cmake -S bootstrap -B build -G Ninja -DCMAKE_C_COMPILER=clang \
+      -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_INSTALL_PREFIX=PREFIX
+cmake --build build && cmake --install build
+```
+
+CMake has no language for LLVM IR, so each package's `sources.lst`
+marks the `.ll` files as C (so that CMake hands them to clang) and adds
+`-x ir` (so that clang reads them as IR). Like the C bootstrap, the
+IR is for one target only.
+
 ## Debugging
 
 `LlvmIR` emits DWARF debug information unless `-g0` is given: line

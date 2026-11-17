@@ -931,3 +931,12 @@ fork's second goal. It gets its own plan once the backend reaches
 Phase 4. One relevant fact for that plan: the text-IR backend adds no
 build-time dependency beyond a `clang`, which is no more than the C
 backend already requires.
+
+A first step exists: `concierge.py make-bootstrap --backend llvmir`
+makes a bootstrap of LLVM IR instead of C (see "A bootstrap of LLVM
+IR" in `m3-sys/m3llvmir/README.md`). On AMD64_LINUX it is half the
+size of the C one (5.0 MB of `.tar.xz` against 10.9 MB) and builds in
+about a third of the CPU time (13 s against 44 s with clang -O0 and
+GCC; ccache was not used for either). A compiler built from it ran
+`full-upgrade --backend llvmir`, and the result passed the mixed tests
+and m3tests as before (292 of 293, p047 failing).

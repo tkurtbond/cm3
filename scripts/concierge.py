@@ -52,7 +52,8 @@
 #
 # * Boostrap creation
 #   For developers the concierge can produce sources for a bootstrap
-#   compiler by compiling the required sources to C.
+#   compiler by compiling the required sources to C (or, in this fork,
+#   with `--backend llvmir`, to LLVM IR for clang 18 or later).
 #
 # * Distribution creation
 #   Finally, the concierge can produce a distribution tarball
@@ -231,7 +232,10 @@ the gcc or llvm backend is only built when explicitly requested.
 The llvmir backend (LLVM IR compiled by clang 18 or later; AMD64_LINUX,
 ARM64_LINUX, AMD64_DARWIN and ARM64_DARWIN only) is part of cm3 itself: upgrade first builds cm3 with the C
 backend, then rebuilds everything with llvmir, and makes llvmir the
-installation's default backend.
+installation's default backend.  "make-bootstrap --backend llvmir"
+makes a bootstrap of LLVM IR (cm3-boot-TARGET-llvmir-VERSION.tar.xz)
+instead of C; building it needs clang 18 or later as CMake's C compiler
+(cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++).
 
 BACKEND_OPTION = --backend (c|gcc|integrated|llvm|llvmir) | -c | -gcc | -integrated | -llvm | -llvmir
 
@@ -1870,11 +1874,20 @@ class MakeBootstrapCommand(ConciergeCommand):
     def parse_args(cls, args, namespace):
         super().parse_args(args, namespace)
 
-        # Override compiler configuration.
-        setattr(namespace, "_backend", "c")
-        setattr(namespace, "_flags", ["-boot", "-keep", "-no-m3ship-resolution"])
+        # Override compiler configuration.  This fork: "--backend llvmir"
+        # makes a bootstrap of LLVM IR (.ll files, compiled by clang 18
+        # or later) instead of C; no debug information, to keep it small.
+        flags = ["-boot", "-keep", "-no-m3ship-resolution"]
+        if getattr(namespace, "_backend", "c") == "llvmir":
+            flags.append("-g0")
+        else:
+            setattr(namespace, "_backend", "c")
+        setattr(namespace, "_flags", flags)
 
     def execute(self):
+        llvmir = self.use_llvmir_backend()
+        if llvmir:
+            check_clang()
         # Compile cm3 and its dependencies to C.
         packages = ["+front", "-m3cc", "-m3cgcat", "-m3cggen"]
         self.realclean(packages)
@@ -1900,8 +1913,9 @@ class MakeBootstrapCommand(ConciergeCommand):
             package_sources = []
             if not self.no_action():
 
+                suffixes = [".c", ".cpp", ".h"] + ([".ll"] if llvmir else [])
                 for file in Path(self.build(package_path)).iterdir():
-                    if file.suffix in [".c", ".cpp", ".h"]:
+                    if file.suffix in suffixes:
                         self.cp(file, package_dir)
                         package_sources.append(file.name)
 
@@ -1910,6 +1924,20 @@ class MakeBootstrapCommand(ConciergeCommand):
                     for filename in sorted(package_sources):
                         sources.write(f"{filename}\n")
                     sources.write(")\n")
+                    # CMake has no language for LLVM IR: call it C, so
+                    # that the C compiler (clang) compiles it, and say
+                    # "-x ir" so that clang reads it as IR.  As in
+                    # Unix.common, don't warn that the module's target
+                    # triple is spelled differently from clang's (-unknown-
+                    # vs. -redhat-), nor about CMake's -I and -MD, which
+                    # do nothing for IR.
+                    ll_files = sorted(f for f in package_sources if f.endswith(".ll"))
+                    if ll_files:
+                        sources.write("set_source_files_properties(\n")
+                        for filename in ll_files:
+                            sources.write(f"{filename}\n")
+                        sources.write('PROPERTIES LANGUAGE C COMPILE_OPTIONS '
+                                      '"-x;ir;-Wno-override-module;-Wno-unused-command-line-argument")\n')
 
         # Generate CMakeLists.txt
         cmake_install_prefix = f"/opt/cm3-{self.version()}" if self.version() else "/opt/cm3"
@@ -1922,6 +1950,19 @@ set(M3Target "{self.target().name()}")
 include(GNUInstallDirs)
 include(bootstrap.cmake)
 """
+        if llvmir:
+            # Apple's clang numbers its versions differently: 17 is
+            # based on LLVM 19.
+            cmake_header += f"""# This bootstrap is LLVM IR (.ll files), which only clang can compile.
+if(NOT ((CMAKE_C_COMPILER_ID STREQUAL "Clang"
+         AND CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL {MIN_CLANG_VERSION})
+        OR (CMAKE_C_COMPILER_ID STREQUAL "AppleClang"
+            AND CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 17)))
+   message(FATAL_ERROR "This bootstrap is LLVM IR and needs clang {MIN_CLANG_VERSION} or later "
+      "as the C compiler, not ${{CMAKE_C_COMPILER_ID}} ${{CMAKE_C_COMPILER_VERSION}}: "
+      "cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ...")
+endif()
+"""
         if not self.no_action():
             with open(Path(bootstrap_dir) / "CMakeLists.txt", "w") as cmake:
                 cmake.write(cmake_header)
@@ -1930,7 +1971,7 @@ include(bootstrap.cmake)
         self.cp(Path(self.source("scripts/bootstrap.cmake")), Path(bootstrap_dir))
 
         # Generate tarballs.
-        distname = f"cm3-boot-{self.config()}-{self.version()}"
+        distname = f"cm3-boot-{self.config()}-{'llvmir-' if llvmir else ''}{self.version()}"
         if self.target().is_win32():
             self.zip(f"{distname}.7z", ["bootstrap"], cwd=str(self.source()))
         else:
