@@ -50,16 +50,17 @@ jobs:
         scripts/concierge.py make-dist --target I386_LINUX
         scripts/concierge.py make-dist --target I386_NT
 
-    # This fork: a bootstrap of LLVM IR as well, for AMD64_LINUX
-    # (cm3-boot-AMD64_LINUX-llvmir-VERSION.tar.xz; see "A bootstrap of
-    # LLVM IR" in m3-sys/m3llvmir/README.md).  It needs clang 18 or
-    # later to make and to build; amd64_linux_llvmir.yml's ir-bootstrap
-    # job tests it.
+    # This fork: bootstraps of LLVM IR as well, for AMD64_LINUX and
+    # ARM64_LINUX (cm3-boot-TARGET-llvmir-VERSION.tar.xz; see "A
+    # bootstrap of LLVM IR" in m3-sys/m3llvmir/README.md).  They need
+    # clang 18 or later to make and to build; amd64_linux_llvmir.yml's
+    # ir-bootstrap job and arm64_linux_llvmir.yml test them.
     - name: Build LLVM IR bootstrap
       run: |
         sudo apt-get install --quiet --assume-yes clang
         clang --version
         scripts/concierge.py make-bootstrap --backend llvmir --target AMD64_LINUX
+        scripts/concierge.py make-bootstrap --backend llvmir --target ARM64_LINUX
         ls -l *.tar.xz
 
     - name: Upload artifacts

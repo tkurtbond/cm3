@@ -10,7 +10,8 @@ name: AMD64_LINUX_LLVMIR
 # behavior in the emitted IR.
 # The job ir-bootstrap makes a bootstrap of LLVM IR ("concierge.py
 # make-bootstrap --backend llvmir"), builds it with clang, and builds
-# and tests everything with the compiler it gives.
+# and tests everything with the compiler it gives, without "--backend
+# llvmir": the bootstrap makes LlvmIR concierge's default.
 # Based on amd64_linux.yml.
 
 on:
@@ -251,7 +252,8 @@ jobs:
     - name: Build everything with the IR bootstrap's compiler
       run: |
         cm3 -version
-        scripts/concierge.py full-upgrade --backend llvmir -g0
+        cat "${CM3_INSTALL}/share/cm3/bootstrap-backend"
+        scripts/concierge.py full-upgrade -g0
         grep -n 'M3_BACKEND_MODE = "LlvmIR"' "${CM3_INSTALL}/bin/cm3.cfg"
 
     - name: Run LlvmIR's own tests
