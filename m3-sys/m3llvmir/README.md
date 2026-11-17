@@ -131,6 +131,8 @@ afterwards whenever the installed `cm3.cfg` selects `LlvmIR`. So
 `PATH` gives an installation that defaults to `LlvmIR`; pass
 `--backend c` for one that defaults to C.
 
+For macOS, see [`README-DARWIN-LLVM-IR.md`](../../README-DARWIN-LLVM-IR.md).
+
 ## Debugging
 
 `LlvmIR` emits DWARF debug information unless `-g0` is given: line

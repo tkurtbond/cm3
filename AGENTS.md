@@ -48,7 +48,7 @@ them, and keep edits to shared files (`Builder.m3`, `M3Backend.m3`,
 | `m3-sys/m3cgcat/` | Converts between binary and ASCII M3CG IR. Useful for inspecting what the front end emits. |
 | `scripts/concierge.py` | The installer and build driver (`install`, `upgrade`, `full-upgrade`, `--backend c|gcc|integrated|llvm|llvmir`). `--backend llvmir` checks for clang 18+, builds the compiler with C and then twice with `LlvmIR`, and makes `LlvmIR` the installed `cm3.cfg`'s default. |
 | `README-ex_stack.md` | The newer zero-cost exception model. It requires the C backend or this fork's `LlvmIR`, and is off by default on AMD64_LINUX. |
-| `.github/workflows/` | Upstream CI, one workflow per platform. This fork adds `amd64_linux_llvmir.yml`, `arm64_linux_llvmir.yml` and `darwin_llvmir.yml` (called from `integration.yml`): the `LlvmIR` build and m3tests with LLVM 18 and the newest LLVM (and on Linux also with ex_stack; on AMD64_LINUX also everything at `-O2`). The ARM64_LINUX one first makes a bootstrap on x86; the Darwin one runs ex_stack (on by default there) and tolerates macOS-specific expected-output differences. |
+| `.github/workflows/` | Upstream CI, one workflow per platform. This fork adds `amd64_linux_llvmir.yml`, `arm64_linux_llvmir.yml` and `darwin_llvmir.yml` (called from `integration.yml`): the `LlvmIR` build and m3tests with LLVM 18 and the newest LLVM (and on Linux also with ex_stack; on AMD64_LINUX also everything at `-O2`). The ARM64_LINUX one first makes a bootstrap on x86; the Darwin one runs ex_stack (on by default there), tolerates macOS-specific expected-output differences, and also makes and tests an ARM64_DARWIN bootstrap of LLVM IR (see `README-DARWIN-LLVM-IR.md`). |
 
 ## Building and testing
 
