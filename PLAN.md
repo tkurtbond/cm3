@@ -770,8 +770,13 @@ Ordered by expected value. Each item is a separate mini-plan.
   p159 p160 p162 p201 p227 p268 p269 p270 p277 p280), the same 16 as
   upstream's C job on Ubuntu; with GCC 14 the C backend's output fails
   to compile (p053: "`SET` was not declared") or misbehaves (p137:
-  "LONGINT value check failed"). Still to do: a CI job (on
-  `ubuntu-24.04-arm`).
+  "LONGINT value check failed"). CI:
+  `.github/workflows/arm64_linux_llvmir.yml`, called from
+  `integration.yml`. There is no ARM64_LINUX bootstrap release, so one
+  job makes the bootstrap on x86 (`concierge.py make-bootstrap --target
+  ARM64_LINUX`) and the next builds it on `ubuntu-24.04-arm`, then does
+  the LlvmIR full-upgrade and m3tests with LLVM 18 and 22 (known
+  failures p047 and e041).
 - **Darwin targets** (AMD64 and ARM64).
 - **Zero-cost exceptions (`ex_stack`)** through `invoke`/`landingpad`
   with the C++ personality, interoperating with `RTStackC.c`. See

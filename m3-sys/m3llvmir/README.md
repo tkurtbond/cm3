@@ -11,8 +11,8 @@ Developers working on the back end itself: see
 
 ## Requirements and status
 
-- **Target:** AMD64_LINUX and ARM64_LINUX (ARM64 is tested by hand,
-  not yet in CI). Darwin is planned (see PLAN.md, Phase 7).
+- **Target:** AMD64_LINUX and ARM64_LINUX, both tested in CI.
+  Darwin is planned (see PLAN.md, Phase 7).
 - **LLVM:** `clang` 18 or later on `PATH`. CI tests LLVM 18 and the
   newest release. The IR uses opaque pointers throughout.
 - **Exceptions:** the default `ex_frame` model (setjmp/longjmp) works.
