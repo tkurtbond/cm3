@@ -1,0 +1,8 @@
+INTEGER and LONGINT arithmetic wraps on overflow.
+
+The C backend used to emit signed C + - * and unary minus, whose
+overflow is undefined behavior in C, so GCC folded x + 1 > x to TRUE
+even at LAST(INTEGER).  It now does signed arithmetic in the unsigned
+C type and casts back.  The LlvmIR backend emits add, sub and mul
+without nsw/nuw flags.  Every line of output should be the same with
+every backend and at every optimization level.

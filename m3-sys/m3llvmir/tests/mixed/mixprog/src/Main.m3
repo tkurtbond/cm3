@@ -100,6 +100,12 @@ PROCEDURE TestOps () =
          Fmt.Real (Ops.ToReal (Ds[k]), Fmt.Style.Sci, 6));
     END;
     P ("FIRST(INTEGER) DIV 1", I (Ops.Div (FIRST (INTEGER), 1)));
+    P ("AddGt(LAST(INTEGER))", B (Ops.AddGt (LAST (INTEGER))));
+    P ("LongAddGt(LAST(LONGINT))", B (Ops.LongAddGt (LAST (LONGINT))));
+    P ("SubLt(FIRST(INTEGER))", B (Ops.SubLt (FIRST (INTEGER))));
+    P ("MulGt(LAST(INTEGER))", B (Ops.MulGt (LAST (INTEGER))));
+    P ("NegLt(FIRST(INTEGER))", B (Ops.NegLt (FIRST (INTEGER))));
+    P ("AbsLt(FIRST(INTEGER))", B (Ops.AbsLt (FIRST (INTEGER))));
 
     P ("Extract(X,0,64)", H (Ops.Extract (X, 0, 64)));
     P ("Extract(X,60,4)", H (Ops.Extract (X, 60, 4)));

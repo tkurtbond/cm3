@@ -238,6 +238,31 @@ so they need an explicit decision, and ideally an upstream discussion
   and the speed of a few benchmarks at `-O`.
 - Effort: a day or two.
 
+Status (2026-11-18): done, except the build-time and benchmark
+comparison.
+
+- `M3C.m3`: `op2` and `op1` cast signed operands to the unsigned type
+  (`typeToUnsigned`) before `+ - *`, unary `-` (and `~ & |`, harmless),
+  and cast the result back. ABS of a signed integer uses a new helper,
+  `m3_iabs_T`, which negates through the unsigned type; REAL types keep
+  `m3_abs_T`.
+- New test `m3tests` p296 (wrapping of `+ - *`, unary `-`, ABS and INC
+  at the limits). With the C back end the old compiler fails it at `-O0`
+  and `-O` (`x + 1 > x` was TRUE; `-FIRST(INTEGER) < 0` was FALSE); the
+  new one passes.
+- `m3llvmir/tests`: mixlib's `Ops` has `AddGt`, `LongAddGt`, `SubLt`,
+  `MulGt`, `NegLt` and `AbsLt`, which mixprog runs in every C/`LlvmIR`
+  combination, and `Ops.check` checks that their `add`, `sub` and `mul`
+  carry no flags. `run-tests.sh` passes with and without `-O`.
+- m3tests with the C back end, old compiler against new, at `-O0` and
+  with `-DM3TESTS_OPTIMIZE`: the same 22 failures apart from p296, which
+  only the old compiler fails. With `LlvmIR` only p047 fails.
+- Running m3tests with C needs care: the installed `cm3.cfg` defaults to
+  `LlvmIR`, and `m3tests/src/m3makefile` passes only `LlvmIR` down to
+  each test's `cm3`, so `cm3 -DHTML -DM3_BACKEND_MODE=C` still builds
+  the tests with `LlvmIR`. A `cm3.cfg` with `M3_BACKEND_MODE = "C"`,
+  named by `M3CONFIG`, works.
+
 ### Phase 1: Decisions (written down before coding)
 
 1. Names (decided). Builtin interfaces `Word8`, `Word16`, `Word32` and

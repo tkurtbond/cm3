@@ -4652,6 +4652,7 @@ TYPE HelperFunctions_t = M3CG_DoNothing.T OBJECT
         set_le, set_lt, extract := FALSE;
         cvt_int := ARRAY ConvertOp OF BOOLEAN{FALSE, ..};
         shift, rotate, rotate_left, rotate_right, div, mod, min, max, abs,
+        iabs (* This fork *),
         insert, sign_extend, pop, check_range, xor := SET OF CGType{};
         compare := ARRAY CompareOp OF SET OF CGType{ SET OF CGType{}, .. };
     END;
@@ -4795,8 +4796,16 @@ END HelperFunctions_mod;
 
 PROCEDURE HelperFunctions_abs(self: HelperFunctions_t; type: AType) =
 CONST text = "#define m3_abs_T(T) static T __stdcall m3_abs_##T(T a) { return ((a < 0) ? (-a) : a); }";
+(* This fork: for signed integers, negate in the unsigned type, so
+   ABS(FIRST(INTEGER)) wraps to FIRST(INTEGER) instead of being
+   undefined in C. *)
+CONST itext = "#define m3_iabs_T(T) static T __stdcall m3_iabs_##T(T a) { return ((a < 0) ? ((T)-(U##T)a) : a); }";
 BEGIN
-    HelperFunctions_helper_with_type(self, "abs", type, self.data.abs, text);
+    IF cgtypeIsSignedInt[type] THEN
+        HelperFunctions_helper_with_type(self, "iabs", type, self.data.iabs, itext);
+    ELSE
+        HelperFunctions_helper_with_type(self, "abs", type, self.data.abs, text);
+    END;
 END HelperFunctions_abs;
 
 PROCEDURE HelperFunctions_max(self: HelperFunctions_t; type: ZType) =
@@ -6909,6 +6918,12 @@ BEGIN
     <* ASSERT type # CGType.Void *>
     self.comment(name);
     pop(self, 1);
+    (* This fork: Modula-3 integer arithmetic wraps, but signed overflow
+       is undefined in C, so negate a signed integer in its unsigned
+       type and cast back, as casted_shift_left does. *)
+    IF cgtypeIsSignedInt[type] THEN
+        s0 := cast(s0, typeToUnsigned[type]);
+    END;
     push(self, type, cast(NEW(Expr_t, left := s0, c_unop_text := op), type));
 END op1;
 
@@ -6943,6 +6958,14 @@ BEGIN
     <* ASSERT type # CGType.Void *>
     self.comment(name);
     pop(self, 2);
+    (* This fork: Modula-3 integer arithmetic wraps, but signed overflow
+       is undefined in C (GCC folds x + 1 > x to TRUE), so do signed
+       + - * in the unsigned type and cast back, as casted_shift_left
+       does. *)
+    IF cgtypeIsSignedInt[type] THEN
+        s0 := cast(s0, typeToUnsigned[type]);
+        s1 := cast(s1, typeToUnsigned[type]);
+    END;
     expr := NEW(Expr_t, left := s1, right := s0, c_binop_text := op);
     expr := cast(expr, type);
     expr.minmax_valid := minMaxPossiblyValidForType[type];
@@ -7046,7 +7069,9 @@ BEGIN
       self.comment("abs");
     END;
     pop(self);
-    push(self, type, CTextToExpr("m3_abs_" & cgtypeToText[type] & "(\n " & s0.CText() & ")"));
+    push(self, type, CTextToExpr(
+        ARRAY BOOLEAN OF TEXT{"m3_abs_", "m3_iabs_"}[cgtypeIsSignedInt[type]] (* This fork *)
+        & cgtypeToText[type] & "(\n " & s0.CText() & ")"));
 END abs;
 
 PROCEDURE max(self: T; type: ZType) =

@@ -64,6 +64,15 @@ PROCEDURE Round (x: LONGREAL): INTEGER;
 PROCEDURE Trunc (x: LONGREAL): INTEGER;
 PROCEDURE RealMod (x, y: REAL): REAL;
 PROCEDURE ToReal (i: INTEGER): REAL;
+
+(* INTEGER and LONGINT arithmetic wraps on overflow, with no undefined
+   behavior for the C compiler or LLVM to exploit. *)
+PROCEDURE AddGt (x: INTEGER): BOOLEAN;    (* x + 1 > x *)
+PROCEDURE LongAddGt (x: LONGINT): BOOLEAN; (* x + 1L > x *)
+PROCEDURE SubLt (x: INTEGER): BOOLEAN;    (* x - 1 < x *)
+PROCEDURE MulGt (x: INTEGER): BOOLEAN;    (* x * 2 > x *)
+PROCEDURE NegLt (x: INTEGER): BOOLEAN;    (* -x < 0 *)
+PROCEDURE AbsLt (x: INTEGER): BOOLEAN;    (* ABS (x) < 0 *)
 PROCEDURE Abs (i: INTEGER): INTEGER;
 PROCEDURE Min (a, b: INTEGER): INTEGER;
 PROCEDURE Max (a, b: Word.T): Word.T;
