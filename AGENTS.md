@@ -127,13 +127,21 @@ and installs into the prefix of the `cm3` it finds on `PATH`.
 - Run the compiler tests: `cd m3-sys/m3tests && cm3 -DHTML` (writes
   `m3tests-results.xml`). They take a while; prefer running a subset
   while iterating. The C-backend baseline is in
-  `LLVM-IR-backend-docs/m3tests-baseline-c.md`. Add `-DM3_BACKEND_MODE=LlvmIR`
-  to build every test with this fork's backend (292 of 293 pass, as
-  with C; see Phases 2 to 6 in `PLAN.md`), and `-DM3TESTS_OPTIMIZE` to build
-  each test with `cm3 -O`.
+  `LLVM-IR-backend-docs/m3tests-baseline-c.md`. The tests use the
+  backend mode of the run, which defaults to the installed `cm3.cfg`'s;
+  add `-DM3_BACKEND_MODE=C` or `-DM3_BACKEND_MODE=LlvmIR` to choose
+  (with `LlvmIR` 292 of 293 pass, see Phases 2 to 6 in `PLAN.md`; C's
+  failures with GCC 16 are explained in the baseline), and
+  `-DM3TESTS_OPTIMIZE` to build each test with `cm3 -O`. Each test is
+  built by the `cm3` on `PATH`, so install a changed compiler first.
 - Rebuild the compiler after changing `m3front`, `m3middle`, `m3back`,
-  `m3llvmir`, or `cm3`: `scripts/concierge.py upgrade` (or build and ship the
-  packages in dependency order, then rebuild `cm3`).
+  `m3llvmir`, or `cm3`: `scripts/concierge.py upgrade` rebuilds and
+  installs everything. For a quicker loop, build and ship the changed
+  packages in dependency order (`cm3 && cm3 -ship`), build `m3-sys/cm3`,
+  then run `scripts/concierge.py ship-compiler`. **`cm3 -ship` in
+  `m3-sys/cm3` does not update `bin/cm3`** (it installs only under
+  `pkg/`, so shipping never replaces the running compiler);
+  `ship-compiler` copies the built driver into `bin/`.
 
 Toolchain on the development machine: Fedora, x86_64, clang/LLVM 22
 (`clang`, `llc`, `opt`, `llvm-as` in `/usr/bin`), GCC 16, CMake,

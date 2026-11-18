@@ -145,11 +145,13 @@ options, and most commands accept a package selection.
 
 The available commands are
 
-COMMAND = install [INSTALL_OPTIONS] | upgrade | full-upgrade | make-bootstrap | make-dist
+COMMAND = install [INSTALL_OPTIONS] | upgrade | full-upgrade | ship-compiler | make-bootstrap | make-dist
 
   * install :: install a new system from a distribution
   * upgrade :: upgrade the compiler
   * full-upgrade :: upgrade the compiler and all libraries
+  * ship-compiler :: copy the cm3 already built in m3-sys/cm3 to the
+    installation's bin directory, building nothing
   * make-bootstrap :: prepare a bootsrap compiler
   * make-dist :: prepare a distribution
 
@@ -1749,6 +1751,23 @@ class FullUpgradeCommand(UpgradeCommand):
         return pkgs
 
 
+class ShipCompilerCommand(UpgradeCommand):
+    """This fork: install the cm3 already built in m3-sys/cm3.
+
+    "cm3 -ship" in m3-sys/cm3 installs the driver only under pkg/,
+    because its m3makefile uses program(), not Program(), so that
+    shipping never overwrites the running compiler.  upgrade copies it
+    to bin/ after rebuilding the compiler from clean; this command does
+    just the copy, for after a hand rebuild of m3-sys/cm3."""
+
+    def execute(self):
+        cm3 = self.build("m3-sys/cm3") / "cm3"
+        if not cm3.is_file() and not cm3.with_suffix(".exe").is_file():
+            raise FatalError(f"no compiler to ship: {cm3} does not exist; "
+                             "build m3-sys/cm3 first")
+        self._ship_front()
+
+
 class InstallCommand(ConciergeCommand):
     "Bootstrap followed by full upgrade"
 
@@ -2162,6 +2181,7 @@ class Concierge:
             "install":        InstallCommand,
             "make-bootstrap": MakeBootstrapCommand,
             "make-dist":      MakeDistributionCommand,
+            "ship-compiler":  ShipCompilerCommand,  # This fork
             "upgrade":        UpgradeCommand
         }
 
