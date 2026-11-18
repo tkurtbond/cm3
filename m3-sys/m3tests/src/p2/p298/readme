@@ -1,0 +1,11 @@
+The unsigned fixed-width integer types Word8.T, Word16.T, Word32.T
+and Word64.T (this fork; see
+LLVM-IR-backend-docs/fixed-width-integer-types-plan.md).
+
+Arithmetic wraps modulo 2^N, comparisons and DIV/MOD are unsigned, and
+FOR loops may run up to LAST of the type and down to 0.  Constant
+folding must agree with run-time arithmetic.  Also: subranges of a
+fixed type, packed fields, arrays indexed and sets based on a fixed
+type, CASE, objects, open arrays and VAR parameters.  Every line of
+output should be the same with every backend and at every optimization
+level.

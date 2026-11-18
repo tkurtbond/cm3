@@ -9,6 +9,7 @@
 MODULE DivExpr;
 
 IMPORT CG, Expr, ExprRep, Type, Int, LInt, IntegerExpr, TInt, Target;
+IMPORT FixedType; (* This fork *)
 IMPORT TargetMap;
 
 TYPE
@@ -68,6 +69,8 @@ PROCEDURE Check (p: P;  VAR cs: Expr.CheckState) =
       p.type := Int.T;
     ELSIF (ta = LInt.T) AND (tb = LInt.T) THEN
       p.type := LInt.T;
+    ELSIF FixedType.Is (ta) AND (ta = tb) THEN (* This fork: unsigned *)
+      p.type := ta;
     ELSE
       p.type := Expr.BadOperands ("DIV", ta, tb);
     END;
@@ -100,7 +103,8 @@ PROCEDURE Compile (p: P; StaticOnly: BOOLEAN) =
       ELSE
         Expr.Compile (e1);
         cg_type := Type.CGType (p.type);
-        CG.Extract_mn (cg_type, TRUE, log, TargetMap.CG_Size[cg_type] - log);
+        CG.Extract_mn (cg_type, NOT FixedType.Is (p.type) (* This fork *),
+                       log, TargetMap.CG_Size[cg_type] - log);
       END;
     ELSE
       IF (e1 = NIL) THEN e1 := p.a; END;

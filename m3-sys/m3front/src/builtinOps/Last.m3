@@ -9,6 +9,7 @@
 MODULE Last;
 
 IMPORT CG, CallExpr, Expr, Type, Procedure, First, ArrayType;
+IMPORT FixedType; (* This fork *)
 IMPORT TypeExpr, IntegerExpr, EnumExpr, Int, LInt, ArrayExpr;
 IMPORT Reel, LReel, EReel, ReelExpr, Target, TInt;
 
@@ -48,10 +49,7 @@ PROCEDURE Compile (ce: CallExpr.T) =
       CG.Load_integer (Target.Integer.cg_type, TInt.One);
       CG.Subtract (Target.Integer.cg_type);
     ELSIF Type.GetBounds (t, min, max) THEN (* ordinal type *)
-      IF Type.IsSubtype (t, LInt.T)
-        THEN CG.Load_integer (Target.Longint.cg_type, max);
-        ELSE CG.Load_integer (Target.Integer.cg_type, max);
-      END;
+      CG.Load_integer (FixedType.OrdStackType (t), max); (* This fork *)
     ELSIF Type.IsEqual (t, Reel.T, NIL) THEN
       CG.Load_float (Target.Real.max);
     ELSIF Type.IsEqual (t, LReel.T, NIL) THEN
@@ -91,6 +89,7 @@ PROCEDURE LastOfType (t: Type.T): Expr.T =
     t_base:= Type.Base (t);
     IF Type.GetBounds (t, min, max) THEN
       IF t_base = Int.T OR t_base = LInt.T
+        OR FixedType.Is (t_base) (* This fork *)
         THEN RETURN IntegerExpr.New (t_base, max);
         ELSE RETURN EnumExpr.New (t, max);
       END;

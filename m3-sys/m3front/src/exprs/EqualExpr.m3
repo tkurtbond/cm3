@@ -111,7 +111,8 @@ PROCEDURE Classify (ta, tb: Type.T): Kind =
       Type.Class.Object,
       Type.Class.Opaque,
       Type.Class.Ref,
-      Type.Class.Subrange =>
+      Type.Class.Subrange,
+      Type.Class.Fixed (* This fork *) =>
           RETURN Kind.SimpleScalar;
     | Type.Class.Set =>
           IF (ia.size <= Target.Integer.size) THEN

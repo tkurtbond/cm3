@@ -13,6 +13,7 @@ module ("Charr")
 module ("Card")
 module ("EReel")
 module ("ErrType")
+module ("FixedType") % This fork: Word8.T .. Word64.T
 module ("Int")
 module ("LCard")
 module ("LInt")

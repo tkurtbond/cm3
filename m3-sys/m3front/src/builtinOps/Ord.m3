@@ -9,6 +9,7 @@
 MODULE Ord;
 
 IMPORT CallExpr, Expr, ExprRep, Type, Procedure, Int, LInt, Error;
+IMPORT FixedType; (* This fork *)
 IMPORT IntegerExpr, EnumExpr, Target;
 
 VAR Z: CallExpr.MethodList;
@@ -16,7 +17,8 @@ VAR Z: CallExpr.MethodList;
 PROCEDURE TypeOf (ce: CallExpr.T): Type.T =
   VAR t := Expr.TypeOf (ce.args[0]);
   BEGIN
-    IF Type.IsSubtype (t, LInt.T)
+    IF FixedType.Is (t) THEN RETURN Type.Base (t) (* This fork *)
+    ELSIF Type.IsSubtype (t, LInt.T)
       THEN RETURN LInt.T
       ELSE RETURN Int.T;
     END;
@@ -29,7 +31,8 @@ PROCEDURE Check (ce: CallExpr.T;  <*UNUSED*> VAR cs: Expr.CheckState) =
     IF NOT Type.IsOrdinal (t) THEN
       Error.Msg ("ORD: argument must be an ordinal");
     END;
-    IF Type.IsSubtype (t, LInt.T)
+    IF FixedType.Is (t) THEN ce.type := Type.Base (t); (* This fork *)
+    ELSIF Type.IsSubtype (t, LInt.T)
       THEN ce.type := LInt.T;
       ELSE ce.type := Int.T;
     END;

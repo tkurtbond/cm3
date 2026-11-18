@@ -110,7 +110,7 @@ PROCEDURE CheckStaticRTErrExec
     ELSE
       CASE lhsTypeClass OF
       | Type.Class.Enum, Type.Class.Subrange, Type.Class.Integer,
-        Type.Class.Longint =>
+        Type.Class.Longint, Type.Class.Fixed (* This fork *) =>
         CheckOrdinal (tlhs, rhsExpr, (*OUT*)Code, (*OUT*)Msg, IsError);
       | Type.Class.Ref, Type.Class.Object, Type.Class.Opaque =>
         CheckReference (tlhs, trhs, lhs_type_info);
@@ -348,7 +348,7 @@ PROCEDURE DoEmit
     EVAL Expr.CheckUseFailure (rhsExpr);
     CASE lhsRepBaseTypeInfo.class OF
     | Type.Class.Integer, Type.Class.Longint, Type.Class.Subrange,
-      Type.Class.Enum =>
+      Type.Class.Enum, Type.Class.Fixed (* This fork *) =>
         AssignOrdinal (lhsRepType, rhsExpr, lhsRepTypeInfo);
     | Type.Class.Real, Type.Class.Longreal, Type.Class.Extended =>
         AssignFloat (rhsExpr, lhsRepTypeInfo);
@@ -649,7 +649,7 @@ PROCEDURE EmitRTCheck (tlhs: Type.T;  rhsExpr: Expr.T) =
     t_lhs_base := Type.CheckInfo (t_lhs_base, t_lhs_base_info);
     CASE t_lhs_base_info.class OF
     | Type.Class.Integer, Type.Class.Longint, Type.Class.Subrange,
-      Type.Class.Enum =>
+      Type.Class.Enum, Type.Class.Fixed (* This fork *) =>
         RTCheckOrdinal (tlhs, rhsExpr);
     | Type.Class.Real, Type.Class.Longreal, Type.Class.Extended =>
         RTCheckFloat (rhsExpr);

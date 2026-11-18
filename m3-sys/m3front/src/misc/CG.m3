@@ -2682,6 +2682,14 @@ PROCEDURE Load_integer (t: IType;  READONLY tintVal: Target.Int) =
     WITH x = stack[SCheck(1,"Load_integer")] DO
       x.kind := VKind.Integer;
       x.int  := tintVal;
+      IF x.type # t THEN
+        (* This fork: SPush gave the constant a signed stack type, so
+           give it the signed value with the same bits.  Only an unsigned
+           fixed-width constant above the signed maximum, such as
+           LAST (Word64.T), changes; M3C rejects it unchanged. *)
+        EVAL TInt.Extend (tintVal, TargetMap.CG_Size [x.type] DIV Target.Byte,
+                          x.int);
+      END;
       x.base_value_align := AlignOfTInt (tintVal);
       x.addr_align := x.base_value_align;
     END;

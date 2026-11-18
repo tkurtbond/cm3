@@ -14,4 +14,8 @@ PROCEDURE Initialize ();
 
 PROCEDURE DoCheck (name: TEXT;  ce: CallExpr.T;  VAR cs: Expr.CheckState);
 
+PROCEDURE CompileFixed (ce: CallExpr.T;  up: BOOLEAN): BOOLEAN;
+(* This fork: if the variable of INC (up) or DEC (NOT up) is of a fixed
+   type, or a subrange of one, compile the call and return TRUE. *)
+
 END Dec.

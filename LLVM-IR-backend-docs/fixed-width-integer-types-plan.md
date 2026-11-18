@@ -448,8 +448,10 @@ is deliberately left open until Phase 4.
   finds about 28).
 - `builtinTypes/FixedType.m3`: size, alignment, `mem_type`
   (`Word8` to `Word64`), `stk_type` (`Word32` for 8 to 32 bits,
-  `Word64` for 64), fingerprint, `TipeMap` (`Word_1` to `Word_8`
-  exist), type description per Phase 1.
+  `Word64` for 64; as built, `Target.Word`'s type for widths up to
+  the word size, so `Word64` for all four on 64-bit targets),
+  fingerprint, `TipeMap` (`Word_1` to `Word_8` exist), type
+  description per Phase 1.
 - Operators in `exprs/`: `AddExpr`, `SubtractExpr`, `MultiplyExpr`,
   `DivExpr`, `ModExpr`, `NegateExpr`, `CompareExpr`, `EqualExpr`. Both
   operands must be the same fixed type. Code: emit the M3CG operation
@@ -471,6 +473,69 @@ is deliberately left open until Phase 4.
   that `Word64.Wrap (16_FFFFFFFFFFFFFFFFL) = LAST (Word64.T)`.
 
 To find every place: `grep -rn "LInt\.T\|Class\.Longint" m3-sys/m3front/src`.
+
+Status (2026-11-18): done, uncommitted at the time of writing. How it
+was built, and where it departs from the bullets above:
+
+- **Representation.** `Type.Class.Fixed` and `builtinTypes/FixedType`,
+  one object per width. Values sit on the M3CG stack in the word type
+  (`stk_type` above). After `+`, `-`, `*`, unary `-`, `INC` and `DEC`,
+  `FixedType.Mask` ANDs the result down to the type's width when the
+  width is less than the stack type's. DIV, MOD and comparisons need
+  no mask: their operands are already in range and the stack type is
+  unsigned. The back ends see each type as a subrange of INTEGER or
+  LONGINT with its own UID (`FixedType.Compiler`), so neither back
+  end changed.
+- **Interfaces and linking.** `Word8` to `Word64` are builtin
+  interfaces made by the front end (`FixedType.InitializeInterfaces`),
+  each exporting only `T` and `Size` for now. No unit in `m3core`
+  implements them, so the front end records no version stamps for
+  them (`FixedType.IsInterface`, checked in `Module`, `Value` and
+  `External`), and `Type.Compile` doesn't note the types. For Phase 3
+  this means a choice: either every new procedure is an inline builtin
+  that can't be used as a procedure value, or `m3core` gets real
+  units and the stamps come back, as for `Word`. Decided
+  (2026-11-18): real units in `m3core`.
+- **Constant folding** uses `TWord` and then `FixedType.Wrap`, so
+  `VAL (200, Word8.T) + VAL (100, Word8.T)` folds to 44, the same as
+  the run-time sum.
+- **`ORD`** returns the fixed type (decision 2), so
+  `Fmt.Int (ORD (w))` is a static error; write `VAL (w, INTEGER)`.
+- **`INC`, `DEC` and `FOR`** take a step of the same fixed type or an
+  INTEGER (decision 8). A `FOR` over a fixed type has its own loop
+  shape (`ForStmt.CompileFixed`): it tests for the last value before
+  stepping, so a loop up to `LAST (T)` or down to `FIRST (T)` ends
+  without wrapping around.
+- **Mixing** fixed types with each other, with INTEGER or with LONGINT
+  is a static error in assignment, arithmetic, comparison, `MIN`,
+  `MAX`, `INC`, `DEC` and `FOR` bounds. `ABS` rejects a fixed type.
+- **Two front-end fixes the new types needed.**
+  - `CG.Load_integer`: the CG's lazy stack gives every integer
+    constant a signed type, so a `Word64` constant above `2^63 - 1`
+    (`LAST (Word64.T)`) reached the C back end as an out-of-range
+    `Int64` and failed its `readonly_i = i` assertion. The constant
+    is now converted to the signed value with the same bits when its
+    type changes.
+  - `SubscriptExpr`: an array indexed by a fixed subrange that
+    doesn't start at 0 subtracts the lower bound in the fixed type,
+    and its range check, since the subtraction wraps, is one unsigned
+    comparison of the biased index against the array's last index.
+- **Not done.** No compile-time warning for a constant out of range
+  in `VAL`, as decision 7 allowed: `VAL (300, Word8.T)` fails only at
+  run time, like `VAL (300, [0..255])` upstream.
+- **A difference between back ends, not new.** Division by zero gives
+  0 with C and SIGFPE with `LlvmIR`, for `Word64.T` as for
+  `Word.Divide (1, 0)` upstream. No test depends on it.
+- **Tests.** `p298` covers wrapping at each width, constant folding,
+  unsigned DIV, MOD and comparisons above `2^63`, `INC`/`DEC`,
+  `FOR` loops to `LAST` and down to 0 with constant, variable and
+  run-time negative steps, subranges, packed fields, objects, arrays
+  indexed by fixed types and their subranges, open arrays, sets and
+  `CASE`. Its output is identical with C and `LlvmIR`, at `-O0` and
+  `-O`. `e042` checks 21 static errors from mixing types. `r006`
+  checks that `VAL` of a LONGINT `-1` to `Word64.T` fails at run time
+  (`16_FFFFFFFFFFFFFFFFL` is that same LONGINT `-1`). The
+  `Word64.Wrap` test waits for Phase 3.
 
 ### Phase 3: Builtin `Word8` to `Word64` interfaces
 

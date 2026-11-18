@@ -10,6 +10,7 @@ MODULE Value EXPORTS Value, ValueRep;
 
 IMPORT M3, M3ID, Type, Expr, Error, M3Buf, Scope, M3FP, CG;
 IMPORT Scanner, Host, ErrType, TypeFP, Procedure;
+IMPORT FixedType; (* This fork *)
 
 CONST NOT_CHECKED = -1;
 CONST CHECKED     = 0;
@@ -211,7 +212,9 @@ PROCEDURE Declare (t: T) =
     IF (NOT t.used) AND (t.imported) THEN RETURN END;
     t.declared := TRUE;
     GetVSFlags (t, f);
-    IF t.declare () AND (Host.versionStamps) AND (f.need_vs) THEN
+    IF t.declare () AND (Host.versionStamps) AND (f.need_vs)
+      AND NOT FixedType.IsInterface (Scope.ModuleName (t)) (* This fork *)
+    THEN
       fp := ToFP (t);
       Host.env.note_version_stamp (Scope.ModuleName (t), t.name,
                                    fp, f.imported, f.implemented);

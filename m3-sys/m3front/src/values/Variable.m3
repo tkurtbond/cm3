@@ -16,6 +16,7 @@ IMPORT Target, TInt, Token, Ident, Module, CallExpr;
 IMPORT Decl, Null, Int, LInt, Fmt, Procedure, Tracer;
 IMPORT Expr, IntegerExpr, ArrayExpr, TextExpr, NamedExpr;
 IMPORT Type, OpenArrayType, ErrType, TipeMap;
+IMPORT FixedType; (* This fork *)
 IMPORT RTIO, RTParams;
 FROM Scanner IMPORT GetToken, Match, cur;
 
@@ -383,6 +384,8 @@ PROCEDURE Check (t: T;  VAR cs: Value.CheckState) =
         (* synthesize an initialization expression *)
         IF Type.IsSubtype (type, LInt.T)
         THEN t.initExpr := IntegerExpr.New (LInt.T, min);
+        ELSIF FixedType.Is (type) (* This fork *)
+        THEN t.initExpr := IntegerExpr.New (Type.Base (type), min);
         ELSE t.initExpr := IntegerExpr.New (Int.T, min);
         END;
       END;

@@ -86,7 +86,8 @@ TYPE
 
 VAR (* CONST *)
   n_builtins : CARDINAL := 0;
-  builtins   : ARRAY [0..10] OF RECORD name: M3ID.T;  t: T;  END;
+  builtins   : ARRAY [0..31] OF RECORD name: M3ID.T;  t: T;  END;
+  (* This fork: was [0..10], which the interfaces Word8 .. Word64 overflow *)
 
 VAR
   curModule   : T := NIL;

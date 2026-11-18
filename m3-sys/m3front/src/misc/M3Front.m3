@@ -17,6 +17,7 @@ IMPORT ESet, CG, TextWr, Target, ProcBody, RunTyme, M3ID, Variable;
 IMPORT Text;
 IMPORT AtomicAddrModule, AtomicBoolModule, AtomicCharrModule, AtomicIntModule;
 IMPORT AtomicLIntModule, AtomicReffModule, AtomicWCharrModule;
+IMPORT FixedType; (* This fork *)
 
 VAR mu         : MUTEX    := NEW (MUTEX);
 VAR builtins   : Module.T := NIL;
@@ -122,6 +123,9 @@ PROCEDURE Initialize () =
     Scanner.Push ("Compiler.i3", NIL, is_main := Host.emitBuiltins);
       InfoModule.Initialize ();
     Scanner.Pop ();
+
+    (* This fork: the interfaces Word8 .. Word64 *)
+    FixedType.InitializeInterfaces ();
   END Initialize;
 
 PROCEDURE Reset () =

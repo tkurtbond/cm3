@@ -9,6 +9,7 @@
 MODULE MultiplyExpr;
 
 IMPORT CG, Expr, ExprRep, Type, Int, LInt, Reel, EReel, Target;
+IMPORT FixedType; (* This fork *)
 IMPORT SetExpr, IntegerExpr, ReelExpr, LReel, SetType, ErrType;
 
 CONST
@@ -18,6 +19,7 @@ CONST
   cLONG  = 3;
   cEXTND = 4;
   cSET   = 5;
+  cFIXED = 6; (* This fork *)
 
 CONST
   CGType = ARRAY [cREAL..cEXTND] OF CG.Type {
@@ -81,6 +83,8 @@ PROCEDURE Check (p: P;  VAR cs: Expr.CheckState) =
       p.class := cINT;
     ELSIF (tb = LInt.T)  AND (ta = LInt.T)  THEN
       p.class := cLINT;
+    ELSIF FixedType.Is (ta) AND (ta = tb) THEN (* This fork *)
+      p.class := cFIXED;
     ELSIF (tb = Reel.T)  AND (ta = Reel.T)  THEN
       p.class := cREAL;
     ELSIF (tb = LReel.T) AND (ta = LReel.T) THEN
@@ -131,6 +135,15 @@ PROCEDURE Compile (p: P; StaticOnly: BOOLEAN) =
       Expr.Compile (p.a);
       Expr.Compile (p.b);
       CG.Multiply (Target.Longint.cg_type);
+    ELSIF (p.class = cFIXED) THEN (* This fork: wrap *)
+      VAR fixed: FixedType.Info;  b := FixedType.Split (p.type, fixed);
+      BEGIN
+        <*ASSERT b*>
+        Expr.Compile (p.a);
+        Expr.Compile (p.b);
+        CG.Multiply (FixedType.StackType (fixed));
+        FixedType.Mask (fixed);
+      END;
     ELSIF (p.class # cSET) THEN
       Expr.Compile (p.a);
       Expr.Compile (p.b);

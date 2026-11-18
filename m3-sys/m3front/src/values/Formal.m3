@@ -682,7 +682,7 @@ PROCEDURE EmitArg (proc: Expr.T;  formalVal: Value.T; actExpr: Expr.T) =
     | Type.Class.Named, Type.Class.Packed
         => <*ASSERT FALSE*>
     | Type.Class.Integer, Type.Class.Enum, Type.Class.Subrange,
-      Type.Class.Longint
+      Type.Class.Longint, Type.Class.Fixed (* This fork *)
         => GenOrdinal (form, actExpr);
     | Type.Class.Real, Type.Class.Longreal, Type.Class.Extended
         => GenFloat (form, actExpr);

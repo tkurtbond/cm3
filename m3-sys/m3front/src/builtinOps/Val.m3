@@ -10,6 +10,7 @@ MODULE Val;
 
 IMPORT CallExpr, Expr, ExprRep, Type, Procedure, Error, TypeExpr, Int, LInt;
 IMPORT IntegerExpr, EnumExpr, EnumType, CheckExpr, Target, TInt, CG;
+IMPORT FixedType; (* This fork *)
 
 VAR Z: CallExpr.MethodList;
 
@@ -30,6 +31,8 @@ PROCEDURE Check (ce: CallExpr.T;  VAR cs: Expr.CheckState) =
       t := LInt.T;
     ELSIF Type.IsSubtype (u, Int.T) THEN
       t := Int.T
+    ELSIF FixedType.Is (u) THEN (* This fork *)
+      t := Type.Base (u);
     ELSE
       Error.Msg ("VAL: first argument must be an integer");
     END;
@@ -74,16 +77,11 @@ PROCEDURE Compile (ce: CallExpr.T) =
     u := Expr.TypeOf (ce.args[0]);
     IF TypeExpr.Split (ce.args[1], t) THEN Type.Compile (t) END;
     Expr.Compile (ce.args[0]);
-    IF Type.IsSubtype (t, LInt.T) THEN
-      (* definitely not an enumeration *)
-      IF Type.IsSubtype (u, Int.T) THEN
-        CG.Loophole (Target.Integer.cg_type, Target.Longint.cg_type);
-      END;
-    ELSE
-      (* base type Int.T or enumeration *)
-      IF Type.IsSubtype (u, LInt.T) THEN
-        CG.Loophole (Target.Longint.cg_type, Target.Integer.cg_type);
-      END;
+    (* This fork: convert between the stack types of INTEGER, LONGINT
+       and the fixed types.  Check has ensured that the value fits. *)
+    WITH from = FixedType.OrdStackType (u),
+         to   = FixedType.OrdStackType (t) DO
+      IF from # to THEN CG.Loophole (from, to) END;
     END;
   END Compile;
 

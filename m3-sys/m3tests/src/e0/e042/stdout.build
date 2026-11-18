@@ -1,0 +1,23 @@
+"../Main.m3", line 10: Types are not assignable in assignment (2.3.1).
+"../Main.m3", line 11: Types are not assignable in assignment (2.3.1).
+"../Main.m3", line 12: Types are not assignable in assignment (2.3.1).
+"../Main.m3", line 13: Types are not assignable in assignment (2.3.1).
+"../Main.m3", line 14: Types are not assignable in assignment (2.3.1).
+"../Main.m3", line 15: Types are not assignable in assignment (2.3.1).
+"../Main.m3", line 16: illegal operand(s) for '+'
+"../Main.m3", line 17: illegal operand(s) for '+'
+"../Main.m3", line 18: illegal operand(s) for '+'
+"../Main.m3", line 19: illegal operand(s) for '*'
+"../Main.m3", line 20: illegal operand(s) for DIV
+"../Main.m3", line 21: illegal operand(s) for MOD
+"../Main.m3", line 22: illegal operand(s) for '/'
+"../Main.m3", line 23: ABS: wrong argument type
+"../Main.m3", line 24: incompatible argument types: MIN
+"../Main.m3", line 25: illegal operand(s) for '<'
+"../Main.m3", line 26: illegal operand(s) for '='
+"../Main.m3", line 27: second argument must be of the first argument's base type or an INTEGER: INC
+"../Main.m3", line 28: second argument must be of the first argument's base type or an INTEGER: INC
+"../Main.m3", line 29: second argument must be an INTEGER: INC
+"../Main.m3", line 30: 'from' and 'to' expressions must be compatible ordinals
+21 errors encountered
+Fatal Error: package build failed

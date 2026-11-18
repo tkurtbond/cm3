@@ -9,11 +9,13 @@
 MODULE SubtractExpr;
 
 IMPORT CG, Expr, ExprRep, Type, Error, LInt, Int, Reel, EnumType;
+IMPORT FixedType; (* This fork *)
 IMPORT SetType, Addr, Module, AddressExpr, Target, EnumExpr;
 IMPORT IntegerExpr, ReelExpr, SetExpr, LReel, EReel, TInt, ErrType;
 
 TYPE
-  Class = { cINT, cLINT, cREAL, cLONG, cEXTND, cADDR, cSET, cENUM };
+  Class = { cINT, cLINT, cREAL, cLONG, cEXTND, cADDR, cSET, cENUM,
+            cFIXED (* This fork *) };
 
 CONST
   FPType = ARRAY [Class.cREAL .. Class.cEXTND] OF CG.Type {
@@ -96,6 +98,8 @@ PROCEDURE Check (p: P;  VAR cs: Expr.CheckState) =
       p.class := Class.cINT;
     ELSIF (ta = LInt.T)  AND (tb = LInt.T)  THEN
       p.class := Class.cLINT;
+    ELSIF FixedType.Is (ta) AND (ta = tb) THEN (* This fork *)
+      p.class := Class.cFIXED;
     ELSIF (ta = Reel.T)  AND (tb = Reel.T)  THEN
       p.class := Class.cREAL;
     ELSIF (ta = LReel.T) AND (tb = LReel.T) THEN
@@ -162,6 +166,15 @@ PROCEDURE Compile (p: P; StaticOnly: BOOLEAN) =
         Expr.Compile (p.a);
         Expr.Compile (p.b);
         CG.Subtract (Target.Longint.cg_type);
+    | Class.cFIXED => (* This fork: wrap *)
+        VAR fixed: FixedType.Info;  b := FixedType.Split (p.type, fixed);
+        BEGIN
+          <*ASSERT b*>
+          Expr.Compile (p.a);
+          Expr.Compile (p.b);
+          CG.Subtract (FixedType.StackType (fixed));
+          FixedType.Mask (fixed);
+        END;
     | Class.cREAL, Class.cLONG, Class.cEXTND =>
         Expr.Compile (p.a);
         Expr.Compile (p.b);

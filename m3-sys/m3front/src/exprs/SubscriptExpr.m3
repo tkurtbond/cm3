@@ -12,6 +12,7 @@ IMPORT CG, Expr, ExprRep, ArrayType, Error, Type, Int, LInt;
 IMPORT ArrayExpr, OpenArrayType, Host, EnumExpr;
 IMPORT CheckExpr, SubtractExpr, IntegerExpr, ErrType;
 IMPORT RefType, DerefExpr, Target, TInt, M3RT, RunTyme;
+IMPORT FixedType; (* This fork *)
 
 TYPE
   P = ExprRep.Tab BRANDED "SubscriptExpr.P" OBJECT
@@ -113,7 +114,19 @@ PROCEDURE GenRangeCheck
   VAR z: Target.Int;
   VAR b: BOOLEAN; 
   BEGIN
-    IF TInt.LT (minb, mini) AND TInt.LT (maxi, maxb) THEN
+    IF TInt.LT (minb, mini) AND FixedType.Is (Expr.TypeOf (p.b)) THEN
+      (* This fork: biasing a fixed-width subscript wraps, so a subscript
+         below the index type becomes one above it. *)
+      IF TInt.LT (maxb, mini) THEN
+        Error.Warn (2, "Will raise runtime error if executed: "
+          & "subscript is below array index type.");
+      END;
+      b := TInt.Subtract (maxi, mini, z);  <*ASSERT b *>
+      p.biased_b := CheckExpr.New (p.biased_b, TInt.Zero, z,
+                                   CG.RuntimeError.SubscriptOutOfRange);
+      p.biased_b.origin := p.origin;
+      Expr.TypeCheck (p.biased_b, cs);
+    ELSIF TInt.LT (minb, mini) AND TInt.LT (maxi, maxb) THEN
       b := TInt.Subtract (maxi, mini, z);  <*ASSERT b *>
       p.biased_b := CheckExpr.New (p.biased_b, TInt.Zero, z,
                                    CG.RuntimeError.SubscriptOutOfRange);
@@ -250,9 +263,12 @@ PROCEDURE DirectCheckPass2 (p: P; VAR cs: Expr.CheckState; ssDepth: INTEGER) =
     ELSIF Type.IsSubtype (tb, Type.Base (ti)) THEN
       (* the index value's type has a common base type with the index type *)
       IF NOT TInt.EQ (mini, TInt.Zero) THEN
-        IF Type.IsSubtype (tb, LInt.T)
-          THEN ti := LInt.T;
-          ELSE ti := Int.T;
+        IF Type.IsSubtype (tb, LInt.T) THEN
+          ti := LInt.T;
+        ELSIF FixedType.Is (tb) THEN  (* This fork *)
+          ti := Type.Base (tb);
+        ELSE
+          ti := Int.T;
         END;
         p.biased_b :=
             SubtractExpr.New (p.b, IntegerExpr.New (ti, mini), TRUE);

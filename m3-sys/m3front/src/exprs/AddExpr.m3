@@ -9,11 +9,13 @@
 MODULE AddExpr;
 
 IMPORT CG, Expr, ExprRep, Type, Int, LInt, Reel, LReel, EReel;
+IMPORT FixedType; (* This fork *)
 IMPORT SetType, Addr, Module, Error, Target, ErrType, TInt;
 IMPORT AddressExpr, SetExpr, IntegerExpr, ReelExpr;
 
 TYPE
-  Class = { cINT, cLINT, cREAL, cLONG, cEXTND, cADDR, cSET };
+  Class = { cINT, cLINT, cREAL, cLONG, cEXTND, cADDR, cSET,
+            cFIXED (* This fork *) };
 
 CONST
   FPType = ARRAY [Class.cREAL .. Class.cEXTND] OF CG.AType {
@@ -86,6 +88,8 @@ PROCEDURE Check (p: P;  VAR cs: Expr.CheckState) =
       p.class := Class.cINT;
     ELSIF (ta = LInt.T)  AND (tb = LInt.T) THEN
       p.class := Class.cLINT
+    ELSIF FixedType.Is (ta) AND (ta = tb) THEN (* This fork *)
+      p.class := Class.cFIXED;
     ELSIF (ta = Reel.T)  AND (tb = Reel.T)  THEN
       p.class := Class.cREAL;
     ELSIF (ta = LReel.T) AND (tb = LReel.T) THEN
@@ -156,12 +160,24 @@ PROCEDURE Compile (p: P; StaticOnly: BOOLEAN) =
         Expr.Compile (p.a);
         Expr.Compile (p.b);
         CG.Add (Target.Longint.cg_type);
+    | Class.cFIXED => (* This fork: wrap *)
+        CompileFixed (p, CG.Add);
     | Class.cREAL, Class.cLONG, Class.cEXTND =>
         Expr.Compile (p.a);
         Expr.Compile (p.b);
         CG.Add (FPType[p.class]);
     END;
   END Compile;
+
+PROCEDURE CompileFixed (p: P;  op: PROCEDURE (t: CG.AType)) =
+  VAR fixed: FixedType.Info;  b := FixedType.Split (p.type, fixed);
+  BEGIN
+    <*ASSERT b*>
+    Expr.Compile (p.a);
+    Expr.Compile (p.b);
+    op (FixedType.StackType (fixed));
+    FixedType.Mask (fixed);
+  END CompileFixed;
 
 PROCEDURE Fold (p: P): Expr.T =
   VAR e1, e2, e3: Expr.T;

@@ -9,7 +9,8 @@
 MODULE NegateExpr;
 
 IMPORT CG, Expr, ExprRep, Type, Int, LInt, Reel, LReel, EReel;
-IMPORT IntegerExpr, ReelExpr;
+IMPORT FixedType; (* This fork *)
+IMPORT IntegerExpr, ReelExpr, TInt;
 
 TYPE
   P = ExprRep.Ta BRANDED "NegateExpr.P" OBJECT
@@ -63,7 +64,8 @@ PROCEDURE Check (p: P;  VAR cs: Expr.CheckState) =
     Expr.TypeCheck (p.a, cs);
     t := Type.Base (Expr.TypeOf (p.a));
     IF (t = Int.T) OR (t = LInt.T)
-      OR (t = Reel.T) OR (t = LReel.T) OR (t = EReel.T) THEN
+      OR (t = Reel.T) OR (t = LReel.T) OR (t = EReel.T)
+      OR FixedType.Is (t) (* This fork *) THEN
       (* ok *)
 (*    ELSIF SetType.split (t, range) THEN (* OK *) *)
     ELSE
@@ -82,10 +84,16 @@ PROCEDURE Prep (p: P) =
   END Prep;
 
 PROCEDURE Compile (p: P; StaticOnly: BOOLEAN) =
-  VAR e := p.folded;
+  VAR e := p.folded;  fixed: FixedType.Info;
   BEGIN
     <* ASSERT NOT StaticOnly *>
-    IF (e = NIL) THEN
+    IF (e = NIL) AND FixedType.Split (p.type, fixed) THEN
+      (* This fork: 0 - a, wrapped *)
+      CG.Load_integer (FixedType.StackType (fixed), TInt.Zero);
+      Expr.Compile (p.a);
+      CG.Subtract (FixedType.StackType (fixed));
+      FixedType.Mask (fixed);
+    ELSIF (e = NIL) THEN
       Expr.Compile (p.a);
       CG.Negate (Type.CGType (p.type));
     ELSE

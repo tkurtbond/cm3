@@ -9,6 +9,7 @@
 MODULE CompareExpr;
 
 IMPORT M3, CG, Expr, ExprRep, Type, Int, LInt, Reel, LReel, EReel;
+IMPORT FixedType; (* This fork *)
 IMPORT EnumType, SetType, Bool, Module, Addr, Target, TInt;
 IMPORT IntegerExpr, EnumExpr, ReelExpr, AddressExpr;
 IMPORT SetExpr, Error;
@@ -22,6 +23,7 @@ CONST
   cADDR  = 5;
   cENUM  = 6;
   cSET   = 7;
+  cFIXED = 8; (* This fork *)
 
 CONST
   CGType = ARRAY [cREAL..cADDR] OF CG.Type {
@@ -98,6 +100,8 @@ PROCEDURE Check (p: P;  VAR cs: Expr.CheckState) =
     ELSIF (Type.IsSubtype (ta, Addr.T)) AND (Type.IsSubtype (tb, Addr.T)) THEN
       IF Module.IsSafe () THEN Error.Msg ("unsafe operation") END;
       p.class := cADDR;
+    ELSIF FixedType.Is (ta) AND (ta = tb)    THEN  p.class := cFIXED;
+      (* This fork: compared unsigned, in the stack type *)
     ELSIF  NOT Type.IsEqual (ta, tb, NIL)    THEN  Err (p, ta, tb);
     ELSIF EnumType.Is (ta)                   THEN  p.class := cENUM;
     ELSIF SetType.Split (ta, range)          THEN
@@ -146,6 +150,8 @@ PROCEDURE Compile (p: P; <*UNUSED*> StaticOnly: BOOLEAN) =
         type := Target.Integer.cg_type;
       ELSIF (p.class = cLINT) THEN
         type := Target.Longint.cg_type;
+      ELSIF (p.class = cFIXED) THEN (* This fork *)
+        type := FixedType.OrdStackType (Expr.TypeOf (p.a));
       ELSE
         type := CGType [p.class];
       END;
@@ -189,6 +195,8 @@ PROCEDURE PrepBR (p: P;  true, false: CG.Label;  freq: CG.Frequency) =
         type := Target.Integer.cg_type;
       ELSIF (p.class = cLINT) THEN
         type := Target.Longint.cg_type;
+      ELSIF (p.class = cFIXED) THEN (* This fork *)
+        type := FixedType.OrdStackType (Expr.TypeOf (p.a));
       ELSE
         type := CGType [p.class];
       END;

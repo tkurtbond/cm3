@@ -35,6 +35,7 @@ PROCEDURE Compile (ce: CallExpr.T) =
     bmin, bmax: Target.Int;
     cg_type: CG.Type;
   BEGIN
+    IF Dec.CompileFixed (ce, up := TRUE) THEN RETURN END; (* This fork *)
     tlhs := Type.CheckInfo (tlhs, info);
     IF Type.IsSubtype (tlhs, LInt.T)
       THEN tlhs := LInt.T; cg_type := Target.Longint.cg_type;

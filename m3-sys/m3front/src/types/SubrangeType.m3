@@ -9,6 +9,7 @@
 MODULE SubrangeType;
 
 IMPORT M3, CG, Type, TypeRep, Int, LInt, Expr, Token, Card, M3Buf;
+IMPORT FixedType; (* This fork *)
 IMPORT Error, IntegerExpr, EnumExpr, Word, TipeMap, TipeDesc;
 IMPORT Target, TInt, TWord, TargetMap, LCard;
 IMPORT Charr, WCharr; 
@@ -81,7 +82,9 @@ PROCEDURE SetRep (p: P) =
     IF TInt.LT (p.max, p.min) THEN
       p.min := TInt.Zero;
       p.max := TInt.MOne;
-      IF Type.IsSubtype (p.baseType, LInt.T)
+      IF FixedType.Is (p.baseType) THEN (* This fork *)
+        p.rep := FixedType.OrdStackType (p.baseType);
+      ELSIF Type.IsSubtype (p.baseType, LInt.T)
         THEN p.rep := Target.Longint.cg_type;
         ELSE p.rep := Target.Integer.cg_type;
       END;
@@ -169,7 +172,9 @@ PROCEDURE Check (p: P) =
     p.info.min_size  := MinSize (p);
     p.info.alignment := TargetMap.CG_Align[p.rep];
     p.info.mem_type  := p.rep;
-    IF Type.IsSubtype (p.baseType, LInt.T) THEN
+    IF FixedType.Is (p.baseType) THEN (* This fork: always unsigned *)
+      p.info.stk_type := FixedType.OrdStackType (p.baseType);
+    ELSIF Type.IsSubtype (p.baseType, LInt.T) THEN
       IF Target.SignedType [p.rep]
         THEN p.info.stk_type := Target.Longint.cg_type;
         ELSE p.info.stk_type := Target.Long.cg_type;
@@ -255,7 +260,7 @@ PROCEDURE Subtyper (a: P;  t: Type.T): BOOLEAN =
   END Subtyper;
 
 PROCEDURE MinSize (p: P): INTEGER =
-  VAR z1, z2: INTEGER;  n1, n2: BOOLEAN;
+  VAR z1, z2: INTEGER;  n1, n2: BOOLEAN;  fixed: FixedType.Info;
   BEGIN
     (* compute the minimum size of these elements *)
     IF TInt.LT (p.max, p.min) THEN RETURN 0 END;
@@ -263,7 +268,9 @@ PROCEDURE MinSize (p: P): INTEGER =
     BitWidth (p.max, z2, n2);
     z1 := MAX (z1, z2);
     IF (n1 OR n2) THEN INC (z1); END;
-    IF Type.IsSubtype (p.baseType, LInt.T)
+    IF FixedType.Split (p.baseType, fixed) (* This fork *)
+      THEN RETURN MIN (z1, fixed.bits);
+    ELSIF Type.IsSubtype (p.baseType, LInt.T)
       THEN RETURN MIN (z1, Target.Longint.size);
       ELSE RETURN MIN (z1, Target.Integer.size);
     END;

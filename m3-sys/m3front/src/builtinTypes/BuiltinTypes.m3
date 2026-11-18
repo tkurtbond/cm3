@@ -11,6 +11,7 @@ MODULE BuiltinTypes;
 IMPORT Int, LInt, Card, Bool, Reel, LReel, EReel, Charr, Addr;
 IMPORT Null, Reff, Textt, Mutex, ErrType, ObjectRef, ObjectAdr;
 IMPORT WCharr, LCard;
+IMPORT FixedType; (* This fork *)
 
 
 PROCEDURE Initialize () =
@@ -35,6 +36,7 @@ PROCEDURE Initialize () =
     Textt.Initialize ();
     Mutex.Initialize ();
     WCharr.Initialize ();
+    FixedType.Initialize (); (* This fork: Word8.T .. Word64.T *)
   END Initialize;
 
 BEGIN

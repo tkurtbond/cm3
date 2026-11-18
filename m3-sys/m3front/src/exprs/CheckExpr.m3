@@ -9,7 +9,8 @@
 MODULE CheckExpr;
 
 IMPORT M3, CG, Expr, ExprRep, Type, IntegerExpr, EnumExpr, Host;
-IMPORT Target, TInt, Error, LInt;
+IMPORT FixedType; (* This fork *)
+IMPORT Target, TInt, Error;
 
 TYPE
   Class = { cLOWER, cUPPER, cBOTH };
@@ -126,10 +127,7 @@ PROCEDURE Compile (p: P; StaticOnly: BOOLEAN) =
   VAR t := Expr.TypeOf (p.expr);  cg_type: CG.Type;
   BEGIN
     <* ASSERT NOT StaticOnly *>
-    IF Type.IsSubtype (t, LInt.T)
-      THEN cg_type := Target.Longint.cg_type;
-      ELSE cg_type := Target.Integer.cg_type;
-    END;
+    cg_type := FixedType.OrdStackType (t); (* This fork *)
     Expr.Compile (p.expr, StaticOnly);
     CASE p.class OF
     | Class.cLOWER => CG.Check_lo (cg_type, p.min, p.err);
@@ -145,10 +143,7 @@ PROCEDURE EmitChecks (e: Expr.T;  READONLY min, max: Target.Int;
   VAR minE, maxE: Target.Int;  x: Expr.T;
       t := Expr.TypeOf (e);  cg_type: CG.Type;
   BEGIN
-    IF Type.IsSubtype (t, LInt.T)
-      THEN cg_type := Target.Longint.cg_type;
-      ELSE cg_type := Target.Integer.cg_type;
-    END;
+    cg_type := FixedType.OrdStackType (t); (* This fork *)
     x := Expr.ConstValue (e);
     IF (x # NIL) THEN e := x;  END;
     Expr.Compile (e);

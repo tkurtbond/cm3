@@ -9,6 +9,7 @@ MODULE External;
 
 IMPORT M3ID, Value, ValueRep, Token, Scope, Module, Error;
 IMPORT Type, Expr, Variable, Ident, Scanner, RunTyme, CG, Host;
+IMPORT FixedType; (* This fork *)
 FROM Scanner IMPORT GetToken, Match, MatchID, cur;
 FROM M3 IMPORT QID;
 
@@ -339,7 +340,11 @@ PROCEDURE GenInitLinks (p: Port;  imported: BOOLEAN;
     WHILE (x # NIL) DO
       y := p;
       LOOP
-        IF (x = y) THEN
+        IF (x = y) AND FixedType.IsInterface (x.module.name) THEN
+          (* This fork: Word8 .. Word64 have no unit, so nothing links to
+             them.  See FixedType.IsInterface. *)
+          EXIT;
+        ELSIF (x = y) THEN
           Module.ImportInterface (x.module);
           Host.env.note_interface_use (x.module.name, imported);
           note (x.module.name);

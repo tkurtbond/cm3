@@ -19,7 +19,8 @@ TYPE
 TYPE
   Class = { Error, Named, Integer, Longint, Real, Longreal, Extended,
             Array, Enum, Object, Opaque, OpenArray, Packed,
-            Procedure, Record, Ref, Set, Subrange };
+            Procedure, Record, Ref, Set, Subrange,
+            Fixed (* This fork: Word8.T .. Word64.T, see FixedType *) };
 
 VAR
   recursionDepth: INTEGER := 0;

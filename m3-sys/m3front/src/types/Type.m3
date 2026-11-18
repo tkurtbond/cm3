@@ -16,6 +16,7 @@ IMPORT Addr, Bool, Charr, Card, EReel, Int, LInt, LReel, Mutex, Null;
 IMPORT ObjectRef, ObjectAdr, Reel, Reff, Textt, Target, TInt, TFloat;
 IMPORT Text, M3RT, TipeMap, TipeDesc, ErrType, OpenArrayType, M3ID;
 IMPORT RTIO, RTParams;
+IMPORT FixedType; (* This fork *)
 FROM M3 IMPORT QID;
 
 VAR debug := FALSE;
@@ -339,7 +340,8 @@ PROCEDURE LoadScalar (t: T) =
     CASE t.info.class OF
     | Class.Integer, Class.Longint, Class.Real, Class.Longreal, Class.Extended,
       Class.Enum, Class.Object, Class.Opaque, Class.Procedure,
-      Class.Ref, Class.Subrange =>
+      Class.Ref, Class.Subrange,
+      Class.Fixed (* This fork *) =>
         CG.Load_indirect (t.info.stk_type, 0, t.info.size, t.info.alignment);
     | Class.Packed =>
         IF NOT IsStructured (t) THEN
@@ -444,7 +446,8 @@ PROCEDURE IsOrdinal (t: T): BOOLEAN =
   VAR u := StripPacked (Check (t));  c := u.info.class;
   BEGIN
     RETURN (c = Class.Integer) OR (c = Class.Longint) OR (c = Class.Subrange)
-           OR (c = Class.Enum) OR (c = Class.Error);
+           OR (c = Class.Enum) OR (c = Class.Error)
+           OR (c = Class.Fixed); (* This fork *)
   END IsOrdinal;
 
 (*EXPORTED*)
@@ -454,6 +457,7 @@ PROCEDURE Number (t: T): Target.Int =
     c := u.info.class;
     b: BOOLEAN;
     min, max, tmp: Target.Int;
+    fixed: FixedType.Info;
   BEGIN
     IF (c = Class.Subrange) THEN
       b := SubrangeType.Split (u, min, max);  <*ASSERT b*>
@@ -466,6 +470,10 @@ PROCEDURE Number (t: T): Target.Int =
     ELSIF (c = Class.Longint) THEN
       min := Target.Longint.min;
       max := Target.Longint.max;
+    ELSIF (c = Class.Fixed) THEN (* This fork *)
+      b := FixedType.Split (u, fixed);  <*ASSERT b*>
+      min := fixed.min;
+      max := fixed.max;
     ELSIF (c = Class.Error) THEN
       RETURN TInt.Zero;
     ELSE
@@ -485,6 +493,7 @@ PROCEDURE Number (t: T): Target.Int =
 (*EXPORTED*)
 PROCEDURE GetBounds (t: T;  VAR min, max: Target.Int): BOOLEAN =
   VAR u := StripPacked (Check (t));  c := u.info.class;  b: BOOLEAN;
+      fixed: FixedType.Info;
   BEGIN
     IF (c = Class.Subrange) THEN
       b := SubrangeType.Split (u, min, max);  <*ASSERT b*>
@@ -501,6 +510,11 @@ PROCEDURE GetBounds (t: T;  VAR min, max: Target.Int): BOOLEAN =
     ELSIF (c = Class.Longint) THEN
       min := Target.Longint.min;
       max := Target.Longint.max;
+      RETURN TRUE;
+    ELSIF (c = Class.Fixed) THEN (* This fork *)
+      b := FixedType.Split (u, fixed);  <*ASSERT b*>
+      min := fixed.min;
+      max := fixed.max;
       RETURN TRUE;
     ELSE
       min := TInt.Zero;
@@ -694,7 +708,11 @@ PROCEDURE Compile (t: T) =
     Scanner.offset := t.origin;
     t.compile ();
     Scanner.offset := save;
-    IF (TypeTbl.Get (visible_types, u) # NIL) THEN
+    IF (u.info.class = Class.Fixed) THEN
+      (* This fork: Word8.T .. Word64.T, like INTEGER, are exported by
+         no unit, so the linker must not look for them; but unlike
+         INTEGER the back ends must be told about them in each unit. *)
+    ELSIF (TypeTbl.Get (visible_types, u) # NIL) THEN
       (* it's visible in one of our imports *)
       Host.env.note_type (GlobalUID (u), imported := TRUE);
     ELSIF Module.IsInterface () THEN
@@ -901,7 +919,8 @@ PROCEDURE Zero (full_t: T) =
     size := u.info.size;
   BEGIN
     CASE t.info.class OF
-    | Class.Integer, Class.Longint, Class.Subrange, Class.Enum =>
+    | Class.Integer, Class.Longint, Class.Subrange, Class.Enum,
+      Class.Fixed (* This fork *) =>
         CG.Load_integer (u.info.stk_type, TInt.Zero);
         CG.Store_indirect (u.info.stk_type, 0, size);
     | Class.Real =>

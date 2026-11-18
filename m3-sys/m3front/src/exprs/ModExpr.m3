@@ -9,10 +9,12 @@
 MODULE ModExpr;
 
 IMPORT CG, Expr, ExprRep, Type, Int, LInt, IntegerExpr, Target;
+IMPORT FixedType; (* This fork *)
 IMPORT Reel, LReel, EReel, ReelExpr, DivExpr, TInt;
 
 TYPE
-  Class = { cINT, cLINT, cREAL, cLONG, cEXTND, cERR };
+  Class = { cINT, cLINT, cREAL, cLONG, cEXTND, cERR,
+            cFIXED (* This fork *) };
 
 CONST
   CGType = ARRAY [Class.cREAL .. Class.cEXTND] OF CG.Type {
@@ -81,6 +83,8 @@ PROCEDURE Check (p: P;  VAR cs: Expr.CheckState) =
       p.class := Class.cINT;
     ELSIF (ta = LInt.T)  AND (tb = LInt.T)  THEN
       p.class := Class.cLINT;
+    ELSIF FixedType.Is (ta) AND (ta = tb) THEN (* This fork *)
+      p.class := Class.cFIXED;
     ELSIF (ta = Reel.T)  AND (tb = Reel.T)  THEN
       p.class := Class.cREAL;
     ELSIF (ta = LReel.T) AND (tb = LReel.T) THEN
@@ -99,7 +103,8 @@ PROCEDURE Prep (p: P) =
   BEGIN
     Expr.Prep (p.a);
     Expr.Prep (p.b);
-    IF (p.class # Class.cINT) AND (p.class # Class.cLINT) THEN
+    IF (p.class # Class.cINT) AND (p.class # Class.cLINT)
+      AND (p.class # Class.cFIXED) (* This fork *) THEN
       (* floating point: x MOD y == x - y * FLOOR (x / y)  *)
       EVAL Type.CheckInfo (p.a.type, info);
       sz := info.size;
@@ -127,7 +132,8 @@ PROCEDURE Compile (p: P; StaticOnly: BOOLEAN) =
     t: Type.T;
   BEGIN
     <* ASSERT NOT StaticOnly *>
-    IF (p.class = Class.cINT) OR (p.class = Class.cLINT) THEN
+    IF (p.class = Class.cINT) OR (p.class = Class.cLINT)
+      OR (p.class = Class.cFIXED) (* This fork *) THEN
       cg_type := Type.CGType (p.type);
       e1 := Expr.ConstValue (p.a);
       e2 := Expr.ConstValue (p.b);
@@ -197,7 +203,8 @@ PROCEDURE Fold (p: P): Expr.T =
 PROCEDURE GetBounds (p: P;  VAR min, max: Target.Int) =
   VAR tmin, tmax, min_b, max_b: Target.Int;
   BEGIN
-    IF (p.class = Class.cINT) OR (p.class = Class.cLINT) THEN
+    IF (p.class = Class.cINT) OR (p.class = Class.cLINT)
+      OR (p.class = Class.cFIXED) (* This fork *) THEN
       EVAL Type.GetBounds (p.type, tmin, tmax);
       Expr.GetBounds (p.b, min_b, max_b);
       IF TInt.LT (min_b, TInt.Zero) OR TInt.LT (max_b, TInt.Zero) THEN

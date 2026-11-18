@@ -9,6 +9,7 @@
 MODULE Dec;
 
 IMPORT CG, CallExpr, Expr, ExprRep, Type, Procedure, Error, Int, LInt, Module;
+IMPORT FixedType; (* This fork *)
 IMPORT M3ID, Addr, Target, TInt, IntegerExpr, Host, NamedExpr;
 
 VAR Z: CallExpr.MethodList;
@@ -20,7 +21,7 @@ PROCEDURE Check (ce: CallExpr.T;  VAR cs: Expr.CheckState) =
 
 PROCEDURE DoCheck (name: TEXT;  ce: CallExpr.T;
                    <*UNUSED*> VAR cs: Expr.CheckState) =
-  VAR t: Type.T; e: Expr.T;  nm: M3ID.T;
+  VAR t, u: Type.T; e: Expr.T;  nm: M3ID.T;
   BEGIN
     e := ce.args[0];
     t := Type.Base (Expr.TypeOf (e));
@@ -42,7 +43,13 @@ PROCEDURE DoCheck (name: TEXT;  ce: CallExpr.T;
       Expr.NeedsAddress (e);
     END;
     IF (NUMBER (ce.args^) > 1) THEN
-      IF Type.IsSubtype (t, LInt.T) THEN
+      IF FixedType.Is (t) THEN (* This fork: the same type or INTEGER *)
+        u := Type.Base (Expr.TypeOf (ce.args[1]));
+        IF (u # t) AND (u # Int.T) THEN
+          Error.Txt (name, "second argument must be of the first argument's"
+                             & " base type or an INTEGER");
+        END;
+      ELSIF Type.IsSubtype (t, LInt.T) THEN
         t := Type.Base (Expr.TypeOf (ce.args[1]));
         IF (t # LInt.T) THEN
           Error.Txt (name, "second argument must be a LONGINT");
@@ -74,6 +81,7 @@ PROCEDURE Compile (ce: CallExpr.T) =
     tmin, tmax, bmin, bmax: Target.Int;
     cg_type: CG.Type;
   BEGIN
+    IF CompileFixed (ce, up := FALSE) THEN RETURN END; (* This fork *)
     tlhs := Type.CheckInfo (tlhs, info);
     IF Type.IsSubtype (tlhs, LInt.T)
       THEN tlhs := LInt.T; cg_type := Target.Longint.cg_type;
@@ -116,6 +124,60 @@ PROCEDURE Compile (ce: CallExpr.T) =
     CG.Free (lvalue);
     Expr.NoteWrite (lhs);
   END Compile;
+
+(* This fork: INC and DEC of a fixed type wrap modulo 2^N.  The step is
+   of the variable's base type or an INTEGER; an INTEGER is converted to
+   the stack type, which gives the right result modulo 2^N even when it
+   is negative.  A subrange is then checked against its bounds. *)
+PROCEDURE CompileFixed (ce: CallExpr.T;  up: BOOLEAN): BOOLEAN =
+  VAR
+    lhs    := ce.args[0];
+    info   : Type.Info;
+    fixed  : FixedType.Info;
+    check  : [0..3] := 0;
+    lvalue : CG.Val;
+    bmin, bmax: Target.Int;
+    stk    : CG.Type;
+  BEGIN
+    IF NOT FixedType.Split (Expr.TypeOf (lhs), fixed) THEN RETURN FALSE END;
+    EVAL Type.CheckInfo (Expr.TypeOf (lhs), info);
+    stk := FixedType.StackType (fixed);
+    Expr.GetBounds (lhs, bmin, bmax);
+    IF Host.doRangeChk THEN
+      IF TInt.LT (fixed.min, bmin) THEN INC (check) END;
+      IF TInt.LT (bmax, fixed.max) THEN INC (check, 2) END;
+    END;
+
+    Expr.CompileLValue (lhs, traced := FALSE);
+    lvalue := CG.Pop ();
+    CG.Push (lvalue);
+
+    CG.Push (lvalue);
+    CG.Load_indirect (info.stk_type, 0, info.size, info.alignment);
+    IF (NUMBER (ce.args^) > 1) THEN
+      WITH step = ce.args[1],
+           from = FixedType.OrdStackType (Expr.TypeOf (step)) DO
+        Expr.Compile (step);
+        IF from # stk THEN CG.Loophole (from, stk) END;
+      END;
+    ELSE
+      CG.Load_integer (stk, TInt.One);
+    END;
+    IF up THEN CG.Add (stk) ELSE CG.Subtract (stk) END;
+    FixedType.Mask (fixed);
+
+    CASE check OF
+    | 0 => (* no range checking *)
+    | 1 => CG.Check_lo (stk, bmin, CG.RuntimeError.ValueOutOfRange);
+    | 2 => CG.Check_hi (stk, bmax, CG.RuntimeError.ValueOutOfRange);
+    | 3 => CG.Check_range (stk, bmin, bmax, CG.RuntimeError.ValueOutOfRange);
+    END;
+
+    CG.Store_indirect (info.stk_type, 0, info.size);
+    CG.Free (lvalue);
+    Expr.NoteWrite (lhs);
+    RETURN TRUE;
+  END CompileFixed;
 
 PROCEDURE Initialize () =
   BEGIN

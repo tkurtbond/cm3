@@ -10,6 +10,7 @@
 MODULE ForStmt;
 
 IMPORT M3ID, CG, Error, Scope, Expr, Stmt, StmtRep;
+IMPORT FixedType; (* This fork *)
 IMPORT EnumType, Type, Int, LInt, Variable, Target, TargetMap, TInt, ErrType;
 IMPORT IntegerExpr, EnumExpr, Token, Marker, Tracer;
 FROM Scanner IMPORT Match, MatchID, GetToken, cur;
@@ -87,6 +88,13 @@ PROCEDURE Check (p: P;  VAR cs: Stmt.CheckState) =
       tStep := Int.T;
     ELSIF (tFrom = LInt.T) AND (tTo = LInt.T) THEN
       tStep := LInt.T;
+    ELSIF FixedType.Is (tFrom) AND (tFrom = tTo) THEN
+      (* This fork: the step is of the same type or an INTEGER *)
+      tStep := Int.T;
+      IF (p.step # NIL) THEN
+        Expr.TypeCheck (p.step, cs);
+        IF Type.Base (Expr.TypeOf (p.step)) = tFrom THEN tStep := tFrom END;
+      END;
     ELSE
       Error.Msg("\'from\' and \'to\' expressions must be compatible ordinals");
       errored := TRUE;
@@ -185,8 +193,12 @@ PROCEDURE Compile (p: P): Stmt.Outcomes =
     offset: INTEGER;
     cg_type: CG.Type;
     uid: INTEGER;
+    fixed: FixedType.Info;
   BEGIN
     Variable.Split (p.var, type, global, indirect, lhs);
+    IF FixedType.Split (type, fixed) THEN (* This fork *)
+      RETURN CompileFixed (p, type, fixed);
+    END;
     IF Type.IsSubtype (type, LInt.T)
       THEN cg_type := Target.Longint.cg_type; uid := Type.GlobalUID (LInt.T);
       ELSE cg_type := Target.Integer.cg_type; uid := Type.GlobalUID (Int.T);
@@ -388,6 +400,175 @@ PROCEDURE Compile (p: P): Stmt.Outcomes =
 
     RETURN oc - Stmt.Outcomes {Stmt.Outcome.Exits};
   END Compile;
+
+(* This fork: a FOR loop over a fixed type.  The usual loop adds the
+   step and then compares with the limit, so a loop up to LAST (T) would
+   wrap around and never end.  This one leaves the loop before the
+   step when fewer than |step| values remain, testing (to - i) < |step|
+   counting up and (i - to) < |step| counting down, all unsigned.  The
+   step is of the fixed type, so counts up, or an INTEGER of either
+   sign; when its sign isn't known at compile time it's tested at run
+   time. *)
+PROCEDURE CompileFixed (p: P;  type: Type.T;
+                        READONLY fixed: FixedType.Info): Stmt.Outcomes =
+  VAR
+    stk := FixedType.StackType (fixed);
+    int := Target.Integer.cg_type;
+    uid, int_uid: INTEGER;
+    step_min, step_max: Target.Int;
+    step_int := NOT FixedType.Is (Expr.TypeOf (p.step));
+    t_index, t_to, t_by: CG.Val;
+    index, to, by, sby: CG.Var;
+    l_top, l_exit, l_down_entry, l_down_step: CG.Label;
+    dir: [-1 .. 1];  (* +1 up, -1 down, 0 known only at run time *)
+    info: Type.Info;
+    oc: Stmt.Outcomes;
+    zz: Scope.T;
+
+  PROCEDURE Local (cg: CG.Type;  u: INTEGER): CG.Var =
+    BEGIN
+      RETURN CG.Declare_local (M3ID.NoID, TargetMap.CG_Size[cg],
+                               TargetMap.CG_Align[cg], cg, u,
+                               in_memory := FALSE, up_level := FALSE,
+                               f := CG.Always);
+    END Local;
+
+  PROCEDURE LoadMag (neg: BOOLEAN) =
+    (* push |step| *)
+    BEGIN
+      IF neg THEN
+        CG.Load_integer (stk, TInt.Zero);
+        CG.Load_int (stk, by);
+        CG.Subtract (stk);
+      ELSE
+        CG.Load_int (stk, by);
+      END;
+    END LoadMag;
+
+  PROCEDURE EntryTest (up: BOOLEAN) =
+    (* leave if the range is empty *)
+    BEGIN
+      CG.Load_int (stk, index);
+      CG.Load_int (stk, to);
+      IF up
+        THEN CG.If_compare (stk, CG.Cmp.GT, l_exit, CG.Maybe);
+        ELSE CG.If_compare (stk, CG.Cmp.LT, l_exit, CG.Maybe);
+      END;
+    END EntryTest;
+
+  PROCEDURE StepAndTest (up: BOOLEAN) =
+    (* leave if fewer than |step| values remain, else step and loop *)
+    BEGIN
+      IF up THEN
+        CG.Load_int (stk, to);
+        CG.Load_int (stk, index);
+      ELSE
+        CG.Load_int (stk, index);
+        CG.Load_int (stk, to);
+      END;
+      CG.Subtract (stk);
+      LoadMag (NOT up);
+      CG.If_compare (stk, CG.Cmp.LT, l_exit, CG.Maybe);
+      CG.Load_int (stk, index);
+      LoadMag (NOT up);
+      IF up THEN CG.Add (stk) ELSE CG.Subtract (stk) END;
+      CG.Store_int (stk, index);
+      CG.Jump (l_top);
+    END StepAndTest;
+
+  BEGIN
+    int_uid := Type.GlobalUID (Int.T);
+    IF TargetMap.CG_Size[stk] = Target.Integer.size
+      THEN uid := int_uid;
+      ELSE uid := Type.GlobalUID (LInt.T);
+    END;
+
+    Expr.GetBounds (p.step, step_min, step_max);
+    IF    TInt.LE (TInt.Zero, step_min) THEN dir := +1;
+    ELSIF TInt.LT (step_max, TInt.Zero) THEN dir := -1;
+    ELSE                                     dir := 0;
+    END;
+
+    Expr.Prep (p.from);
+    Expr.Compile (p.from);
+    t_index := CG.Pop_temp ();
+    Expr.Prep (p.limit);
+    Expr.Compile (p.limit);
+    t_to := CG.Pop_temp ();
+    Expr.Prep (p.step);
+    Expr.Compile (p.step);
+    t_by := CG.Pop_temp ();
+
+    l_top        := CG.Next_label (4);
+    l_exit       := l_top + 1;
+    l_down_entry := l_top + 2;
+    l_down_step  := l_top + 3;
+
+    zz := Scope.Push (p.scope);
+      Scope.Enter (p.scope);
+      Scope.InitValues (p.scope);
+
+      index := Local (stk, uid);
+      to    := Local (stk, uid);
+      by    := Local (stk, uid);
+      CG.Push (t_index);  CG.Store_int (stk, index);  CG.Free (t_index);
+      CG.Push (t_to);     CG.Store_int (stk, to);     CG.Free (t_to);
+      IF (dir = 0) THEN
+        sby := Local (int, int_uid);
+        CG.Push (t_by);
+        CG.Store_int (int, sby);
+      END;
+      CG.Push (t_by);
+      IF step_int AND (int # stk) THEN CG.Loophole (int, stk) END;
+      CG.Store_int (stk, by);
+      CG.Free (t_by);
+
+      IF (dir = 0) THEN
+        CG.Load_int (int, sby);
+        CG.Load_integer (int, TInt.Zero);
+        CG.If_compare (int, CG.Cmp.LT, l_down_entry, CG.Maybe);
+        EntryTest (up := TRUE);
+        CG.Jump (l_top);
+        CG.Set_label (l_down_entry);
+        EntryTest (up := FALSE);
+      ELSE
+        EntryTest (up := (dir > 0));
+      END;
+
+      CG.Set_label (l_top);
+      Marker.PushExit (l_exit);
+
+      (* make the user's variable equal to the counter *)
+      EVAL Type.CheckInfo (type, info);
+      Variable.LoadLValue (p.var);
+      CG.Load_int (stk, index);
+      CG.Store_indirect (info.stk_type, 0, info.size);
+      Variable.ScheduleTrace (p.var);
+
+      oc := Stmt.Compile (p.body);
+
+      CG.Gen_location (p.origin);
+      IF (dir = 0) THEN
+        CG.Load_int (int, sby);
+        CG.Load_integer (int, TInt.Zero);
+        CG.If_compare (int, CG.Cmp.LT, l_down_step, CG.Maybe);
+        StepAndTest (up := TRUE);
+        CG.Set_label (l_down_step);
+        StepAndTest (up := FALSE);
+      ELSE
+        StepAndTest (up := (dir > 0));
+      END;
+
+      Marker.Pop ();
+      CG.Set_label (l_exit);
+
+      Scope.Exit (p.scope);
+    Scope.Pop (zz);
+
+    (* the range may be empty, so the loop may fall through *)
+    RETURN oc + Stmt.Outcomes {Stmt.Outcome.FallThrough}
+              - Stmt.Outcomes {Stmt.Outcome.Exits};
+  END CompileFixed;
 
 PROCEDURE GetOutcome (p: P): Stmt.Outcomes =
   BEGIN
