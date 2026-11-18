@@ -123,8 +123,9 @@ IR is for one target only; `--target ARM64_LINUX` makes one for that
 target on another machine.
 
 When a release of this fork is tagged, `make-release.yml` makes
-bootstraps of LLVM IR for four targets, all in its Linux job (there is
-no such release yet). Cross-made IR is the same as IR made on the
+bootstraps of LLVM IR for four targets, all in its Linux job (the first
+release is
+[d5.12.1-llvmir.1](https://github.com/tkurtbond/cm3/releases/tag/d5.12.1-llvmir.1)). Cross-made IR is the same as IR made on the
 target, apart from source file paths and version stamps. CI makes each
 bootstrap too, builds it, builds everything with its compiler, and runs
 m3tests:

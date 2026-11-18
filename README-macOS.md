@@ -129,8 +129,9 @@ When this fork makes a release, its `make-release.yml` also makes
 `cm3-boot-ARM64_DARWIN-llvmir-VERSION.tar.xz` and
 `cm3-boot-AMD64_DARWIN-llvmir-VERSION.tar.xz`: the compiler's sources
 as LLVM IR (`.ll` files) instead of C++. It makes them on Linux, so a
-release doesn't wait for macOS runners. There is no such release yet.
-You can make one yourself, on any machine (it need not be a Mac) that
+release doesn't wait for macOS runners. The first is in
+[d5.12.1-llvmir.1](https://github.com/tkurtbond/cm3/releases/tag/d5.12.1-llvmir.1).
+You can also make one yourself, on any machine (it need not be a Mac) that
 has this fork's compiler and clang 18 or later:
 `scripts/concierge.py make-bootstrap --backend llvmir --target
 ARM64_DARWIN`, or `--target AMD64_DARWIN`.
