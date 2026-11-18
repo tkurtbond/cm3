@@ -3,6 +3,9 @@
 [-63..63]: ok
 [-1..255]: ok
 [-256..0]: ok
+[-129..0]: ok
+[-200..-64]: ok
+[-255..16_ffffff]: ok
 [0..65535]: ok
 [0..65536]: ok
 [-32768..32767]: ok
@@ -19,3 +22,9 @@
 [-1L..LAST(LONGINT)]: ok
 [0..LAST(INTEGER)]: ok
 [FIRST(INTEGER)..LAST(INTEGER)]: ok
+[-63..63] bounds: ok
+[-256..0] bounds: ok
+[-129..0] bounds: ok
+[-200..-64] bounds: ok
+[-255..16_ffffff] bounds: ok
+[-32768..32767] bounds: ok

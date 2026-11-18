@@ -9,5 +9,7 @@ holds the bounds, unsigned when the lower bound is at least 0.  So
 packing LONGINT subranges wider than 32 bits came out 32.  Each line
 compares RTTipe's size of a record field with BITSIZE, under 32- and
 64-bit packings.  See LLVM-IR-backend-docs/BUGS.md,
-bugs 9, 10 and 24.  Bounds in -255..-64 are left out: the front end
-encodes them wrongly (bug 25).
+bugs 9, 10 and 24.  The last lines check the bounds RTTipe reads back;
+those with a bound in -255..-64 check the front end's encoding of
+such bounds, which stored the low byte of the value instead of its
+magnitude (bug 25).

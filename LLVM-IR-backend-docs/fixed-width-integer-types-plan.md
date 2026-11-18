@@ -356,9 +356,9 @@ Status (2026-11-18): done.
    Both `RTTipe` fixes change only the runtime, not the format.
    **Both are now made** (`BUGS.md`, bugs 9 and 10), with a third
    (bug 24: `LONGINT` subranges sized at 32 bits for 32-bit
-   packings); test p297. A fourth, in the front end, is open: bounds
-   in -255..-64 are encoded wrongly (bug 25), which doesn't touch the
-   new types' bounds.
+   packings); test p297. A fourth, in the front end, is fixed too:
+   bounds in -255..-64 were encoded wrongly (bug 25). It didn't touch
+   the new types' bounds.
 5. The wrap conversion. Recommendation: `WordN.Wrap (x)` and
    `SignedN.Wrap (x)`, builtin procedures that accept any integer type,
    not a predeclared `WRAP`.

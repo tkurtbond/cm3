@@ -11,7 +11,7 @@ is in upstream cm3 too, so the fix may be worth offering there. Where a
 claim comes from reading code rather than from a test, the entry says
 so.
 
-Bugs 1 to 10 and 24 are fixed; the others are open.
+Bugs 1 to 10, 24 and 25 are fixed; the others are open.
 
 ## Bug 1: C back end: set and word operations give wrong results
 
@@ -315,7 +315,11 @@ every back end.
 ## Bug 25: The front end encodes subrange bounds in -255..-64 wrongly
 
 - **Where:** upstream, `m3-sys/m3front/src/misc/TipeDesc.m3`, `AddI`.
-- **Status:** open. Found while writing p297, 2026-11-18.
+- **Status:** fixed (marked "This fork" in the source). Found while
+  writing p297, 2026-11-18. p297 now also checks the bounds `RTTipe`
+  reads back for `[-129..0]`, `[-200..-64]` and `[-255..16_ffffff]`;
+  with the old front end they came back as `[-127..0]`, `[-56..-192]`
+  and `[-1..16_ffffff]`.
 - **Detail:** for a value from -255 to -64, `AddI` writes
   `Stuff (16_c1); Stuff (i)`. That stores the low byte of the negative
   number, where `GetDoubleInt` in `RTTipe` (and the encoding of every
@@ -327,7 +331,7 @@ every back end.
   such a lower bound, so wrong layouts in pickles of records with such
   fields. Same-machine round trips are probably unaffected, as for
   bug 9 (not tested).
-- **Fix:** `Stuff (-i)`. `RTTipe` can't work around it for code
-  already compiled: the wrong bytes are also valid encodings of other
-  values (both -129 and -127 come out as 16_7f). p297 leaves such
-  bounds out; once this is fixed, add `[-129..0]`, which gets 16 bits.
+- **Fix:** `Stuff (-i)`. It takes effect only for code compiled by the
+  fixed front end. `RTTipe` can't work around it for code already
+  compiled: the wrong bytes are also valid encodings of other values
+  (both -129 and -127 came out as 16_7f).
