@@ -20,11 +20,17 @@ on:
 
 concurrency: ci
 
+# This fork: pushes and pull requests run only AMD64_LINUX (C) and
+# AMD64_LINUX_LLVMIR; the other jobs run only by hand
+# ("gh workflow run integration"), e.g. before a release.  GitHub
+# disables the workflows of forks that use too much compute.
 jobs:
   AMD64_DARWIN:
+    if: github.event_name == 'workflow_dispatch'
     uses: modula3/cm3/.github/workflows/amd64_darwin.yml@master
 
   ARM64_DARWIN:
+    if: github.event_name == 'workflow_dispatch'
     uses: modula3/cm3/.github/workflows/arm64_darwin.yml@master
 
   AMD64_LINUX:
@@ -35,19 +41,25 @@ jobs:
     uses: ./.github/workflows/amd64_linux_llvmir.yml
 
   ARM64_LINUX_LLVMIR:
+    if: github.event_name == 'workflow_dispatch'
     uses: ./.github/workflows/arm64_linux_llvmir.yml
 
   DARWIN_LLVMIR:
+    if: github.event_name == 'workflow_dispatch'
     uses: ./.github/workflows/darwin_llvmir.yml
 
   AMD64_MINGW:
+    if: github.event_name == 'workflow_dispatch'
     uses: modula3/cm3/.github/workflows/amd64_mingw.yml@master
 
   AMD64_NT:
+    if: github.event_name == 'workflow_dispatch'
     uses: modula3/cm3/.github/workflows/amd64_nt.yml@master
 
   I386_LINUX:
+    if: github.event_name == 'workflow_dispatch'
     uses: modula3/cm3/.github/workflows/i386_linux.yml@master
 
   I386_NT:
+    if: github.event_name == 'workflow_dispatch'
     uses: modula3/cm3/.github/workflows/i386_nt.yml@master
