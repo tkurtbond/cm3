@@ -300,9 +300,16 @@ PROCEDURE GetDoubleInt (VAR ptr: Ptr): DoubleInt =
             INC (shift, 8);
             INC (ptr, ADRSIZE (ptr^));
           END;
-          IF sign < 0 
-          THEN resLo := - resLo; resHi := - resHi - ORD ( resLo # 0 ) 
-          END; 
+          IF sign < 0
+          THEN resLo := - resLo; resHi := - resHi - ORD ( resLo # 0 )
+          ELSIF resHi < 0 THEN
+            (* This fork: a positive value of 2^63 or more, such as
+               2^64 - 1, doesn't fit in a two-word INTEGER; it read as
+               negative (2^64 - 1 as -1).  Only sizes depend on it, and
+               any such bound needs 64 bits, so make it 2^63 - 1.
+               See LLVM-IR-backend-docs/BUGS.md, bug 10. *)
+            resHi := LAST (INTEGER);  resLo := -1;
+          END;
           RETURN DoubleInt {Hi := resHi, Lo := resLo};
         END;
       ELSE 
@@ -349,6 +356,28 @@ PROCEDURE GetUID (VAR ptr: Ptr): INTEGER =
    will sometimes be the target on which the pickle was written, possibly
    different from the one doing the reading.  
 *)  
+
+(* This fork: comparisons of a DoubleInt, whose value is
+   Hi * 2^BITSIZE(INTEGER) + Lo with Lo unsigned, for FixSizes. *)
+
+PROCEDURE DoubleLT (READONLY a, b: DoubleInt): BOOLEAN =
+  BEGIN
+    RETURN a.Hi < b.Hi OR a.Hi = b.Hi AND Word.LT (a.Lo, b.Lo);
+  END DoubleLT;
+
+PROCEDURE DoubleLE (READONLY a: DoubleInt;  c: Word.T): BOOLEAN =
+  (* a <= c, for c >= 0 given as an unsigned word, so that 16_ffffffff
+     means 2^32 - 1 on 32-bit hosts too. *)
+  BEGIN
+    RETURN a.Hi < 0 OR a.Hi = 0 AND Word.LE (a.Lo, c);
+  END DoubleLE;
+
+PROCEDURE DoubleGE (READONLY a: DoubleInt;  c: INTEGER): BOOLEAN =
+  (* a >= c, for c < 0. *)
+  BEGIN
+    <* ASSERT c < 0 *>
+    RETURN a.Hi >= 0 OR a.Hi = -1 AND Word.GE (a.Lo, c);
+  END DoubleGE;
 
 PROCEDURE FixSizes (t: T;  READONLY p: Packing) =
   BEGIN
@@ -414,34 +443,33 @@ PROCEDURE FixSizes (t: T;  READONLY p: Packing) =
         END;
 
     | Kind.Subrange =>
+        (* This fork: size subranges the way the compiler does
+           (SubrangeType.SetRep): the smallest unsigned 8, 16, 32 or 64
+           bits if the lower bound is not negative, else the smallest
+           signed size, whatever the word size.  This replaces tests on
+           sub.min.Lo and sub.max.Lo that gave [0..16_ffffffff] 64 bits
+           (Word.LT for Word.LE), gave every subrange wider than 16 bits
+           32 bits when p.word_size = 32 (LONGINT subranges need 64), and
+           misread bounds that don't fit in one signed host word.
+           See LLVM-IR-backend-docs/BUGS.md, bugs 9, 10 and 24. *)
         VAR sub: Subrange := t; BEGIN
-          IF sub.min.Hi # 0 AND sub.min.Lo >= 0 
-             OR sub.min.Hi # -1 AND sub.min.Lo < 0
-             OR sub.max.Hi # 0 AND sub.max.Lo >= 0 
-             OR sub.max.Hi # -1 AND sub.max.Lo < 0
-          THEN (* This can only happen if BITSIZE(INTEGER) > 32 on the machine
-                  we are executing on.  A bound of the subrange exceeds the
-                  range of 32-bit INTEGER.  In this case, the compiler will
-                  always have allocated 64 bits.
-               *) 
-            t.size := 64; 
-          (* Below here, sub.min.Hi and sub.max.Hi are just sign extensions
-             of sub.min.Lo and sub.max.Lo, so can be ignored.
-          *) 
-          ELSIF (0 <= sub.min.Lo) AND (sub.max.Lo <= 255)         
+          IF DoubleLT (sub.max, sub.min) THEN
+            (* An empty subrange: the compiler makes it 0..-1, as big as
+               its base type, which is INTEGER or LONGINT; this can't tell
+               which, so it assumes INTEGER. *)
+            t.size := p.word_size;
+          ELSIF sub.min.Hi >= 0 THEN
+            IF    DoubleLE (sub.max, 16_ff)       THEN t.size := 8;
+            ELSIF DoubleLE (sub.max, 16_ffff)     THEN t.size := 16;
+            ELSIF DoubleLE (sub.max, 16_ffffffff) THEN t.size := 32;
+            ELSE                                       t.size := 64;
+            END;
+          ELSIF DoubleGE (sub.min, -16_80) AND DoubleLE (sub.max, 16_7f)
           THEN t.size := 8;
-          ELSIF (-128 <= sub.min.Lo) AND (sub.max.Lo <= 127)      
-          THEN t.size := 8;
-          ELSIF (0 <= sub.min.Lo) AND (sub.max.Lo <= 65535)       
+          ELSIF DoubleGE (sub.min, -16_8000) AND DoubleLE (sub.max, 16_7fff)
           THEN t.size := 16;
-          ELSIF (-32768 <= sub.min.Lo) AND (sub.max.Lo <= 32767) 
-          THEN t.size := 16;
-          ELSIF (p.word_size <= 32)                         
-          THEN t.size := 32;
-          ELSIF (0 <= sub.min.Lo) 
-                AND Word.LT(sub.max.Lo, 16_ffffffff) 
-          THEN t.size := 32;
-          ELSIF (-16_7fffffff-1 <= sub.min.Lo) AND (sub.max.Lo <= 16_7fffffff)
+          ELSIF DoubleGE (sub.min, -16_7fffffff-1)
+                AND DoubleLE (sub.max, 16_7fffffff)
           THEN t.size := 32;
           ELSE t.size := 64;
           END;

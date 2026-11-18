@@ -11,7 +11,7 @@ is in upstream cm3 too, so the fix may be worth offering there. Where a
 claim comes from reading code rather than from a test, the entry says
 so.
 
-Bugs 1 to 8 are fixed; 9 to 23 are open.
+Bugs 1 to 10 and 24 are fixed; the others are open.
 
 ## Bug 1: C back end: set and word operations give wrong results
 
@@ -134,7 +134,10 @@ A new `m3_iabs_T` helper negates through the unsigned type, so
 
 - **Where:** upstream, `m3-libs/m3core/src/runtime/common/RTTipe.m3`,
   `FixSizes`.
-- **Status:** open. Checked on AMD64_LINUX, 2026-11-18.
+- **Status:** fixed (marked "This fork" in the source), together with
+  bugs 10 and 24. Regression test: m3tests p297, which compares
+  `RTTipe`'s size of 21 subrange fields with `BITSIZE` under 32- and
+  64-bit packings. Before the fix, 11 of them differed.
 - **Detail:** the subrange case tests
   `Word.LT (sub.max.Lo, 16_ffffffff)` where it needs `Word.LE`. So
   `[0..16_ffffffff]` and `[0L..16_ffffffffL]` get 64 bits, while the
@@ -145,17 +148,24 @@ A new `m3_iabs_T` helper negates through the unsigned type, so
   and read on the same machine still round-trips (tested). Converting a
   pickle between byte orders or word sizes would use the wrong layout
   (not tested). The planned `Word32.T` would hit this.
-- **Fix:** `LT` to `LE`.
+- **Fix:** `FixSizes` now sizes subranges the way `SubrangeType.SetRep`
+  does, comparing the whole two-word bounds rather than their low
+  words. That fixes this bug and bug 24.
 
 ## Bug 10: `RTTipe` on 32-bit hosts misreads bounds of `2^63` and above
 
 - **Where:** upstream, `RTTipe.m3`, `GetDoubleInt` and `FixSizes`.
-- **Status:** open. From reading the code; there's no 32-bit host here
-  to test on.
+- **Status:** fixed, with bug 9. There's no 32-bit host here, so the fix
+  was checked by emulating, with 32-bit arithmetic, the 32-bit branch of
+  `GetDoubleInt` and the new `FixSizes`: for every valid pair of 43
+  bounds, from -2^63 to 2^64 - 1, the size matched the compiler's.
 - **Detail:** the 32-bit branch of `GetDoubleInt` decodes the 8-byte
   value `2^64 - 1` as `{Hi := -1, Lo := -1}`, which is -1. `FixSizes`
   would then size a subrange with that upper bound at 8 bits. No type
   has such a bound today; the planned `Word64.T` would.
+- **Fix:** `GetDoubleInt` reads a positive value of 2^63 or more as
+  2^63 - 1. That's not its value, but only sizes depend on it, and any
+  such bound needs 64 bits.
 
 ## Bug 11: `cm3 -keep` doesn't keep M3CG IR in C mode
 
@@ -289,3 +299,35 @@ every back end.
 - **Status:** open.
 - **Detail:** the test directory has no `stderr.build` file, so the
   test fails although the program is fine.
+
+## Bug 24: `RTTipe` sizes wide `LONGINT` subranges at 32 bits for 32-bit packings
+
+- **Where:** upstream, `RTTipe.m3`, `FixSizes`.
+- **Status:** fixed, with bug 9; test p297.
+- **Found by:** the probe for bug 9, on AMD64_LINUX, 2026-11-18.
+- **Detail:** for a packing with `word_size = 32`, `FixSizes` gave
+  every subrange wider than 16 bits 32 bits. The compiler gives
+  `[0L..16_1ffffffffL]`, `[-16_80000001L..0L]` and other `LONGINT`
+  subranges that don't fit in 32 bits 64 bits, whatever the target.
+  So would a 32-bit target's `RTTipe` reading a 64-bit target's
+  pickle with such fields.
+
+## Bug 25: The front end encodes subrange bounds in -255..-64 wrongly
+
+- **Where:** upstream, `m3-sys/m3front/src/misc/TipeDesc.m3`, `AddI`.
+- **Status:** open. Found while writing p297, 2026-11-18.
+- **Detail:** for a value from -255 to -64, `AddI` writes
+  `Stuff (16_c1); Stuff (i)`. That stores the low byte of the negative
+  number, where `GetDoubleInt` in `RTTipe` (and the encoding of every
+  other value) expects its magnitude, `-i`. So -129 is written as byte
+  16_7f and read back as -127, and `RTTipe` sizes `[-129..0]` at 8 bits
+  where the compiler uses 16. -200 reads back as -56. The code dates
+  from the 2001 import.
+- **Effect:** wrong bounds and sizes in `RTTipe` for subranges with
+  such a lower bound, so wrong layouts in pickles of records with such
+  fields. Same-machine round trips are probably unaffected, as for
+  bug 9 (not tested).
+- **Fix:** `Stuff (-i)`. `RTTipe` can't work around it for code
+  already compiled: the wrong bytes are also valid encodings of other
+  values (both -129 and -127 come out as 16_7f). p297 leaves such
+  bounds out; once this is fixed, add `[-129..0]`, which gets 16 bits.

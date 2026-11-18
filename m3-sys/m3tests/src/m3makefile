@@ -545,6 +545,7 @@ readonly proc p_test (group, uid, comment) is
   run_test ("_ptests", group, uid, comment, "run", cm3opts, runopts, "probeForTargetSpecificFiles")
 end
 
+p_test ("p2", "p297", "RTTipe sizes subranges the way the compiler does")
 p_test ("p2", "p296", "INTEGER and LONGINT overflow wraps (no C undefined behavior)")
 p_test ("p2", "p295", "Integrated backend crash in typecase")
 p_test ("p2", "p293", "Mutex unlocked in event of exception within LOCK")

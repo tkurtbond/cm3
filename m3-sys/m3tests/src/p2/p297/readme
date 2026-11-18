@@ -1,0 +1,13 @@
+RTTipe sizes subranges the way the compiler does.
+
+RTTipe.Get rebuilds a type from its compiled type description; pickles
+use it to find where each field is.  It used to size a subrange by
+whether its bounds fit in a word of the packing, while the compiler
+(SubrangeType.SetRep) picks the smallest of 8, 16, 32 or 64 bits that
+holds the bounds, unsigned when the lower bound is at least 0.  So
+[0..16_ffffffff] came out 64 bits instead of 32, and with a 32-bit
+packing LONGINT subranges wider than 32 bits came out 32.  Each line
+compares RTTipe's size of a record field with BITSIZE, under 32- and
+64-bit packings.  See LLVM-IR-backend-docs/BUGS.md,
+bugs 9, 10 and 24.  Bounds in -255..-64 are left out: the front end
+encodes them wrongly (bug 25).
