@@ -4963,7 +4963,12 @@ BEGIN
 END HelperFunctions_insert_mn;
 
 PROCEDURE HelperFunctions_pop(self: HelperFunctions_t; type: CGType) =
-CONST text = "#define m3_pop_T(T) static void __stdcall m3_pop_##T(volatile T a) { }";
+(* This fork: the store to a volatile local keeps the popped value from
+   being discarded (so EVAL p^ still loads, and faults on NIL), as the
+   volatile parameter did; C++20 deprecates volatile parameters, and
+   GCC 16 warned about them (-Wvolatile).  See
+   LLVM-IR-backend-docs/BUGS.md, bug 12. *)
+CONST text = "#define m3_pop_T(T) static void __stdcall m3_pop_##T(T a) { volatile T b = a; (void)b; }";
 BEGIN
     HelperFunctions_helper_with_type(self, "pop", type, self.data.pop, text);
 END HelperFunctions_pop;

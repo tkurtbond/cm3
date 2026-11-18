@@ -11,7 +11,7 @@ is in upstream cm3 too, so the fix may be worth offering there. Where a
 claim comes from reading code rather than from a test, the entry says
 so.
 
-Bugs 1 to 10, 24 and 25 are fixed; 23 turned out not to be a bug; the
+Bugs 1 to 10, 12, 14, 24 and 25 are fixed; 23 turned out not to be a bug; the
 others are open.
 
 ## Bug 1: C back end: set and word operations give wrong results
@@ -182,12 +182,22 @@ A new `m3_iabs_T` helper negates through the unsigned type, so
 
 - **Where:** upstream, the `m3_pop_T` macro in `M3C.m3`'s generated
   C++.
-- **Status:** open.
+- **Status:** fixed (marked "This fork" in the source).
 - **Detail:** GCC 16 warns "'volatile'-qualified parameter is
   deprecated". The programs are fine, but the warning lands in
   `stderr.build`, so m3tests fail on it: p039, p085, p100, p117, p137,
   p140, p184, p189, p205, p265, p283 and e020, most of the C back
   end's remaining failures.
+- **Why `volatile`:** `cg_pop` (`EVAL e`) calls `m3_pop_T (e)`; the
+  `volatile` parameter (2012, "don't discard pop side effects") was
+  meant to keep `e` evaluated. It didn't at `gcc -O2`: `EVAL p^.a` with
+  `p` NIL ran on without faulting (tested 2026-11-18, with
+  `LLVM-IR-backend-docs/phase4/gcc-O2-wrapper`).
+- **Fix:** `m3_pop_T` takes a plain parameter and stores it in a
+  `volatile` local, which C++20 allows and which keeps the load:
+  `EVAL p^.a` now faults at `-O0` and `-O2`, and the warning is gone.
+  m3tests with C (GCC 16): 8 failures, down from 22; the 8 are bugs
+  13, 15 and 16.
 
 ## Bug 13: C back end emits C++ that doesn't compile
 
@@ -209,8 +219,11 @@ A new `m3_iabs_T` helper negates through the unsigned type, so
 ## Bug 14: C back end: `FIRST(INTEGER) * NotConstI(0)` (p227)
 
 - **Where:** upstream, the C back end or GCC's treatment of its output.
-- **Status:** open; not rechecked since Bug 2 was fixed, which may
-  have fixed it.
+- **Status:** fixed. Both of p227's checks pass with C (m3tests,
+  2026-11-18). Most likely bug 2's fix did it: C failed 22 tests
+  before that fix and 8 after it and bug 12's, which accounts for
+  bug 12's 12 tests and p227's 2 checks. Not confirmed by rerunning
+  p227 with the old compiler.
 - **Detail:** p227 fails `<*ASSERT*> (FIRST(INTEGER) * NotConstI(0)) = 0`
   at line 250, and its output stops there. `LlvmIR` passes.
 
