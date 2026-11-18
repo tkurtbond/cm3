@@ -393,10 +393,11 @@ if equal(M3_BACKEND_MODE, "StAloneLlvmAsm")
 % llvm optimisations if required - each compile runs opt -O3 and llc -O3
   cm3opts = cm3opts & "-O3 "
 end
-% LlvmIR backend (this fork): "cm3 -DHTML -DM3_BACKEND_MODE=LlvmIR" builds
-% the tests with it.
+% This fork: build every test with this run's back end, so that
+% "cm3 -DHTML -DM3_BACKEND_MODE=C" tests C (and "...=LlvmIR" tests LlvmIR)
+% whatever the installed cm3.cfg defaults to.
+cm3opts = cm3opts & "-DM3_BACKEND_MODE=" & M3_BACKEND_MODE & " "
 if equal(M3_BACKEND_MODE, "LlvmIR")
-  cm3opts = cm3opts & "-DM3_BACKEND_MODE=LlvmIR "
   % "-DM3_DEBUG_LANGUAGE=C" labels its debug information C (for lldb).
   if defined("M3_DEBUG_LANGUAGE")
     cm3opts = cm3opts & "-DM3_DEBUG_LANGUAGE=" & M3_DEBUG_LANGUAGE & " "
