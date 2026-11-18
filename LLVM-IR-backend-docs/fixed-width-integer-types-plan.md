@@ -238,8 +238,7 @@ so they need an explicit decision, and ideally an upstream discussion
   and the speed of a few benchmarks at `-O`.
 - Effort: a day or two.
 
-Status (2026-11-18): done, except the build-time and benchmark
-comparison.
+Status (2026-11-18): done.
 
 - `M3C.m3`: `op2` and `op1` cast signed operands to the unsigned type
   (`typeToUnsigned`) before `+ - *`, unary `-` (and `~ & |`, harmless),
@@ -257,11 +256,45 @@ comparison.
 - m3tests with the C back end, old compiler against new, at `-O0` and
   with `-DM3TESTS_OPTIMIZE`: the same 22 failures apart from p296, which
   only the old compiler fails. With `LlvmIR` only p047 fails.
-- Running m3tests with C needs care: the installed `cm3.cfg` defaults to
-  `LlvmIR`, and `m3tests/src/m3makefile` passes only `LlvmIR` down to
-  each test's `cm3`, so `cm3 -DHTML -DM3_BACKEND_MODE=C` still builds
-  the tests with `LlvmIR`. A `cm3.cfg` with `M3_BACKEND_MODE = "C"`,
-  named by `M3CONFIG`, works.
+- m3tests used to pass only `LlvmIR` down to each test's `cm3`, so
+  `cm3 -DHTML -DM3_BACKEND_MODE=C` built the tests with the installed
+  default; it now passes any mode (2a7330d19).
+- Cost, measured with two drivers that differ only in `M3C.m3`
+  (scripts and raw numbers in [`fwint-phase0/`](fwint-phase0/)). Same
+  machine as [Phase 4](phase4-results.md); C mode; the generated C
+  compiled at `gcc -O0` (what cm3 does, even with `cm3 -O`) and at
+  `gcc -O2` (through Phase 4's wrapper).
+  - Building the 15 compiler packages (`m3core` to `cm3`), minimum of
+    3 runs: the generated C grows 0.2% (311.6 to 312.3 MB) and object
+    text 0.1% at `-O0`, 0.2% at `-O2`. CPU time grows 0.7% at `-O0`
+    (76.7 to 77.2 s) and 0.4% at `-O2` (156.6 to 157.2 s), about the
+    run-to-run spread.
+  - Runtime, minimum of 3 runs pinned to one P-core; `m3core` and
+    `libm3` are the installed ones in every column, so only the
+    program's own code differs. Outputs are identical.
+
+    | Program | old `-O0` | new `-O0` | old `-O2` | new `-O2` |
+    |---------|------:|------:|------:|------:|
+    | Sieve | 2.90 s | 2.90 s | 0.77 s | 0.77 s |
+    | NBody | 3.29 s | 3.28 s | 0.72 s | 0.73 s |
+    | Trees | 4.15 s | 4.17 s | 3.78 s | 3.71 s |
+    | QSort | 3.34 s | 3.32 s | 1.70 s | 1.84 s |
+    | Hash | 9.68 s | 9.58 s | 2.14 s | 2.16 s |
+
+  - At `gcc -O0` there is no difference. At `-O2` only QSort moves:
+    8% slower (1.70 against 1.84 s, steady over 7 more runs each).
+    Undoing single casts in its generated C shows the cost is entirely
+    the wrapped `INC (i)` and `DEC (j)` in
+    `WHILE a[i] < p DO INC (i) END` and its mirror; with those two
+    reverted it runs in 1.69 s. The only difference between the two
+    forms is that signed overflow is undefined in C, so the old code's
+    speed came from GCC being allowed to assume `i + 1` never
+    overflows: the same license that folded `x + 1 > x` to TRUE. Here
+    `i` and `j` are kept in range by the array bounds, but GCC can't
+    see that in the generated C. Getting the speed back safely would
+    take facts the front end has (such as a checked range), not
+    undefined behavior. Hash, which overflows on purpose, is
+    unaffected.
 
 ### Phase 1: Decisions (written down before coding)
 
