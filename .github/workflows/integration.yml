@@ -6,8 +6,16 @@ on:
   pull_request: {branches: master}
   # This fork: full CI only on master (work happens on dev, which is
   # fast-forwarded into master); run it on another branch by hand with
-  # "gh workflow run integration --ref dev".
-  push: {branches: master}
+  # "gh workflow run integration --ref dev".  Skip pushes that change
+  # only documentation: GitHub disables the workflows of forks that use
+  # too much compute.
+  push:
+    branches: master
+    paths-ignore:
+      - '**.md'
+      - 'README'
+      - 'docs/**'
+      - 'LLVM-IR-backend-docs/**'
   workflow_dispatch:
 
 concurrency: ci
