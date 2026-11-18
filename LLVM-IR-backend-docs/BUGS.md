@@ -11,7 +11,8 @@ is in upstream cm3 too, so the fix may be worth offering there. Where a
 claim comes from reading code rather than from a test, the entry says
 so.
 
-Bugs 1 to 10, 24 and 25 are fixed; the others are open.
+Bugs 1 to 10, 24 and 25 are fixed; 23 turned out not to be a bug; the
+others are open.
 
 ## Bug 1: C back end: set and word operations give wrong results
 
@@ -185,8 +186,8 @@ A new `m3_iabs_T` helper negates through the unsigned type, so
 - **Detail:** GCC 16 warns "'volatile'-qualified parameter is
   deprecated". The programs are fine, but the warning lands in
   `stderr.build`, so m3tests fail on it: p039, p085, p100, p117, p137,
-  p140, p184, p189, p205, p265 and e020, most of the C back end's
-  remaining failures.
+  p140, p184, p189, p205, p265, p283 and e020, most of the C back
+  end's remaining failures.
 
 ## Bug 13: C back end emits C++ that doesn't compile
 
@@ -296,9 +297,13 @@ every back end.
 ## Bug 23: p283 has no expected `stderr.build`
 
 - **Where:** upstream, `m3-sys/m3tests/src/p2/p283`.
-- **Status:** open.
-- **Detail:** the test directory has no `stderr.build` file, so the
-  test fails although the program is fine.
+- **Status:** not a bug; it's bug 12. Checked 2026-11-18.
+- **Detail:** p283 has no expected files at all, and that's fine:
+  `cmp_file` in `m3tests/src/m3makefile` compares a missing expected
+  file as an empty one. The test failed with C because GCC 16's
+  `-Wvolatile` warning (bug 12) made `stderr.build` non-empty. With
+  `LlvmIR` the build writes nothing to stderr and p283 passes. Adding
+  an empty `stderr.build` would change nothing.
 
 ## Bug 24: `RTTipe` sizes wide `LONGINT` subranges at 32 bits for 32-bit packings
 

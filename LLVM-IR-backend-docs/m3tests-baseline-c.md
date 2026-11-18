@@ -33,7 +33,9 @@ expected file. The programs are fine. These are expected to pass with
 p039, p085, p100, p117, p140, p184, p189, p205, p265, e020.
 
 **Expected file missing (1).** p283: there is no `stderr.build` in the
-test directory. Effectively a pass.
+test directory. Effectively a pass. (Corrected 2026-11-18: a missing
+expected file counts as an empty one, so this is really the
+`-Wvolatile` warning above; see `BUGS.md`, bugs 12 and 23.)
 
 **The C backend generates invalid C++ (4).** These tests fail to
 compile.
