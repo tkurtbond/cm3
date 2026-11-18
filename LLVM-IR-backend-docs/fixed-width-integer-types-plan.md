@@ -117,8 +117,9 @@ Checked against the sources on branch `dev` (commit 992071694).
 
    - **`VAL` checks the value; `Wrap` keeps the bits.** Use `VAL` for
      a number and `Wrap` for a bit pattern. `VAL
-     (16_FFFFFFFFFFFFFFFFL, Word64.T)` is a static error, because the
-     literal's value is -1.
+     (16_FFFFFFFFFFFFFFFFL, Word64.T)` fails, because the literal's
+     value is -1. It fails at run time, not at compile time: see
+     Phase 1, decision 7.
    - **`Word64.T` values of 2^63 and above** are written as a based
      LONGINT literal passed to `Wrap`. The scanner
      (`misc/Scanner.m3`, around line 546) accepts a based literal with
@@ -304,15 +305,57 @@ Status (2026-11-18): done.
    instantiate generics such as `Table`; `Wrap`; and, for `WordN`, the
    `Word` operations at that width plus `FromWord`, `ToWord`,
    `FromLong` and `ToLong`. No 128-bit types.
-2. Ordinal rules. Recommendation: follow LONGINT. The types are
-   ordinal for `FIRST`, `LAST`, `ORD`, `VAL`, `INC`, `DEC`, `FOR` and
-   subranges, but not allowed as an array index type or set base type
-   at first.
-3. Front-end representation. Recommendation: one new `Type.Class`
-   (say `Fixed`, appended after `Subrange`) and one parametrized module
-   `builtinTypes/FixedType.m3` holding bit width, signedness and
-   overflow policy, with one instance per type. That is one class to
-   audit, not eight.
+Status (2026-11-18): decisions 2, 3 and 5 to 8 are written down below
+as proposed defaults, checked against the front end and the installed
+compiler; they stand unless the maintainer changes them. Decision 6
+is deliberately left open until Phase 4.
+
+2. Ordinal rules (decided): follow LONGINT, which is allowed wherever
+   an ordinal type is. A test with the installed compiler accepts
+   `ARRAY [0L..3L] OF INTEGER`, `SET OF [0L..3L]`, `BITS 16 FOR
+   [0L..9L]`, `a[1L]`, `CASE` on a LONGINT and `FOR i := 0L TO 3L`.
+   Only the size stops it: `ARRAY LONGINT OF` fails in
+   `Type.Number` with "type has too many elements". So the new types
+   are ordinal everywhere: `FIRST`, `LAST`, `NUMBER`, `ORD`, `VAL`,
+   `INC`, `DEC`, `FOR`, `CASE`, subranges, `BITS FOR`, array index
+   types and set base types. `ARRAY Word8.T OF ...` and
+   `SET OF Word8.T` are legal; `ARRAY Word64.T OF ...` is rejected
+   for its size, as `ARRAY LONGINT OF` is. This answers the open
+   question below. Phase 2 may reject index and set uses with a "not
+   yet implemented" error and enable them in Phase 4, so the rule
+   doesn't wait on the code.
+   - **Subranges** of a fixed type have that type as their base
+     (`SubrangeType` already keeps a base type), and their bounds are
+     constants of that type, such as
+     `[VAL (0, Word8.T) .. VAL (9, Word8.T)]`.
+   - **`ORD (x)`** returns `x`'s base type, as `ORD` of a LONGINT
+     returns LONGINT (`builtinOps/Ord.m3`). It is the identity, the
+     same on every target, and never fails. Getting an INTEGER takes
+     `VAL (x, INTEGER)`, which is checked, or `WordN.ToWord (x)`,
+     which keeps the bits.
+3. Front-end representation (decided): one new `Type.Class`,
+   `Fixed`, appended after `Subrange`, and one module
+   `builtinTypes/FixedType.m3` whose objects hold the bit width,
+   signedness and overflow policy, with one instance per type. That
+   is one class to audit, not eight. What was checked:
+   - `Type.Class` is used only in `m3front` (a search of `m3-sys`
+     finds no other user), and no array is indexed by it, so
+     appending is safe.
+   - The front end recognizes LONGINT in two ways: by class (12
+     places in 5 files, mostly in `types/Type.m3`: `IsOrdinal`,
+     `Number`, `GetBounds`) and by `Type.IsSubtype (t, LInt.T)` or
+     `= LInt.T` (56 places in 27 files). Each LONGINT test needs a
+     matching test for the new class. `FixedType.Split (t, VAR info)`
+     answers "is `t`, or its base, a fixed type, and which one", so
+     the code doesn't compare against eight type constants. There are
+     41 `CASE` statements over a class; each needs a look, though
+     most fall into an `ELSE`.
+   - `Target.Int` (`TInt.Int`) is 9 bytes, so every bound of the new
+     types, including `2^64 - 1`, fits in `GetBounds`. `Type.Number`
+     returns an INTEGER-sized count, so it rejects `Word64.T`,
+     `Signed64.T` and, on 32-bit targets, `Word32.T` and
+     `Signed32.T` as index or set types, the same way it rejects
+     LONGINT.
 4. Type descriptions (decided, 2026-11-18): describe each new type
    with the existing `Subrange` opcode and its bounds, for example
    `Word32.T` as `Subrange 0 16_ffffffff` and `Signed8.T` as
@@ -359,11 +402,44 @@ Status (2026-11-18): done.
    packings); test p297. A fourth, in the front end, is fixed too:
    bounds in -255..-64 were encoded wrongly (bug 25). It didn't touch
    the new types' bounds.
-5. The wrap conversion. Recommendation: `WordN.Wrap (x)` and
-   `SignedN.Wrap (x)`, builtin procedures that accept any integer type,
-   not a predeclared `WRAP`.
-6. Literal suffixes: later, or never. Constants are written with `VAL`
-   and `Wrap` (correction 5).
+5. The wrap conversion (decided): `WordN.Wrap (x)` and
+   `SignedN.Wrap (x)`, builtin procedures, not a predeclared `WRAP`.
+   `x` may be of any integer type: INTEGER, LONGINT, any of the eight
+   new types, or a subrange of one. The result is `x`'s value modulo
+   `2^N`, read as unsigned for `WordN` and as two's complement for
+   `SignedN`; that equals keeping the low N bits. So
+   `Word32.Wrap (x64)` truncates and `Signed32.Wrap (w32)`
+   reinterprets. It folds when `x` is constant and never fails.
+6. Literal suffixes (open until Phase 4). Constants are written with
+   `VAL` and `Wrap` (correction 5). Decision 8 removes the commonest
+   case, `INC (x)` and `INC (x, 1)`, but `x + 1` still has to be
+   written `x + One`, with `CONST One = VAL (1, Word32.T)`. Phase 4's
+   SHA256 rewrite will show how often that matters; decide then.
+7. `VAL` (decided). `VAL (x, T)` accepts any integer type for `x`,
+   not only INTEGER and LONGINT (`builtinOps/Val.m3` allows only
+   those two today), and any ordinal type for `T`. It is checked the
+   way it is today: `Val.m3` compares the argument's possible range
+   with `T`'s and inserts a check where they differ, so a value
+   outside `T`'s range raises `ValueOutOfRange` at run time. So
+   `VAL (w, INTEGER)` fails for a `Word64.T` of `2^63` or more.
+   - **A constant out of range is not a static error today.** Checked
+     with the installed compiler: `VAL (10, [0..9])` compiles without
+     a message and fails at run time, as does `VAL (l, [0..9])` with
+     a LONGINT `l` of 10 (`Val.m3` has a TODO to warn). So
+     `VAL (16_FFFFFFFFFFFFFFFFL, Word64.T)` also fails only at run
+     time. Phase 2 may add the warning for all types; making it an
+     error would reject code that compiles today.
+8. Steps of `INC`, `DEC` and `FOR` (decided): the amount may be of
+   the variable's own type or an INTEGER. For a LONGINT it must be a
+   LONGINT (`builtinOps/Dec.m3`, `stmts/ForStmt.m3`), but for an
+   enumeration it is an INTEGER, so there is a precedent. The INTEGER
+   is allowed because an unsigned step can't be negative: without it
+   `FOR i := hi TO lo BY -1` couldn't be written over a `WordN.T`,
+   and `INC (w, 1)` would need `VAL`. `INC (x, n)` means
+   `x := x + n` computed exactly and then made to fit: wrapped for
+   `WordN`, checked for `SignedN`. Phase 2 must check that a
+   `WordN` loop up to `LAST (T)` (or down to 0) ends, rather than
+   wrapping around forever; a `p*` test covers it.
 
 ### Phase 2: Front end, wrapping unsigned family
 
@@ -389,9 +465,9 @@ Status (2026-11-18): done.
 - `types/SubrangeType.m3`: subranges with a fixed base type. Also
   `AssignStmt`, `CheckExpr`, `ForStmt`, `Formal`, `Variable`: the
   places that special-case LONGINT today (the list in the grep below).
-- `e*` static-error tests in `m3tests` for mixed operands, assignment
-  between types and out-of-range constants, including
-  `VAL (16_FFFFFFFFFFFFFFFFL, Word64.T)`. Matching `p*` tests check
+- `e*` static-error tests in `m3tests` for mixed operands and
+  assignment between types; an `r0` test that
+  `VAL (16_FFFFFFFFFFFFFFFFL, Word64.T)` fails at run time. Matching `p*` tests check
   that `Word64.Wrap (16_FFFFFFFFFFFFFFFFL) = LAST (Word64.T)`.
 
 To find every place: `grep -rn "LInt\.T\|Class\.Longint" m3-sys/m3front/src`.
@@ -453,5 +529,6 @@ To find every place: `grep -rn "LInt\.T\|Class\.Longint" m3-sys/m3front/src`.
 
 - Is upstream interested? A language extension kept only in this fork
   makes programs that use it unportable to upstream cm3.
-- Whether array index and set base types should accept the new types
-  (for example `ARRAY Word8.T OF ...` for a byte table).
+- Literal suffixes (Phase 1, decision 6), after Phase 4.
+- Answered: array index and set base types accept the new types, as
+  they accept LONGINT subranges (Phase 1, decision 2).
