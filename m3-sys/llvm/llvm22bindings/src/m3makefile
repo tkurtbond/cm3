@@ -37,8 +37,12 @@ if equal (OS_TYPE, "POSIX")
   else
   % Lib location for dynamic posix libraries. Again this is for linux so
   % other architectures will need to check their paths.
-    LIB_DIR1 = "/lib"
-    LIB_DIR2 = "/lib"
+  % tkurtbond/cm3: not "/lib", which on Fedora holds 32-bit libraries
+  % (gold then fails with "skipping incompatible /lib/libm.so").  Use
+  % LLVM's own library directory, which llvmlibs() below adds anyway;
+  % the linker still finds stdc++, z and zstd on its default path.
+    LIB_DIR1 = skipr (q_exec_get ("llvm-config --libdir")[1])
+    LIB_DIR2 = LIB_DIR1
   end
 
   % llvm needs the stdc++ lib and the compression libs z and zstd.
