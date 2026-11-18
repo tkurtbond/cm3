@@ -101,8 +101,8 @@ Checked against the sources on branch `dev` (commit 992071694).
    encodes back-references as `Old0 + n`, so a new opcode shifts
    `Old0`. The comment there says this needs a coordinated change with
    `RTTipe` and invalidates compiled code. That is why WIDECHAR is
-   described as an `Enum`. The new types need a decision here (see
-   Phase 1).
+   described as an `Enum`. Phase 1 decides to describe the new types
+   with the existing `Subrange` opcode instead.
 5. **Literal suffixes are optional.** `VAL` and `Wrap` both fold at
    compile time, so every constant of the new types can be written
    with today's literals, without touching the scanner:
@@ -158,9 +158,9 @@ With builtin-interface names and front-end lowering:
   named `Word8` to `Word64` or `Signed8` to `Signed64` would clash with
   the builtin one. This is the same risk `Word` and `Long`
   carry, and it is checkable with a search before release.
-- **Binary:** new `TipeDesc` opcodes, if chosen, need everything
-  rebuilt together, which a cm3 release already requires. Old pickles
-  contain no new types and still read.
+- **Binary:** no new `TipeDesc` opcodes (Phase 1, decision 4), so
+  type descriptions keep their format. Old pickles contain no new
+  types and still read.
 - **Tools:** `m3tk` (used by `stubgen` for network objects and by
   `m3browser`) has its own parser and type checker. Until it learns
   the new types it will reject or mistype only programs that use them.
@@ -313,10 +313,47 @@ Status (2026-11-18): done.
    `builtinTypes/FixedType.m3` holding bit width, signedness and
    overflow policy, with one instance per type. That is one class to
    audit, not eight.
-4. Type descriptions. Either new `TipeDesc` opcodes (coordinated with
-   `RTTipe` and pickles), or describe the new types with existing
-   opcodes (`Packed` around `Subrange`, which may not hold `2^64 - 1`).
-   The `TipeDesc` integer encoding needs checking before choosing.
+4. Type descriptions (decided, 2026-11-18): describe each new type
+   with the existing `Subrange` opcode and its bounds, for example
+   `Word32.T` as `Subrange 0 16_ffffffff` and `Signed8.T` as
+   `Subrange -128 127`. No new opcodes and no `Packed`, so
+   `TipeDesc.Op`, `Old0` and code already compiled stay as they are.
+   What was checked:
+   - **The encoding holds `2^64 - 1`.** An integer is a sign bit plus
+     up to 8 magnitude bytes. `TipeDesc.AddX` takes a 72-bit
+     `Target.Int`, and for `2^64 - 1` `AddBigX` writes `16_48` and
+     eight `16_ff` bytes. Every other bound of the eight types is
+     already written today, by `INTEGER` and `LONGINT` subranges.
+   - **Only `RTTipe` reads type descriptions**
+     (`m3core/src/runtime/common/RTTipe.m3`). `RT0` and `RTType` only
+     hold the pointer. The only user of `RTTipe` is pickles
+     (`ConvertPacking`), which need just the size of each field and
+     whether it is signed. Telling `Word8.T` apart from `[0..255]` is
+     the fingerprint's job (Phase 2), not the type description's.
+   - **On 64-bit hosts `RTTipe` already decodes `2^64 - 1`.**
+     `GetDoubleInt` gives `{Hi := 0, Lo := -1}`, which is the right
+     two-word value, and `FixSizes` gives it 64 bits.
+   - **`RTTipe.FixSizes` has an existing off-by-one** that would size
+     `Word32.T` wrong. It tests `Word.LT (sub.max.Lo, 16_ffffffff)`
+     where it needs `LE`, so `[0..16_ffffffff]` gets 64 bits while the
+     compiler (`SubrangeType.SetRep`) gives it 32. A test program
+     shows this on AMD64_LINUX: field size 32 according to `BITSIZE`,
+     64 according to `RTTipe`. `[0L..16_ffffffffL]` has the same
+     problem; `[0..16_fffffffe]` and `[-2^31..2^31-1]` are right.
+     Pickles written and read on one machine still round-trip, which
+     was also tested. Converting a pickle between byte orders or word
+     sizes would use the wrong layout, but that hasn't been tried.
+     This is a one-character fix, worth making (and offering upstream)
+     whatever happens to this plan.
+   - **On 32-bit hosts `RTTipe` would misread `2^64 - 1`** (from
+     reading the code, not tested). The 32-bit branch of
+     `GetDoubleInt` gives `{Hi := -1, Lo := -1}`, which is `-1`, and
+     `FixSizes` would then give `Word64.T` 8 bits. The fix is for a
+     positive value with a negative `Hi` to stay "big": clamp it, or
+     have `FixSizes` give 64 bits to any upper bound decoded from 8
+     bytes.
+
+   Both `RTTipe` fixes change only the runtime, not the format.
 5. The wrap conversion. Recommendation: `WordN.Wrap (x)` and
    `SignedN.Wrap (x)`, builtin procedures that accept any integer type,
    not a predeclared `WRAP`.
@@ -398,7 +435,8 @@ To find every place: `grep -rn "LInt\.T\|Class\.Longint" m3-sys/m3front/src`.
 - Pickles (`libm3/src/pickle/ver2/ConvertPacking.m3`, `PickleStubs`),
   network objects (`stubgen`), `m3tk` (`ast/M3AST_AS.i3`,
   `syn/M3CParse.m3`, `fe/StandardAsText.m3`), `m3browser`. The effort
-  is unknown until this code is read.
+  is unknown until this code is read. For pickles, the two `RTTipe`
+  fixes under Phase 1, decision 4, cover the type descriptions.
 - `Cstdint`: re-aliasing `uint32_t` to `Word32.T` changes type identity
   for C-binding code, so leave it for last and make it optional.
 - Documentation: the language reference additions, and the `Word`
@@ -410,6 +448,5 @@ To find every place: `grep -rn "LInt\.T\|Class\.Longint" m3-sys/m3front/src`.
 
 - Is upstream interested? A language extension kept only in this fork
   makes programs that use it unportable to upstream cm3.
-- `TipeDesc`: new opcodes or an encoding with existing ones.
 - Whether array index and set base types should accept the new types
   (for example `ARRAY Word8.T OF ...` for a byte table).

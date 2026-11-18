@@ -1,0 +1,291 @@
+# Bugs found while working on this fork
+
+This lists bugs found while working on this fork, the ones fixed and the
+ones still open. Most were found while comparing the C back end with
+`LlvmIR` or while running m3tests. Each bug keeps its number for good;
+a newly found bug gets the next one.
+
+Each bug says where it lives (upstream code, or code this fork added),
+its status, and how it was found or checked. "Upstream" means the bug
+is in upstream cm3 too, so the fix may be worth offering there. Where a
+claim comes from reading code rather than from a test, the entry says
+so.
+
+Bugs 1 to 8 are fixed; 9 to 23 are open.
+
+## Bug 1: C back end: set and word operations give wrong results
+
+- **Where:** upstream, `m3-sys/m3back/src/M3C.m3`.
+- **Status:** fixed in 8be996c90 (marked "This fork" in the source).
+- **Found by:** the mixed-linking tests in `m3-sys/m3llvmir/tests/`,
+  which link C-built and `LlvmIR`-built code and compare output, and
+  then by m3tests. With the fixes, m3tests with C fails 22 tests instead
+  of 27 (GCC 16, AMD64_LINUX); p053, p156, p159, p160 and p162 pass.
+
+### Bug 1.1: `Word.Extract` and `Word.Insert` with a count of 64
+
+`Word.Extract (x, 0, 64)` and `Word.Insert (x, y, 0, 64)` shifted by
+64, which is undefined in C. They now compute in `UINT64` and handle
+the full-width count.
+
+### Bug 1.2: `shift_right` on signed types is arithmetic
+
+`shift_right` used C's `>>` on signed types, which shifts in copies of
+the sign bit, so one-word set ranges came out wrong. It now shifts as
+unsigned.
+
+### Bug 1.3: Set `<=` and `<` reversed on multi-word sets
+
+`m3_set_le` and `m3_set_lt` named their parameters in the opposite
+order to the call, so `<=` and `<` on sets longer than one word gave
+reversed results.
+
+### Bug 1.4: Set `=` and `#` inverted for sets in memory
+
+`=` and `#` on sets held in memory gave inverted results.
+
+### Bug 1.5: Missing `SET` typedef
+
+A unit whose only set operations were comparisons didn't get the `SET`
+typedef, so its C++ failed to compile ("'SET' was not declared in this
+scope"; p053, p160).
+
+## Bug 2: C back end: signed `INTEGER` and `LONGINT` overflow is undefined
+
+- **Where:** upstream, `m3-sys/m3back/src/M3C.m3`.
+- **Status:** fixed in 547d4f16b (Phase 0 of
+  [`fixed-width-integer-types-plan.md`](fixed-width-integer-types-plan.md)).
+  A new test, p296, checks wrapping at the limits. The cost is measured
+  in that plan and in [`fwint-phase0/`](fwint-phase0/).
+
+### Bug 2.1: `+`, `-`, `*` and unary minus
+
+These were emitted as C signed arithmetic, whose overflow is undefined
+behavior. GCC folded `x + 1 > x` to TRUE at `LAST(INTEGER)`, even at
+`-O0`. Signed operands are now cast to the unsigned type, operated on
+and cast back, so overflow wraps.
+
+### Bug 2.2: `ABS (FIRST (INTEGER))`
+
+`ABS` negated in the signed type, with the same undefined overflow.
+A new `m3_iabs_T` helper negates through the unsigned type, so
+`ABS (FIRST (INTEGER))` wraps as well.
+
+## Bug 3: `cm3 -ship` in `m3-sys/cm3` doesn't update `bin/cm3`
+
+- **Where:** upstream behavior, by design: `program ("cm3")` installs
+  into `INSTALL/pkg/cm3/`, not `INSTALL/bin/`, so shipping never
+  replaces the running compiler. Only `concierge.py` copied it to
+  `bin/`, and only as part of a full build.
+- **Status:** worked around in 2a7330d19. `concierge.py ship-compiler`
+  copies the driver already built in `m3-sys/cm3` to `bin/` without
+  rebuilding anything.
+
+## Bug 4: m3tests ignores `-DM3_BACKEND_MODE=C`
+
+- **Where:** `m3-sys/m3tests/src/m3makefile`. Upstream doesn't pass
+  `-DM3_BACKEND_MODE` to each test's `cm3` at all; this fork added it
+  only for `LlvmIR`.
+- **Status:** fixed in 2a7330d19. The makefile now always passes
+  `M3_BACKEND_MODE`.
+- **Effect before the fix:** with an install whose `cm3.cfg` defaults
+  to `LlvmIR`, `cm3 -DHTML -DM3_BACKEND_MODE=C` silently tested
+  `LlvmIR`.
+
+## Bug 5: ex_stack: an uncaught exception prints only "terminate called"
+
+- **Where:** upstream, the zero-cost exception model (`RTStackC.c`,
+  `RTExStack`).
+- **Status:** fixed in f437aeef3.
+- **Detail:** an uncaught Modula-3 exception made the C++ runtime call
+  `std::terminate`, which printed "terminate called after throwing an
+  instance of '_M3Exc'" and nothing else. A `std::terminate` handler
+  now calls the backstop while the stack is intact, so the report is
+  the same as with ex_frame. r001, r003, r004 and r005 now pass with
+  ex_stack, with both `LlvmIR` and C.
+
+## Bug 6: concierge exits 0 after a fatal error
+
+- **Where:** upstream, `scripts/concierge.py`.
+- **Status:** fixed in 9cb01399d.
+- **Detail:** concierge printed a `FatalError` and exited with status
+  0, so a CI step went on until a later step failed for an unrelated
+  reason. It now exits 1.
+
+## Bug 7: `m3llvmir` built before `m3bundle` on a fresh install
+
+- **Where:** this fork, `scripts/pkginfo.txt`.
+- **Status:** fixed in cc06dde79.
+- **Detail:** the Phase 5 bundling of `m3printers.py` needs
+  `m3bundle`, which a bootstrap install doesn't have yet. Every fresh
+  build failed, upstream's CI jobs included. `m3llvmir` now comes after
+  `m3bundle` and `mklib`.
+
+## Bug 8: `llvm22bindings` links libraries from `/lib`
+
+- **Where:** upstream, `m3-sys/llvm/llvm22bindings`.
+- **Status:** fixed in 992071694.
+- **Detail:** on Fedora `/lib` holds 32-bit libraries, so gold warned
+  "skipping incompatible /lib/libm.so", and `--fatal-warnings` failed
+  the link. The package now finds `stdc++`, `z` and `zstd` through
+  `llvm-config --libdir`.
+
+## Bug 9: `RTTipe` sizes `[0..16_ffffffff]` at 64 bits
+
+- **Where:** upstream, `m3-libs/m3core/src/runtime/common/RTTipe.m3`,
+  `FixSizes`.
+- **Status:** open. Checked on AMD64_LINUX, 2026-11-18.
+- **Detail:** the subrange case tests
+  `Word.LT (sub.max.Lo, 16_ffffffff)` where it needs `Word.LE`. So
+  `[0..16_ffffffff]` and `[0L..16_ffffffffL]` get 64 bits, while the
+  compiler (`SubrangeType.SetRep`) gives them 32. A test program showed
+  a field size of 32 from `BITSIZE` and 64 from `RTTipe`, with the next
+  field placed 32 bits too late.
+- **Effect:** pickles are the only user of `RTTipe`. A pickle written
+  and read on the same machine still round-trips (tested). Converting a
+  pickle between byte orders or word sizes would use the wrong layout
+  (not tested). The planned `Word32.T` would hit this.
+- **Fix:** `LT` to `LE`.
+
+## Bug 10: `RTTipe` on 32-bit hosts misreads bounds of `2^63` and above
+
+- **Where:** upstream, `RTTipe.m3`, `GetDoubleInt` and `FixSizes`.
+- **Status:** open. From reading the code; there's no 32-bit host here
+  to test on.
+- **Detail:** the 32-bit branch of `GetDoubleInt` decodes the 8-byte
+  value `2^64 - 1` as `{Hi := -1, Lo := -1}`, which is -1. `FixSizes`
+  would then size a subrange with that upper bound at 8 bits. No type
+  has such a bound today; the planned `Word64.T` would.
+
+## Bug 11: `cm3 -keep` doesn't keep M3CG IR in C mode
+
+- **Where:** upstream, `m3-sys/cm3/src/Builder.m3`.
+- **Status:** open (worked around by
+  [`gen_m3cg_corpus.sh`](gen_m3cg_corpus.sh)).
+- **Detail:** `PushOneM3` sets `m3env.sideIRName`, then `RunM3Front`
+  calls `ResetEnv`, which clears it before `M3Backend.Open` sees it. So
+  `-keep` writes no `.mc`/`.ic` side files. From reading the code,
+  confirmed by the missing files; a one-line fix looks possible.
+
+## Bug 12: C back end output triggers GCC 16's `-Wvolatile` warning
+
+- **Where:** upstream, the `m3_pop_T` macro in `M3C.m3`'s generated
+  C++.
+- **Status:** open.
+- **Detail:** GCC 16 warns "'volatile'-qualified parameter is
+  deprecated". The programs are fine, but the warning lands in
+  `stderr.build`, so m3tests fail on it: p039, p085, p100, p117, p137,
+  p140, p184, p189, p205, p265 and e020, most of the C back end's
+  remaining failures.
+
+## Bug 13: C back end emits C++ that doesn't compile
+
+- **Where:** upstream, `M3C.m3`.
+- **Status:** open. All three tests pass with `LlvmIR`.
+
+### Bug 13.1: `FIRST`/`LAST` of enumerations in record constants (p109)
+
+"invalid cast from type 'const Main_m_4_L_5_t'".
+
+### Bug 13.2: Nested array constructors (p269)
+
+"expected initializer before 'temp'".
+
+### Bug 13.3: Recursive values (p201)
+
+`M3C.m3` stops with "DeclareTypes not progressing".
+
+## Bug 14: C back end: `FIRST(INTEGER) * NotConstI(0)` (p227)
+
+- **Where:** upstream, the C back end or GCC's treatment of its output.
+- **Status:** open; not rechecked since Bug 2 was fixed, which may
+  have fixed it.
+- **Detail:** p227 fails `<*ASSERT*> (FIRST(INTEGER) * NotConstI(0)) = 0`
+  at line 250, and its output stops there. `LlvmIR` passes.
+
+## Bug 15: Constructor tests differ with the C back end (p268, p270, p277, p280)
+
+- **Where:** upstream; not yet narrowed down.
+- **Status:** open; not investigated. All four pass with `LlvmIR`.
+- **Detail:** debugging output (`TIntLiteral:type=UINT64 i=-8 ok1=FALSE
+  ok2=TRUE`) appears, the "N warnings encountered" line is missing,
+  and the expected run-time errors appear in a different form.
+
+## Bug 16: p047 fails with every back end
+
+- **Where:** upstream, probably the test's expected output.
+- **Status:** open; the one known failure with `LlvmIR` on every
+  platform.
+- **Detail:** Real/Integer `LOOPHOLE` prints `1067316150 instead of 1`
+  and so on. Probably an expected-output problem now that EXTENDED is
+  128 bits on AMD64_LINUX; not confirmed.
+
+## Bug 17: e041 overflows the front end's stack
+
+- **Where:** upstream, `m3-sys/m3front`.
+- **Status:** open; a known failure in this fork's CI.
+- **Detail:** e041's mutually recursive REVEALs make the front end
+  recurse until it crashes with a segmentation fault, whatever the
+  back end. Under bash (Fedora's `/bin/sh`) the shell reports the
+  crash on its own stderr and the test passes; under dash (Ubuntu's)
+  the message lands in the captured stderr and the test fails.
+
+## Bug 18: Front-end failures with atomics
+
+- **Where:** upstream, `m3-sys/m3front` and `m3-libs/m3core`.
+- **Status:** open; found in Phase 3 (see `PLAN.md`).
+
+### Bug 18.1: `AtomicLongint.FetchInc` with a LONGINT increment crashes the front end
+
+### Bug 18.2: An atomic call can't be a boolean operand
+
+The front end rejects it with "CallExpr.NotBoolean".
+
+### Bug 18.3: The builtin `Atomic*` interfaces have no exporter
+
+`m3core/src/atomic` is disabled, so any program that imports them
+(p226, which is commented out) fails cm3's version-stamp check with
+every back end.
+
+## Bug 19: Grisu's single-precision path fails its own assertion
+
+- **Where:** upstream, `m3-libs/m3core/src/float/`, `IEEE.m3`,
+  `NormalizedBoundaries_S`.
+- **Status:** open; avoided by building with `no_grisu` for both C and
+  `LlvmIR`.
+- **Detail:** fails its `<*ASSERT*>` with either back end. With Grisu,
+  p003, p040, p113 and p118 fail.
+
+## Bug 20: The parallel back end ignores failed compiles
+
+- **Where:** upstream, quake's `try_exec` under `M3_PARALLEL_BACK`, as
+  used by `compile_c` and `compile_llvm_ir` in `Unix.common`.
+- **Status:** open; left alone as upstream behavior. This fork's
+  `M3_LLVM_IR_VERIFY` step uses `exec` to avoid it.
+- **Detail:** each back-end command becomes a promise, and `try_exec`
+  promises ignore their exit status. A failed compile shows up only
+  when the link can't find the object.
+
+## Bug 21: `cm3 -O` doesn't optimize C back end output
+
+- **Where:** upstream, `m3-sys/cm3/src/Builder.m3`.
+- **Status:** open; may be deliberate.
+- **Detail:** `Builder.m3` compiles the C back end's output with
+  `optimize := FALSE`, so `cm3 -O` in C mode still runs `gcc -O0`.
+  Measured in [`phase4-results.md`](phase4-results.md), which uses
+  `phase4/gcc-O2-wrapper` to get `-O2`.
+
+## Bug 22: cm3 doesn't recompile when the compiler changes
+
+- **Where:** upstream, `m3-sys/cm3`.
+- **Status:** open; may be deliberate.
+- **Detail:** a unit whose source hasn't changed isn't recompiled
+  after the compiler or a back end changes. To test a back-end change,
+  delete the `AMD64_LINUX` directory or touch the sources.
+
+## Bug 23: p283 has no expected `stderr.build`
+
+- **Where:** upstream, `m3-sys/m3tests/src/p2/p283`.
+- **Status:** open.
+- **Detail:** the test directory has no `stderr.build` file, so the
+  test fails although the program is fine.
