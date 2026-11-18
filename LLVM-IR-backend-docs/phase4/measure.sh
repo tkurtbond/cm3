@@ -1,7 +1,7 @@
 #!/bin/bash
 # measure.sh LABEL MODE [cm3 flags...]: build (no ship) every headless
 # package; record wall/cpu time and object sizes per package.
-W=${W:?set W to the scratch directory (see experiment-doc/phase4-results.md)}
+W=${W:?set W to the scratch directory (see LLVM-IR-backend-docs/phase4-results.md)}
 LABEL=$1; MODE=$2; shift 2
 export PATH=${PREPATH}$W/prefix/bin:/usr/bin:/bin
 OUT=$W/m/$LABEL.tsv; mkdir -p $W/m; : > $OUT

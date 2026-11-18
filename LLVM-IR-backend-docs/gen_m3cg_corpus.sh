@@ -1,10 +1,10 @@
 #!/bin/sh
 # Generate ASCII M3CG IR dumps for a set of m3tests programs.
 #
-# Usage: experiment-doc/gen_m3cg_corpus.sh WORKDIR [OUTDIR] [TEST...]
+# Usage: LLVM-IR-backend-docs/gen_m3cg_corpus.sh WORKDIR [OUTDIR] [TEST...]
 #   WORKDIR  scratch directory (e.g. /usr/local/sw/tmp/<you>/corpus); it is
 #            emptied and reused.
-#   OUTDIR   where to put the dumps (default: experiment-doc/m3cg-corpus).
+#   OUTDIR   where to put the dumps (default: LLVM-IR-backend-docs/m3cg-corpus).
 #   TEST     m3tests directories relative to m3-sys/m3tests/src, e.g. p0/p036
 #            (default: the list below).
 #
@@ -24,7 +24,7 @@ set -eu
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 TESTSRC=$ROOT/m3-sys/m3tests/src
 W=${1:?usage: $0 WORKDIR [OUTDIR] [TEST...]}
-OUT=${2:-$ROOT/experiment-doc/m3cg-corpus}
+OUT=${2:-$ROOT/LLVM-IR-backend-docs/m3cg-corpus}
 [ $# -ge 2 ] && shift 2 || shift $#
 TESTS=${*:-"c0/c001 c0/c008 c0/c014 p0/p029 p0/p036 p0/p042 p0/p053 p0/p057 p0/p061 p0/p066 p0/p073"}
 

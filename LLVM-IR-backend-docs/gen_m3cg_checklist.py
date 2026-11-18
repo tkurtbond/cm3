@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Generate experiment-doc/m3cg-ops-checklist.md from the M3CG interface.
+"""Generate LLVM-IR-backend-docs/m3cg-ops-checklist.md from the M3CG interface.
 
-Usage: python3 experiment-doc/gen_m3cg_checklist.py . > experiment-doc/m3cg-ops-checklist.md
+Usage: python3 LLVM-IR-backend-docs/gen_m3cg_checklist.py . > LLVM-IR-backend-docs/m3cg-ops-checklist.md
 
 Regenerating overwrites the hand-maintained Status and Notes columns;
 merge by hand (or diff) if they have been filled in.

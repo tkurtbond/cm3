@@ -23,9 +23,9 @@ commands.
 | `scripts/concierge.py` | `--backend llvmir`: the clang check, the C-then-LlvmIR bootstrap (`_doLlvmIR`), and the `cm3.cfg` default. |
 | `.github/workflows/amd64_linux_llvmir.yml` | CI: LLVM 18 and the newest LLVM; full build, `tests/`, m3tests, IR verification; also with ex_stack and at `-O2`. |
 | `m3-sys/m3llvmir/tests/` | The back end's own tests (`run-tests.sh`): mixed C/`LlvmIR` linking and FileCheck checks on the IR. See its `README.md`. |
-| `experiment-doc/m3cg-ops-checklist.md` | Which M3CG operations are implemented. |
-| `experiment-doc/m3cg-corpus/` | Saved ASCII M3CG units for quick tests with `m3llir`. |
-| `experiment-doc/phase4-results.md`, `phase4/` | Self-hosting, timing and benchmark scripts and numbers. |
+| `LLVM-IR-backend-docs/m3cg-ops-checklist.md` | Which M3CG operations are implemented. |
+| `LLVM-IR-backend-docs/m3cg-corpus/` | Saved ASCII M3CG units for quick tests with `m3llir`. |
+| `LLVM-IR-backend-docs/phase4-results.md`, `phase4/` | Self-hosting, timing and benchmark scripts and numbers. |
 
 Changes to shared files (`Builder.m3`, `M3Backend.m3`, `Target.i3`,
 the configs) are small and marked `(* LLVM IR backend *)` or with a
@@ -125,13 +125,13 @@ The fast loop doesn't need a new compiler at all: rebuild only
 
 ```sh
 cd m3-sys/m3llvmir && cm3 && cd ../m3llir && cm3
-for f in ../../experiment-doc/m3cg-corpus/*.mc.txt; do
+for f in ../../LLVM-IR-backend-docs/m3cg-corpus/*.mc.txt; do
   AMD64_LINUX/m3llir -a -g -t AMD64_LINUX "$f" -o /dev/stdout |
     llvm-as -o /dev/null || echo "FAIL $f"
 done
 ```
 
-(`experiment-doc/gen_m3cg_corpus.sh` regenerates the corpus.) Add
+(`LLVM-IR-backend-docs/gen_m3cg_corpus.sh` regenerates the corpus.) Add
 `llvm-dwarfdump --verify` on the object file when touching debug
 information.
 
@@ -151,9 +151,9 @@ The full checks, roughly in order of cost:
    -DM3_BACKEND_MODE=LlvmIR` (add `-DM3TESTS_OPTIMIZE` for `-O`,
    `-DM3_DEBUG_LANGUAGE=C` for C-labeled debug information). Expect
    292 of 293; p047 fails with the C back end too
-   (`experiment-doc/m3tests-baseline-c.md`). Run a subset while
+   (`LLVM-IR-backend-docs/m3tests-baseline-c.md`). Run a subset while
    iterating.
-4. **Self-hosting:** `experiment-doc/phase4/` builds the compiler in
+4. **Self-hosting:** `LLVM-IR-backend-docs/phase4/` builds the compiler in
    stages and checks that the stages' `.ll` files are identical.
 5. **The whole tree with `LlvmIR` as default:** what CI does. Don't do
    this to your real installation; copy it:

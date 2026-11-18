@@ -5,7 +5,7 @@
 # prefix's cm3. Refuses to ship if .M3SHIP names any other prefix.
 # Keeps the .ll files in $W/ll/LABEL, then installs the new cm3 as
 # $W/prefix/bin/cm3 (and cm3.stageLABEL).
-W=${W:?set W to the scratch directory (see experiment-doc/phase4-results.md)}
+W=${W:?set W to the scratch directory (see LLVM-IR-backend-docs/phase4-results.md)}
 LABEL=$1; MODE=${2:-LlvmIR}; PKGS=${3:-$W/pkgs.txt}; FAILS=0
 export PATH=$W/prefix/bin:/usr/bin:/bin
 mkdir -p $W/ll/$LABEL; LOG=$W/$LABEL.log; : > $LOG

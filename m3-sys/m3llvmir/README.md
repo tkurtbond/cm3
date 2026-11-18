@@ -60,7 +60,7 @@ that line of `cm3.cfg` yourself.
 `cm3 -O` passes `-O2` to clang (the config's `m3back_optimize`);
 otherwise clang gets `-O0`. The C back end compiles with `-O0` even
 under `-O`, so optimized `LlvmIR` code is often several times faster
-(numbers in `experiment-doc/phase4-results.md`).
+(numbers in `LLVM-IR-backend-docs/phase4-results.md`).
 
 ### Changing how the IR is compiled
 

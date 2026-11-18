@@ -16,7 +16,7 @@ two goals, in this order:
    build-system changes unless a task asks for them.
 
 Background and motivation:
-[`experiment-doc/modula3-build-llvm-64bit-discussion.md`](experiment-doc/modula3-build-llvm-64bit-discussion.md).
+[`LLVM-IR-backend-docs/modula3-build-llvm-64bit-discussion.md`](LLVM-IR-backend-docs/modula3-build-llvm-64bit-discussion.md).
 
 Outside this repository: the Hostess Oberon compiler test suite, in
 `/usr/local/sw/src/lang/Oberon/hostess` (the oo2c driver for it is in
@@ -37,7 +37,7 @@ them, and keep edits to shared files (`Builder.m3`, `M3Backend.m3`,
 | `m3-sys/m3middle/src/M3CG_*.m3` | M3CG utilities: `M3CG_BinWr`/`M3CG_BinRd` (binary IR files), `M3CG_Wr`/`M3CG_Rd` (ASCII IR), `M3CG_Check` (stack/type checker), `M3CG_MultiPass` (record and replay), `M3CG_Tee`. |
 | `m3-sys/m3middle/src/Target.i3` | Target description and `M3BackendMode_t`, the enum of backend modes. |
 | `m3-sys/m3back/src/M3C.m3` | **The C backend** (about 8,300 lines). It is the default on AMD64_LINUX. It is the closest structural template for a text-emitting backend and the reference oracle for testing. |
-| `m3-sys/m3llvmir/src/M3LLVMIR.m3` | **This fork's backend** (backend mode `LlvmIR`): an M3CG_Ops subtype of `M3CG_AssertFalse` that writes textual `.ll`. Unimplemented operations fail with an assertion; progress is tracked in `experiment-doc/m3cg-ops-checklist.md`. `M3LLVMIRDebug.m3` writes the DWARF debug metadata (Phase 5). Documentation: [`m3-sys/m3llvmir/README.md`](m3-sys/m3llvmir/README.md) (using it) and [`HACKING.md`](m3-sys/m3llvmir/HACKING.md) (working on it). |
+| `m3-sys/m3llvmir/src/M3LLVMIR.m3` | **This fork's backend** (backend mode `LlvmIR`): an M3CG_Ops subtype of `M3CG_AssertFalse` that writes textual `.ll`. Unimplemented operations fail with an assertion; progress is tracked in `LLVM-IR-backend-docs/m3cg-ops-checklist.md`. `M3LLVMIRDebug.m3` writes the DWARF debug metadata (Phase 5). Documentation: [`m3-sys/m3llvmir/README.md`](m3-sys/m3llvmir/README.md) (using it) and [`HACKING.md`](m3-sys/m3llvmir/HACKING.md) (working on it). |
 | `m3-sys/m3llvmir/tests/` | The back end's own tests: `run-tests.sh WORKDIR [-O]` builds a library and program in every C/`LlvmIR` combination, diffs their output, and FileChecks the IR (`Ops.check`). Takes seconds; run it after changing `m3llvmir`. |
 | `m3-sys/m3llir/` | Standalone driver: `m3llir [-a] [-g] [-l LANG] [-t TARGET] [-o out.ll] in.mc` translates an M3CG file (`-a` for ASCII, `-g` for debug info, `-l C` to label it C for lldb) to `.ll`. Handy with the IR corpus: `m3llir -a -t AMD64_LINUX X.mc.txt \| llvm-as -o /dev/null`. |
 | `m3-sys/llvm/llvm22/src/M3CG_LLVM.m3` | **The existing LLVM backend** (about 7,100 lines, by Peter McKinna and Rodney Bates). It uses LLVM's C API through bindings in `llvm22bindings`, runs as a standalone `m3llvm` executable, and needs LLVM's libraries at build time. Use it as the main reference for *how to lower* M3CG to LLVM, but don't add dependencies on it. `llvm13/` and `llvm18/` are older copies. |
@@ -122,12 +122,12 @@ and installs into the prefix of the `cm3` it finds on `PATH`.
 - Keep intermediate files and show the commands run: `cm3 -keep -commands`.
   In C mode this keeps `Foo.m3.cpp` but, because of a bug, **not** the
   M3CG IR (`.mc`/`.ic`). To get M3CG IR as text, use
-  `experiment-doc/gen_m3cg_corpus.sh` (or its `m3_backend` trick); a
-  saved corpus is in `experiment-doc/m3cg-corpus/`.
+  `LLVM-IR-backend-docs/gen_m3cg_corpus.sh` (or its `m3_backend` trick); a
+  saved corpus is in `LLVM-IR-backend-docs/m3cg-corpus/`.
 - Run the compiler tests: `cd m3-sys/m3tests && cm3 -DHTML` (writes
   `m3tests-results.xml`). They take a while; prefer running a subset
   while iterating. The C-backend baseline is in
-  `experiment-doc/m3tests-baseline-c.md`. Add `-DM3_BACKEND_MODE=LlvmIR`
+  `LLVM-IR-backend-docs/m3tests-baseline-c.md`. Add `-DM3_BACKEND_MODE=LlvmIR`
   to build every test with this fork's backend (292 of 293 pass, as
   with C; see Phases 2 to 6 in `PLAN.md`), and `-DM3TESTS_OPTIMIZE` to build
   each test with `cm3 -O`.

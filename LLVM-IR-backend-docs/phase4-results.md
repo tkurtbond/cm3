@@ -190,10 +190,10 @@ cp -a /usr/local/sw/versions/cm3/git $W/prefix
 sed -i '1s/.*/M3_BACKEND_MODE = "LlvmIR"/' $W/prefix/bin/cm3.cfg
 cp m3-sys/cminstall/src/config/cm3cfg.common $W/prefix/bin/config/  # fix 1
 git worktree add --detach $W/src HEAD
-cp experiment-doc/phase4/front-pkgs.txt $W/pkgs.txt
-cp experiment-doc/phase4/headless-pkgs.txt $W/headless-inst.txt
-for s in A B C; do experiment-doc/phase4/stage.sh $s; done
+cp LLVM-IR-backend-docs/phase4/front-pkgs.txt $W/pkgs.txt
+cp LLVM-IR-backend-docs/phase4/headless-pkgs.txt $W/headless-inst.txt
+for s in A B C; do LLVM-IR-backend-docs/phase4/stage.sh $s; done
 diff -r $W/ll/B $W/ll/C                      # the fixed point
-experiment-doc/phase4/stage.sh H LlvmIR $W/headless-inst.txt
-experiment-doc/phase4/measure.sh L0 LlvmIR -keep
+LLVM-IR-backend-docs/phase4/stage.sh H LlvmIR $W/headless-inst.txt
+LLVM-IR-backend-docs/phase4/measure.sh L0 LlvmIR -keep
 ```

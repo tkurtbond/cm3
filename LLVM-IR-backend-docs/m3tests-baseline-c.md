@@ -93,7 +93,7 @@ p282 p286 p287 p288 p289 p291 p292 p293 p295 r001 r002 r003 r004 r005
 - The test harness compares `stderr.build`, so compiler warnings count
   as failures. `clang -x ir` output must stay quiet, or the harness
   must be told to ignore it.
-- The corpus test p0/p053 (`experiment-doc/m3cg-corpus/p0-p053`) is one
+- The corpus test p0/p053 (`LLVM-IR-backend-docs/m3cg-corpus/p0-p053`) is one
   the C backend can't compile. Its M3CG IR is still valid, which makes
   it a good early test of whether `LlvmIR` can do better.
 
