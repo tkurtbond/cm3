@@ -1255,7 +1255,7 @@ PROCEDURE SubRange (fmtWr   : Formatter.T;
       WITH min = NARROW(min, Value.Longint).val,
            max = NARROW(max, Value.Longint).val DO
         StubLibCall(fmtWr, "Longint", varName, libName, d,
-                    ", " & Fmt.LongInt(min) & ", " & Fmt.LongInt(max));
+                    ", " & LongLit(min) & ", " & LongLit(max));
       END;
     ELSIF t = Type.integer OR t.base = Type.integer THEN
       WITH min = NARROW(min, Value.Integer).val,
@@ -1277,6 +1277,14 @@ PROCEDURE SubRange (fmtWr   : Formatter.T;
       END;
     END;
   END SubRange;
+
+(* A LONGINT literal for v.  FIRST(LONGINT) has no literal: its
+   magnitude is out of range. *)
+PROCEDURE LongLit (v: LONGINT): TEXT =
+  BEGIN
+    IF v = FIRST(LONGINT) THEN RETURN "FIRST(LONGINT)" END;
+    RETURN Fmt.LongInt(v) & "L";
+  END LongLit;
 
 PROCEDURE Enumeration (fmtWr   : Formatter.T;
                        varName : TEXT;

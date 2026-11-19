@@ -477,6 +477,12 @@ PROCEDURE OutInt32 (h: Handle; i: Int32) RAISES
     EventStubLib.OutInt32(h.eh,i);
   END OutInt32;
 
+PROCEDURE OutLongint (h: Handle; i: LONGINT)
+  RAISES {Wr.Failure, Thread.Alerted} =
+  BEGIN
+    EventStubLib.OutLongint(h.eh,i);
+  END OutLongint;
+
 PROCEDURE OutByte (h: Handle; i: Byte8) RAISES
   {Wr.Failure, Thread.Alerted}= 
   BEGIN
@@ -559,6 +565,19 @@ PROCEDURE InInt32 (h: EventStubLib.Handle; min := FIRST(Int32);
       RETURN 0; (* not reached, to shut up the compiler *)
     END;
   END InInt32;
+
+PROCEDURE InLongint (h: EventStubLib.Handle; min := FIRST(LONGINT);
+                     max := LAST(LONGINT)): LONGINT
+  RAISES {SharedObj.Error, Rd.Failure, Thread.Alerted} =
+  BEGIN
+    TRY
+      RETURN EventStubLib.InLongint(h, min, max);
+    EXCEPT
+    | Event.Error (ec) =>
+      SharedObjError.RaiseEventFailure(ec);
+      RETURN 0L; (* not reached, to shut up the compiler *)
+    END;
+  END InLongint;
 
 PROCEDURE InByte (h: EventStubLib.Handle; max := LAST(Byte8)): Byte8
   RAISES {SharedObj.Error, Rd.Failure, Thread.Alerted} =

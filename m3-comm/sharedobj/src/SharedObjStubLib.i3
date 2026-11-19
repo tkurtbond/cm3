@@ -172,6 +172,10 @@ PROCEDURE OutInt32 (h: Handle; i: Int32) RAISES
   {Wr.Failure, Thread.Alerted}; 
 (* Marshal a 32-bit integer in native format. *)
 
+PROCEDURE OutLongint (h: Handle; i: LONGINT)
+  RAISES {Wr.Failure, Thread.Alerted};
+(* Marshal a longint (64 bits on every platform) in native format. *)
+
 PROCEDURE OutByte (h: Handle; i: Byte8) RAISES
   {Wr.Failure, Thread.Alerted}; 
 (* Marshal a byte. *)
@@ -228,6 +232,11 @@ PROCEDURE InInt32 (h: EventStubLib.Handle; min := FIRST(Int32); max :=
   LAST(Int32)): Int32 RAISES {SharedObj.Error, Rd.Failure, Thread.Alerted};
 (* Unmarshal a 32-bit integer, checking that its value is in
    "[min..max]". *)
+
+PROCEDURE InLongint (h: EventStubLib.Handle; min := FIRST(LONGINT);
+                     max := LAST(LONGINT)): LONGINT
+  RAISES {SharedObj.Error, Rd.Failure, Thread.Alerted};
+(* Unmarshal a longint, checking that its value is in "[min..max]". *)
 
 PROCEDURE InByte (h: EventStubLib.Handle; max := LAST(Byte8)): Byte8
   RAISES {SharedObj.Error, Rd.Failure, Thread.Alerted};
