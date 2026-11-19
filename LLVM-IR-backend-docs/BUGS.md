@@ -376,3 +376,50 @@ every back end.
   gives 0, `DIV` negates (wrapping, as `-` does since bug 2). The
   checked `Signed64` operations of Phase 5 do this themselves, so they
   don't depend on this fix.
+
+## Bug 27: Pickles can't convert 64-bit subrange fields between byte orders and word sizes
+
+- **Where:** upstream, `m3-libs/libm3/src/pickle/ver2/ConvertPacking.m3`
+  (`BuildOrdinal`, the `Swap32to64` and `Swap64to32` cases).
+- **Status:** open. Found while surveying Phase 6 of
+  [`fixed-width-integer-types-plan.md`](fixed-width-integer-types-plan.md),
+  2026-11-18. Checked on AMD64_LINUX with a program that calls
+  `ConvertPacking.New` for a record of one field, from a 32-bit
+  big-endian packing to the local one: it raises `ConvertPacking.Error
+  ("Should not get here: 1")` for `[0L..16_1ffffffffL]`, `Word64.T`
+  and `Signed64.T`, and succeeds for INTEGER, LONGINT and every narrower
+  fixed-width type. The other packings (32-bit little-endian, 64-bit
+  either way) succeed for all of them.
+- **Detail:** `BuildOrdinal` assumes that when the word size changes
+  only a word-sized field changes size. Since bugs 9, 10 and 24,
+  `RTTipe` sizes a subrange by its bounds, the same under every
+  packing, so a 64-bit subrange is 64 bits on both sides. `Swap32to64`
+  has no case for a 64-bit source (it raises the error above), and
+  `Swap64to32` asserts that a 64-bit source becomes 32 bits (read, not
+  run: it needs a 64-bit big-endian pickle read on a 32-bit host).
+  `Copy32to64` and `Copy64to32` already test for equal sizes first.
+- **Effect:** a pickle with such a field, written on a 32-bit
+  big-endian machine, can't be read on a 64-bit little-endian one, and
+  the reverse.
+- **Fix (not done):** in both cases, when `fromTipe.size =
+  toTipe.size`, swap at that size (`addSwap64` for 64 bits), as the
+  `Swap` case does.
+
+## Bug 28: `stubgen` emits `StubLib.InLongint` and `OutLongint`, which don't exist
+
+- **Where:** upstream, `m3-comm/stubgen/src/ModuleStubCode.m3`
+  (`MarshalTypedVal`) and `m3-comm/netobj/src/netobjrt/StubLib.i3`.
+- **Status:** open. Found while surveying Phase 6 of
+  [`fixed-width-integer-types-plan.md`](fixed-width-integer-types-plan.md),
+  2026-11-18, by reading: `MarshalTypedVal` calls
+  `StubLibCall (..., "Longint", ...)` for LONGINT, but no `InLongint`
+  or `OutLongint` is declared anywhere under `m3-comm` (they exist only
+  in `libm3`'s `PickleStubs` and `m3-db`'s `StableLog`). Checked on
+  AMD64_LINUX: a network object with a method `add (x: LONGINT):
+  LONGINT` gets stubs that fail with "unknown qualification '.'
+  (InLongint)" and "(OutLongint)".
+- **Effect:** network objects can't have LONGINT parameters or
+  results.
+- **Fix (not done):** add `InLongint` and `OutLongint` to `StubLib`,
+  with byte-order handling for the `DataRep`, as `InInteger` and
+  `OutInteger` have.

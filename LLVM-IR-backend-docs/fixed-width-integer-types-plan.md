@@ -848,6 +848,51 @@ the design above:
   rule above.
 - The optional `Word.T` comparison warning, if wanted.
 
+Survey (2026-11-18, before any Phase 6 change; on the installed
+compiler at 27c3b8407). Largest first:
+
+- **`m3tk`, and so `stubgen` and `sharedobjgen`: large.** `m3tk` has
+  its own front end and reads `Word` and `Long` from their source,
+  which works because `WordRep.i3` says `T = INTEGER`. For `Word32`
+  it finds `Word32.i3 = GenWordN(Word32Rep)` and `Word32Rep.i3`'s
+  `IMPORT Word32`, a cycle. Checked: `stubgen` on a network object
+  with a `Word32.T` parameter stops with "import cycle between
+  interfaces 'Word32' and 'Word32Rep'". The faithful fix teaches
+  `m3tk` the eight builtin interfaces: a new type node in
+  `ast/M3AST_AS.i3`, the standard types (`sem/M3CStdTypes`,
+  `M3CMkStd`), assignability, and folding (`sem/M3CWordProcs.m3`
+  matches only the unit name `Word`). A quicker fallback, a
+  `WordNRep` with `T = [0 .. 2^N - 1]` for `m3tk` only, loses the
+  type's identity and can't express `Word64.T`. (From reading:
+  `sharedobjgen` is built on `m3tk` too, so it fails the same way.)
+- **`stubgen` and `StubLib`: medium, after `m3tk`.**
+  `AstToType.ProcessTypeSpec` and `ModuleStubCode.MarshalTypedVal`
+  need a case for the new types, and `CodeForType.ToText` must name
+  them (`Word32.T`), not write `[min..max]`. `StubLib` has
+  `InInteger`/`OutInteger`, `InInt32` and `InByte`, so 8 to 32 bits
+  can reuse them; 64 bits need new procedures. It has no 64-bit
+  procedures at all: bug 28 (LONGINT stubs don't compile) comes
+  first.
+- **Pickles: small.** Type descriptions were fixed under Phase 1,
+  decision 4. Checked with `ConvertPacking.New` from each foreign
+  packing (32- and 64-bit, either byte order) to the local one:
+  all eight types convert, except a 64-bit field from a 32-bit
+  big-endian packing. That is bug 27, which predates this branch
+  (a wide LONGINT subrange fails the same way), and its fix is a
+  few lines in `BuildOrdinal`. `PickleStubs` needs nothing: special
+  picklers name their own procedures. Not yet checked: a real round
+  trip of record data through a conversion (only building the
+  conversion program was).
+- **`m3browser`: none.** It uses `m3scan` and `m3markup`, not
+  `m3tk` or `m3front`, and does markup and cross references only.
+  `Word32.T` links to `Word32.i3`, which declares no `T`, as `Word.T`
+  links to `Word.i3` today.
+- **`Cstdint` and documentation:** unchanged from the list above.
+
+Suggested order: bug 27 and a pickle round-trip test (small, also
+worth offering upstream); bug 28; then decide whether network
+objects need the new types at all before the `m3tk` work.
+
 ## Open questions
 
 - Is upstream interested? A language extension kept only in this fork
