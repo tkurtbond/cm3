@@ -461,8 +461,9 @@ every back end.
   `[-5L ..]`, `[NegFive ..]`, `[0L - 5L ..]`, `[FIRST(LONGINT) .. -1L]`,
   `[-10 .. -1]` and full-range LONGINT were checked in the generated
   stubs. The byte-swapping path isn't tested: that needs a peer with
-  the other byte order. There is no m3tests test, because m3tests has
-  no network-object tests.
+  the other byte order. m3tests has no network-object tests; the test
+  is `m3-comm/netobj/tests/longint`, run by
+  `m3-comm/netobj/tests/run-netobj-tests.sh WORKDIR`.
 
 ## Bug 29: `RTPacking.Encode` overflows on a max_align of 128, so pickles misread records
 

@@ -1,0 +1,14 @@
+% This fork: network objects with the fixed-width integer type arguments.
+% Run by ../../run-netobj-tests.sh, which starts a server and a client.
+
+import("netobj")
+import("tcp")
+import("libm3")
+
+interface("F")
+netobj("F", "T")
+implementation("FixedWidthTest")
+
+build_standalone()
+
+program("fixedwidthtest")

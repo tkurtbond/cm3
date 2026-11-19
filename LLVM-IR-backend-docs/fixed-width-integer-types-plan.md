@@ -928,7 +928,9 @@ and marshals every fixed type, and every subrange of one, as a LONGINT
 T)` in; `Word64.T` as its bits through `ToLong`/`FromLong`). No
 `StubLib` change was needed. A server and client exchanging all eight
 types, subranges of three, a VAR pair and a record over TCP agree, and
-the server rejects a `Word64.T` subrange value out of range.
+the server rejects a `Word64.T` subrange value out of range. These are
+`m3-comm/netobj/tests/fixedwidth` (and `longint`, for bug 28), run by
+`m3-comm/netobj/tests/run-netobj-tests.sh WORKDIR`.
 
 Known limits (from reading, not tested): m3tk's operator checks
 compare TYPECODEs, so they accept

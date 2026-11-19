@@ -1,0 +1,14 @@
+% This fork: network objects with LONGINT and LONGINT subrange arguments.
+% Run by ../../run-netobj-tests.sh, which starts a server and a client.
+
+import("netobj")
+import("tcp")
+import("libm3")
+
+interface("L")
+netobj("L", "T")
+implementation("LongintTest")
+
+build_standalone()
+
+program("longinttest")
