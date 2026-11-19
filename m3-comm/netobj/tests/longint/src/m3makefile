@@ -1,0 +1,15 @@
+% Network objects with LONGINT and LONGINT subrange arguments, results
+% and VAR parameters.  Run "longinttest server", then, in another
+% process, "longinttest client"; see LongintTest.m3.
+
+import("netobj")
+import("tcp")
+import("libm3")
+
+interface("L")
+netobj("L", "T")
+implementation("LongintTest")
+
+build_standalone()
+
+program("longinttest")
