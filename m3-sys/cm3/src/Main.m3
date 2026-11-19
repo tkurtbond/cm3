@@ -80,6 +80,12 @@ VAR defs: TextTextTbl.T;
         Quake.Define(mach, "HOST", MxConfig.HOST());
         Quake.Define(mach, "HOST_OS_TYPE", MxConfig.HOST_OS_TYPE_TEXT());
 
+        (* This fork: the front end has the builtin interfaces Word8 ..
+           Word64.  m3core builds their units only when this is defined,
+           so that an older compiler (a bootstrap, say) can still build
+           m3core; see m3-libs/m3core/src/word/m3makefile. *)
+        Quake.Define(mach, "M3_FIXED_WIDTH_INTEGERS", "TRUE");
+
         (* define the site configuration *)
         Msg.Verbose ("EVAL (\"", config, "\")");
         Quake.Run (mach, config);

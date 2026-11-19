@@ -592,6 +592,17 @@ the bullets above:
   from `WordNRep` to `WordN`. (Skipping every import of `WordN`
   also skipped merging the library's `WordN.i3` into client
   programs, which then failed to link.)
+- **Bootstrapping.** A compiler older than Phase 3 (the installed
+  one, or the d5.12.0 bootstrap CI starts from) has no builtin
+  `WordN`, so `WordNRep`'s import finds `m3core`'s own `WordN.i3`
+  and reports a circular import. `cm3` now defines the quake
+  variable `M3_FIXED_WIDTH_INTEGERS` (`Main.m3`), and
+  `m3core/src/word/m3makefile` builds the units only when it is
+  defined. Every pass of `concierge.py upgrade` rebuilds `m3core`
+  with the `cm3` installed by the pass before, so the first pass
+  leaves the units out and the later ones put them in. Checked by
+  upgrading a copy of the pre-Phase 3 install with
+  `--backend llvmir` and running `p299`, `p300` and `r007`.
 - **Tests.** `p299` calls every `Word32` procedure inline, with
   constant arguments, and as a procedure value through `m3core`.
   `p300` instantiates a generic module with each of `Word8` to

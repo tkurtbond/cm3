@@ -10,24 +10,24 @@ Interface("Word")
 Interface("LongRep")
 Interface("Long")
 
-% This fork: unsigned fixed-width integers (see GenWordN.ig)
-Generic_interface("GenWordN")
-Interface("Word8Rep")
-Interface("Word8")
-Interface("Word16Rep")
-Interface("Word16")
-Interface("Word32Rep")
-Interface("Word32")
-Interface("Word64Rep")
-Interface("Word64")
-
 generic_implementation("GenWord")
 implementation ("Word")
 implementation ("Long")
 
-% This fork
-generic_implementation("GenWordN")
-implementation ("Word8")
-implementation ("Word16")
-implementation ("Word32")
-implementation ("Word64")
+% This fork: the units of the unsigned fixed-width integer interfaces
+% Word8 .. Word64 (see GenWordN.ig).  Each WordNRep imports the builtin
+% interface WordN, which only a compiler that defines
+% M3_FIXED_WIDTH_INTEGERS has; an older one (a bootstrap compiler, say)
+% would instead find WordN.i3 here and report a circular import.  So
+% build them only with a compiler that has the builtins: upgrading from
+% an older compiler leaves them out of the first pass and builds them
+% in the next.
+if defined("M3_FIXED_WIDTH_INTEGERS")
+  Generic_interface("GenWordN")
+  generic_implementation("GenWordN")
+  foreach n in [ "8", "16", "32", "64" ]
+    Interface("Word" & n & "Rep")
+    Interface("Word" & n)
+    implementation("Word" & n)
+  end
+end
