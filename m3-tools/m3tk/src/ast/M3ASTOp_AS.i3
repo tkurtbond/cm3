@@ -405,6 +405,11 @@ TYPE
     copy := M3AST_AS_Copy.WideChar_type;
     name := M3AST_AS_Name.WideChar_type;
   END;
+  Fixed_type = Previous_View.Fixed_type OBJECT (* This fork *)
+  OVERRIDES
+    copy := M3AST_AS_Copy.Fixed_type;
+    name := M3AST_AS_Name.Fixed_type;
+  END;
   Real_type = Previous_View.Real_type OBJECT
   OVERRIDES
     copy := M3AST_AS_Copy.Real_type;
@@ -1040,6 +1045,7 @@ REVEAL
   M3AST_AS.Integer_type <: Integer_type;
   M3AST_AS.Longint_type <: Longint_type;
   M3AST_AS.WideChar_type <: WideChar_type;
+  M3AST_AS.Fixed_type <: Fixed_type; (* This fork *)
   M3AST_AS.Real_type <: Real_type;
   M3AST_AS.LongReal_type <: LongReal_type;
   M3AST_AS.Extended_type <: Extended_type;

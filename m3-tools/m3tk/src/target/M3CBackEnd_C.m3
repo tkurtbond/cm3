@@ -37,6 +37,7 @@ the compiler front-end from a back-end . *)
 
 IMPORT M3CBackEnd;
 IMPORT Fmt, Text, TextRd, TextWr, Rd, Wr, Word, Convert, RdExtras;
+IMPORT Long; (* This fork *)
 IMPORT M3AST_AS, M3AST_SM;
 
 IMPORT M3AST_AS_F, M3AST_SM_F;
@@ -163,6 +164,10 @@ PROCEDURE MayBeExactBitSizeAndAlign(ts: M3AST_AS.TYPE_SPEC;
         size := wideCharS;
         align := wideCharA;
 
+    | M3AST_AS.Fixed_type(t) => (* This fork: Word8.T .. Signed64.T *)
+        size := t.fx_bits;
+        align := MIN(t.fx_bits, longintA);
+
     | M3AST_AS.Real_type =>
         size := realS;
         align := realA;
@@ -177,7 +182,8 @@ PROCEDURE MayBeExactBitSizeAndAlign(ts: M3AST_AS.TYPE_SPEC;
 
     | M3AST_AS.Subrange_type(t) =>
         TYPECASE t.sm_base_type_spec OF
-        | M3AST_AS.Longint_type =>
+        | M3AST_AS.Longint_type,
+          M3AST_AS.Fixed_type => (* This fork: values are LONGINTs *)
           (* This fork: s2 was the lower bound, and s1 and s2 aliased the
              bounds, so "s2 := 0L" below overwrote the subrange's lower
              bound (bug 28 in LLVM-IR-backend-docs/BUGS.md). *)
@@ -565,7 +571,8 @@ PROCEDURE Val_C(n: INTEGER;
   BEGIN
     (* ORD(n) = n for all types *)
     TYPECASE ts OF
-    | M3AST_AS.Longint_type =>
+    | M3AST_AS.Longint_type,
+      M3AST_AS.Fixed_type => (* This fork *)
       er := M3CBackEnd_Int_Longint.New_value(VAL(n, LONGINT));
       RETURN M3CBackEnd.NumStatus.Valid;
     | M3AST_AS.Subrange_type(subrange) =>
@@ -608,7 +615,8 @@ PROCEDURE ConvertOrdinal_C(
     RAISES {}=
   BEGIN
     TYPECASE ts OF
-    | M3AST_AS.Longint_type =>
+    | M3AST_AS.Longint_type,
+      M3AST_AS.Fixed_type => (* This fork *)
       TYPECASE e OF <*NOWARN*>
       | Integer_value(iv) =>
         er := M3CBackEnd_Int_Longint.New_value(VAL(iv.sm_value, LONGINT));
@@ -886,6 +894,8 @@ PROCEDURE StdUnaryTypeOp_C(
             er := M3CBackEnd_Int_Integer.New_value(FIRST(INTEGER));
         | M3AST_AS.Longint_type =>
             er := M3CBackEnd_Int_Longint.New_value(FIRST(LONGINT));
+        | M3AST_AS.Fixed_type(f) => (* This fork *)
+            er := M3CBackEnd_Int_Longint.New_value(FixedFirst(f));
         | M3AST_AS.WideChar_type =>
             er := M3CBackEnd_Int_Integer.New_value(ORD(FIRST(WIDECHAR)));
         | M3AST_AS.Real_type =>
@@ -901,6 +911,8 @@ PROCEDURE StdUnaryTypeOp_C(
             er := M3CBackEnd_Int_Integer.New_value(LAST(INTEGER));
         | M3AST_AS.Longint_type =>
             er := M3CBackEnd_Int_Longint.New_value(LAST(LONGINT));
+        | M3AST_AS.Fixed_type(f) => (* This fork *)
+            er := M3CBackEnd_Int_Longint.New_value(FixedLast(f));
         | M3AST_AS.WideChar_type =>
             er := M3CBackEnd_Int_Integer.New_value(ORD(LAST(WIDECHAR)));
         | M3AST_AS.Real_type =>
@@ -915,6 +927,23 @@ PROCEDURE StdUnaryTypeOp_C(
     END; (* case *)
     RETURN M3CBackEnd.NumStatus.Valid;
   END StdUnaryTypeOp_C;
+
+(* This fork: the bounds of Word8.T .. Signed64.T.  Their values are
+   LONGINTs, so LAST(Word64.T) is LAST(LONGINT), not 2^64-1. *)
+PROCEDURE FixedFirst(f: M3AST_AS.Fixed_type): LONGINT =
+  BEGIN
+    IF NOT f.fx_signed THEN RETURN 0L END;
+    IF f.fx_bits >= 64 THEN RETURN FIRST(LONGINT) END;
+    RETURN -Long.Shift(1L, f.fx_bits - 1);
+  END FixedFirst;
+
+PROCEDURE FixedLast(f: M3AST_AS.Fixed_type): LONGINT =
+  VAR bits := f.fx_bits;
+  BEGIN
+    IF f.fx_signed THEN DEC(bits) END;
+    IF bits >= 63 THEN RETURN LAST(LONGINT) END;
+    RETURN Long.Shift(1L, bits) - 1L;
+  END FixedLast;
 
 PROCEDURE RoundToByte(n: INTEGER): INTEGER RAISES {}=
   CONST

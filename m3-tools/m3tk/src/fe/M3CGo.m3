@@ -36,6 +36,7 @@ IMPORT SeqM3AST_AS_Used_interface_id, SeqM3AST_AS_IMPORTED,
 IMPORT M3CId, M3Context, M3Error, M3CParse, M3CUnit, M3CUnitRep,
     M3Conventions;
 IMPORT M3CMkStd, M3CSM, M3CSpec, M3CGenIns;
+IMPORT M3CFixedType; (* This fork *)
 
 
 VAR
@@ -236,6 +237,7 @@ PROCEDURE Parse(
     tcu: M3AST_AS.Compilation_Unit;
   BEGIN
     tcu := NewParser(input).compilation(headerOnly);
+    M3CFixedType.Transform(tcu); (* This fork *)
     cu.as_root := tcu.as_root;
     cu.lx_pragmas := tcu.lx_pragmas;
     cu.lx_comments := tcu.lx_comments;

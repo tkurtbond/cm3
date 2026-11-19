@@ -371,6 +371,14 @@ subtype ("Enumeration_type" for "BOOLEAN"). *)
   Integer_type <: INT_TYPE;              (* INTEGER *)
   Longint_type <: INT_TYPE;              (* LONGINT *)
   WideChar_type <: TYPE_SPEC;            (* WIDECHAR *)
+  (* This fork: the fixed-width types Word8.T .. Word64.T (unsigned,
+     wrapping) and Signed8.T .. Signed64.T (signed, checked).  The only
+     nodes are made for the interfaces Word8Rep .. Signed64Rep (see
+     M3CFixedType), so there is one node per type. *)
+  Fixed_type <: INT_TYPE;
+  <* FIELDS OF Fixed_type
+     fx_bits: INTEGER;  (* 8, 16, 32 or 64 *)
+     fx_signed: BOOLEAN *>
   Null_type <: TYPE_SPEC;                (* NULL *)
   RefAny_type <: TYPE_SPEC;              (* REFANY *)
   Address_type <: TYPE_SPEC;             (* ADDRESS *)

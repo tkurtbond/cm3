@@ -556,6 +556,22 @@ PROCEDURE Opaque(t: T;
     END;
   END Opaque;
 
+(* This fork: the fixed-width type after FixedCh. *)
+PROCEDURE Fixed(f: M3AST_AS.Fixed_type;
+                text: Text.T;
+                VAR chIndex: TextIndex) RAISES {}=
+  BEGIN
+    f.fx_signed := Text.GetChar(text, chIndex) = 's';
+    INC(chIndex);
+    CASE Text.GetChar(text, chIndex) OF <*NOWARN*>
+    | '0' => f.fx_bits := 8;
+    | '1' => f.fx_bits := 16;
+    | '2' => f.fx_bits := 32;
+    | '3' => f.fx_bits := 64;
+    END;
+    INC(chIndex);
+  END Fixed;
+
 PROCEDURE M3Type(t: T;
                  text: Text.T;
                  VAR chIndex: TextIndex): M3AST_AS.M3TYPE RAISES {}=
@@ -594,6 +610,8 @@ PROCEDURE FillinTypeSpec(t: T;
     | M3LTypeToText.LongcardCh =>
     | M3LTypeToText.LongintCh =>
     | M3LTypeToText.RealCh =>
+    | M3LTypeToText.FixedCh => (* This fork *)
+        Fixed(NARROW(ts, M3AST_AS.Fixed_type), text, chIndex);
     | M3LTypeToText.LongRealCh =>
     | M3LTypeToText.ExtendedCh =>
     | M3LTypeToText.RefAnyCh =>
@@ -643,6 +661,8 @@ PROCEDURE NewTS(ch: CHAR): M3AST_AS.TYPE_SPEC RAISES {}=
         RETURN M3CStdTypes.Longcard();
     | M3LTypeToText.LongintCh =>
         RETURN M3CStdTypes.Longint();
+    | M3LTypeToText.FixedCh => (* This fork *)
+        RETURN NEW(M3AST_AS.Fixed_type).init();
     | M3LTypeToText.RealCh =>
         RETURN M3CStdTypes.Real();
     | M3LTypeToText.LongRealCh =>

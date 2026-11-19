@@ -41,6 +41,18 @@ PROCEDURE ToText (t: Type.T; byName: BOOLEAN := TRUE): Text.T =
       BEGIN
         IF sub = Type.integer THEN RETURN "INTEGER" END;
         IF sub = Type.longint THEN RETURN "LONGINT" END;
+        (* This fork: fixed-width types and their subranges. *)
+        TYPECASE sub OF
+        | Type.Fixed (f) => RETURN Type.ToText(f);
+        ELSE
+        END;
+        TYPECASE sub.base OF
+        | Type.Fixed (f) =>
+          RETURN "[" & Type.FixedVal(NARROW(sub.min, Value.Longint).val, f) &
+                 ".." & Type.FixedVal(NARROW(sub.max, Value.Longint).val, f) &
+                 "]";
+        ELSE
+        END;
         IF sub.base = Type.longint OR sub.base = Type.longcard THEN
           WITH min = NARROW(sub.min, Value.Longint).val,
                max = NARROW(sub.max, Value.Longint).val DO
@@ -292,6 +304,12 @@ PROCEDURE ImportFromType(t: Type.T; importTbl: AtomRefTbl.T;
          fields, even if the record is named. *)
       ImportFromFields(rec.fields, importTbl);
       RETURN;
+    | Type.Subrange (sub) =>
+      (* This fork: the stubs name a fixed-width base type ("VAL(x,
+         Word32.T)", "Word64.FromLong(x)") even for a named subrange. *)
+      WITH f = Type.FixedBase(sub) DO
+        IF f # NIL THEN EVAL importTbl.put(f.name.intf, NIL) END;
+      END;
     ELSE
     END;
     IF byName AND t.name # NIL THEN

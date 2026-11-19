@@ -369,6 +369,8 @@ PROCEDURE SubType(type1, type2: M3AST_SM.TYPE_SPEC_UNSET): BOOLEAN RAISES {}=
 
     (* assert: neither type is packed or NIL *)
     TYPECASE type1 OF
+    | M3AST_AS.Fixed_type => (* This fork *)
+        RETURN M3COrdinal.SubType(type1, type2);
     | M3AST_AS.Integer_type =>
         IF ISTYPE(type2, M3AST_AS.Integer_type) THEN RETURN TRUE END;
         RETURN M3COrdinal.SubType(type1, type2);

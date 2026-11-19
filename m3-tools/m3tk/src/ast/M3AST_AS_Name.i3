@@ -62,6 +62,7 @@ PROCEDURE Named_type(n: M3AST_AS_F.Named_type): TEXT;
 PROCEDURE Integer_type(n: M3AST_AS_F.Integer_type): TEXT;
 PROCEDURE Longint_type(n: M3AST_AS_F.Longint_type): TEXT;
 PROCEDURE WideChar_type(n: M3AST_AS_F.WideChar_type): TEXT;
+PROCEDURE Fixed_type(n: M3AST_AS_F.Fixed_type): TEXT; (* This fork *)
 PROCEDURE Real_type(n: M3AST_AS_F.Real_type): TEXT;
 PROCEDURE LongReal_type(n: M3AST_AS_F.LongReal_type): TEXT;
 PROCEDURE Extended_type(n: M3AST_AS_F.Extended_type): TEXT;

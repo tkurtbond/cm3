@@ -32,6 +32,7 @@ IMPORT AST, M3AST_LX, M3AST_AS, M3AST_SM, M3AST_PG;
 IMPORT SeqM3AST_LX_SRC_NODE;
 IMPORT M3AST_LX_F, M3AST_AS_F, M3AST_PG_F;
 IMPORT M3CId, M3Assert;
+IMPORT Fmt; (* This fork *)
 IMPORT M3CToken, M3CWhitespace, M3CLiteral, M3CComment;
 
 IMPORT
@@ -243,6 +244,7 @@ PROCEDURE DoIt(h: Handle; parent, n: M3AST_AS.SRC_NODE_C)=
     | M3AST_AS.Integer_type(q) => Integer_type(h, q)
     | M3AST_AS.Longint_type(q) => Longint_type(h, q)
     | M3AST_AS.WideChar_type(q) => WideChar_type(h, q)
+    | M3AST_AS.Fixed_type(q) => Fixed_type(h, q) (* This fork *)
     | M3AST_AS.Real_type(q) => Real_type(h, q)
     | M3AST_AS.LongReal_type(q) => LongReal_type(h, q)
     | M3AST_AS.Extended_type(q) => Extended_type(h, q)
@@ -654,6 +656,16 @@ PROCEDURE WideChar_type(
   BEGIN
     Append(h, n, NewToken(M3CToken.WIDECHAR_));
   END WideChar_type;
+
+(* This fork: displayed as the name of its interface, Word32 for
+   example; the node only appears in Word32Rep .. Signed64Rep. *)
+PROCEDURE Fixed_type(
+    h: Handle; n: M3AST_AS.Fixed_type)=
+  VAR name := "Word";
+  BEGIN
+    IF n.fx_signed THEN name := "Signed" END;
+    D(h, n, name & Fmt.Int(n.fx_bits) & ".T");
+  END Fixed_type;
 
 PROCEDURE Real_type(
     h: Handle; n: M3AST_AS.Real_type;)=

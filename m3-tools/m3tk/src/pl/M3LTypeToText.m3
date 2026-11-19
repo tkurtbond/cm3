@@ -456,6 +456,9 @@ PROCEDURE ComponentType(s: Wr.T; t: M3AST_AS.M3TYPE) RAISES {Wr.Failure, Thread.
   BEGIN
     M3CTypesMisc.GetTYPE_SPECFromM3TYPE(t, ts);
     TYPECASE ts OF
+    | M3AST_AS.Fixed_type =>
+        (* This fork: unique, like a branded type, so by index *)
+        TypeIndex(s, ts.tmp_type_code);
     | M3AST_AS.INT_TYPE, M3AST_AS.WideChar_type, M3AST_AS.FLOAT_TYPE,
       M3AST_AS.RefAny_type,
       M3AST_AS.Address_type, M3AST_AS.Null_type,
@@ -492,6 +495,15 @@ PROCEDURE TypeSpec(
         Wr.PutChar(s, LongintCh);
     | M3AST_AS.WideChar_type =>
         Wr.PutChar(s, WideCharCh);
+    | M3AST_AS.Fixed_type(f) => (* This fork *)
+        Wr.PutChar(s, FixedCh);
+        IF f.fx_signed THEN Wr.PutChar(s, 's') ELSE Wr.PutChar(s, 'w') END;
+        CASE f.fx_bits OF <*NOWARN*>
+        | 8 => Wr.PutChar(s, '0');
+        | 16 => Wr.PutChar(s, '1');
+        | 32 => Wr.PutChar(s, '2');
+        | 64 => Wr.PutChar(s, '3');
+        END;
     | M3AST_AS.Real_type =>
         Wr.PutChar(s, RealCh);
     | M3AST_AS.LongReal_type =>

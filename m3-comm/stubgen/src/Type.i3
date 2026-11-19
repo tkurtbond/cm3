@@ -50,6 +50,18 @@ TYPE
   (* LONGINT is represented by a Subrange p with p.base = p,
      p.min = FIRST(LONGINT) and p.max = LAST(LONGINT). *)
 
+  (* This fork: the fixed-width integer types Word8.T .. Word64.T and
+     Signed8.T .. Signed64.T.  Like LONGINT, each is a Subrange p with
+     p.base = p and Value.Longint bounds; p.name is always "WordN.T" or
+     "SignedN.T".  Word64.T's max is LAST(LONGINT), not its real
+     maximum, so marshaling it does not use the bounds.  A subrange of
+     one of these types has it as base and Value.Longint bounds.  On
+     the wire every value is a LONGINT. *)
+  Fixed = Subrange OBJECT
+    bits  : INTEGER;  (* 8, 16, 32 or 64 *)
+    signed: BOOLEAN;
+  END;
+
   Real = T BRANDED OBJECT END;
 
   LongReal = T BRANDED OBJECT END;
@@ -193,6 +205,16 @@ VAR (* READONLY *)
   mutex         : Opaque;
 
 PROCEDURE ToText(t: T; byName: BOOLEAN := TRUE): Text.T;
+
+PROCEDURE NewFixed(bits: INTEGER; signed: BOOLEAN): Fixed;
+(* This fork: the Fixed type for "WordN.T" or "SignedN.T", N = bits.
+   Each call with the same arguments returns the same object. *)
+
+PROCEDURE FixedBase(t: Subrange): Fixed;
+(* This fork: t, or the Fixed type t is a subrange of, or NIL. *)
+
+PROCEDURE FixedVal(v: LONGINT; f: Fixed): Text.T;
+(* This fork: an expression for v as a value of type f. *)
 (* Return a textual representation of the type.  If 
    "byName AND t.name # NIL", the text for "t.name" is returned.  
    Otherwise the returned value is composed from the type of T and its 

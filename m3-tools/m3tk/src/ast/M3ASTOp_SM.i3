@@ -132,6 +132,7 @@ TYPE
   Integer_type = Previous_View.Integer_type;
   Longint_type = Previous_View.Longint_type;
   WideChar_type = Previous_View.WideChar_type;
+  Fixed_type = Previous_View.Fixed_type; (* This fork *)
   Null_type = Previous_View.Null_type;
   RefAny_type = Previous_View.RefAny_type;
   Address_type = Previous_View.Address_type;

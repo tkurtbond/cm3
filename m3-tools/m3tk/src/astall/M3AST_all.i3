@@ -142,6 +142,7 @@ REVEAL
   M3AST_AS.Integer_type = Last_View.Integer_type BRANDED OBJECT END;
   M3AST_AS.Longint_type = Last_View.Longint_type BRANDED OBJECT END;
   M3AST_AS.WideChar_type = Last_View.WideChar_type BRANDED OBJECT END;
+  M3AST_AS.Fixed_type = Last_View.Fixed_type BRANDED OBJECT END; (* This fork *)
   M3AST_AS.Null_type = Last_View.Null_type BRANDED OBJECT END;
   M3AST_AS.RefAny_type = Last_View.RefAny_type BRANDED OBJECT END;
   M3AST_AS.Address_type = Last_View.Address_type BRANDED OBJECT END;

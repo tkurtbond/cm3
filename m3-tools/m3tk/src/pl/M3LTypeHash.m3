@@ -108,6 +108,10 @@ PROCEDURE Classify(t: M3AST_AS.TYPE_SPEC): Class RAISES {}=
         RETURN Class.Integer;
     | M3AST_AS.Longint_type =>
         RETURN Class.Longint;
+    | M3AST_AS.Fixed_type =>
+        (* This fork: each fixed-width type is unique, like a branded
+           type; see M3LTypeEquiv.Add *)
+        RETURN Class.Branded;
     | M3AST_AS.WideChar_type =>
         RETURN Class.WideChar;
     | M3AST_AS.Real_type =>

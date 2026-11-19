@@ -424,6 +424,8 @@ PROCEDURE MarshalTypedVal(fmtWr: Formatter.T;
           StubLibCall(fmtWr, "Integer", varName, d);
         ELSIF t = Type.longint THEN
           StubLibCall(fmtWr, "Longint", varName, d);
+        ELSIF Type.FixedBase(sub) # NIL THEN (* This fork *)
+          FixedVal(fmtWr, varName, sub, d);
         ELSE
           SubRange(fmtWr, varName, t, d, sub.min, sub.max);
         END;
@@ -536,6 +538,46 @@ PROCEDURE SubRange(fmtWr: Formatter.T;
       END;
     END;
   END SubRange;
+
+(* This fork: marshal a value of a fixed-width type (Word8.T ..
+   Word64.T, Signed8.T .. Signed64.T) or a subrange of one.  On the
+   wire it is a LONGINT; Word64.T goes as its bit pattern. *)
+PROCEDURE FixedVal(fmtWr: Formatter.T;
+                   varName: TEXT;
+                   t: Type.Subrange;
+                   d: Direction) =
+  VAR
+    f := Type.FixedBase(t);
+    typeName := Type.ToText(f);
+    min := NARROW(t.min, Value.Longint).val;
+    max := NARROW(t.max, Value.Longint).val;
+    word64 := f.bits >= 64 AND NOT f.signed;
+    bounds: TEXT;
+  BEGIN
+    IF d = Direction.Out THEN
+      IF word64 THEN
+        PutLine(fmtWr, "StubLib.OutLongint(c, Word64.ToLong(" & varName
+                         & "));");
+      ELSE
+        PutLine(fmtWr, "StubLib.OutLongint(c, VAL(" & varName
+                         & ", LONGINT));");
+      END;
+    ELSE
+      IF word64 AND (t = f OR min < 0L OR max < min) THEN
+        (* Bit patterns above LAST(LONGINT): no bounds to check. *)
+        bounds := "";
+      ELSE
+        bounds := ", " & LongLit(min) & ", " & LongLit(max);
+      END;
+      IF word64 THEN
+        PutLine(fmtWr, varName & " := Word64.FromLong(StubLib.InLongint("
+                         & "c, rep" & bounds & "));");
+      ELSE
+        PutLine(fmtWr, varName & " := VAL(StubLib.InLongint(c, rep"
+                         & bounds & "), " & typeName & ");");
+      END;
+    END;
+  END FixedVal;
 
 (* This fork: a LONGINT literal for v.  FIRST(LONGINT) has no literal:
    its magnitude is out of range. *)

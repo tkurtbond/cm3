@@ -35,6 +35,7 @@ IMPORT SeqM3AST_AS_Fields, SeqM3AST_AS_Method, SeqM3AST_AS_Override,
 
 IMPORT M3CTypesMisc, M3CRaisesSet, M3COrdinal;
 IMPORT M3CExpValue;
+IMPORT M3CFixedType; (* This fork *)
 
 
 TYPE
@@ -583,6 +584,8 @@ PROCEDURE Identical(t1, t2: M3AST_SM.TYPE_SPEC_UNSET): BOOLEAN RAISES {}=
 
       (* assert: neither type is NIL *)
       TYPECASE t1 OF
+      | M3AST_AS.Fixed_type => (* This fork *)
+          RETURN M3CFixedType.Same(t1, t2);
       | M3AST_AS.INT_TYPE,
         M3AST_AS.WideChar_type,
         M3AST_AS.FLOAT_TYPE,

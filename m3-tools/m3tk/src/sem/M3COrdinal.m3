@@ -26,6 +26,7 @@ IMPORT M3AST_AS_F, M3AST_SM_F;
 IMPORT SeqM3AST_AS_Enum_id;
 
 IMPORT M3CBackEnd, M3CTypesMisc, M3Assert;
+IMPORT M3CFixedType; (* This fork *)
 
 
 PROCEDURE Is(
@@ -95,6 +96,8 @@ PROCEDURE SameSupertype(
           END;
       | M3AST_AS.WideChar_type =>
           RETURN ISTYPE(base2, M3AST_AS.WideChar_type);
+      | M3AST_AS.Fixed_type => (* This fork *)
+          RETURN M3CFixedType.Same(base1, base2);
       | M3AST_AS.Integer_type =>
           RETURN ISTYPE(base2, M3AST_AS.Integer_type);
       | M3AST_AS.Longint_type =>
@@ -177,6 +180,8 @@ PROCEDURE Identical(t1, t2: M3AST_SM.TYPE_SPEC_UNSET): BOOLEAN RAISES {}=
 
     (* assert: 't1' and 't2' are of the same form and neither is NIL *)
     TYPECASE t1 OF
+    | M3AST_AS.Fixed_type => (* This fork *)
+        RETURN M3CFixedType.Same(t1, t2);
     | M3AST_AS.INT_TYPE, M3AST_AS.WideChar_type =>
         RETURN TRUE;
     | M3AST_AS.Enumeration_type =>
@@ -227,6 +232,8 @@ PROCEDURE SubType(t1, t2: M3AST_SM.TYPE_SPEC_UNSET): BOOLEAN RAISES {}=
           RETURN ISTYPE(t2, M3AST_AS.Longint_type);
       | M3AST_AS.WideChar_type =>
           RETURN ISTYPE(t2, M3AST_AS.WideChar_type);
+      | M3AST_AS.Fixed_type => (* This fork *)
+          RETURN M3CFixedType.Same(t1, t2);
       | M3AST_AS.Enumeration_type =>
           RETURN ISTYPE(t2, M3AST_AS.Enumeration_type) AND
               IdenticalEnumerations(t1, t2);
@@ -253,6 +260,8 @@ PROCEDURE SubType(t1, t2: M3AST_SM.TYPE_SPEC_UNSET): BOOLEAN RAISES {}=
                       IdenticalEnumerations(base1, t2));
           | M3AST_AS.WideChar_type =>
               RETURN unset OR ISTYPE(base1, M3AST_AS.WideChar_type);
+          | M3AST_AS.Fixed_type => (* This fork *)
+              RETURN unset OR M3CFixedType.Same(base1, t2);
           | M3AST_AS.Integer_type =>
               RETURN unset OR ISTYPE(base1, M3AST_AS.Integer_type);
           | M3AST_AS.Longint_type =>

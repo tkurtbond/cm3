@@ -654,6 +654,17 @@ PROCEDURE WideChar_type(
     RETURN SRC_NODE(n, NEW(M3AST_AS.WideChar_type).init());
   END WideChar_type;
 
+(* This fork *)
+PROCEDURE Fixed_type(
+    n: M3AST_AS_F.Fixed_type; <*UNUSED*> h: AST_CopyRep.Handle;
+    ): AST.NODE=
+  VAR c: M3AST_AS_F.Fixed_type := NEW(M3AST_AS.Fixed_type).init();
+  BEGIN
+    c.fx_bits := n.fx_bits;
+    c.fx_signed := n.fx_signed;
+    RETURN SRC_NODE(n, c);
+  END Fixed_type;
+
 PROCEDURE Real_type(
     n: M3AST_AS_F.Real_type; <*UNUSED*> h: AST_CopyRep.Handle;
     ): AST.NODE=

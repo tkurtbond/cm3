@@ -183,6 +183,9 @@ PROCEDURE Longint_type(
 PROCEDURE WideChar_type(
     n: M3AST_AS_F.WideChar_type; h: AST_CopyRep.Handle;
     ): AST.NODE RAISES ANY;
+PROCEDURE Fixed_type( (* This fork *)
+    n: M3AST_AS_F.Fixed_type; h: AST_CopyRep.Handle;
+    ): AST.NODE RAISES ANY;
 PROCEDURE Real_type(
     n: M3AST_AS_F.Real_type; h: AST_CopyRep.Handle;
     ): AST.NODE RAISES ANY;

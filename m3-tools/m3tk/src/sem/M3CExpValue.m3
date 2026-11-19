@@ -302,6 +302,11 @@ PROCEDURE GetBounds(
         EVAL M3CBackEnd.StdUnaryTypeOp(M3CStdProcs.T.Last, longintType, high);
         RETURN M3CBackEnd.NumStatus.Valid;
 
+    | M3AST_AS.Fixed_type(fixedType) => (* This fork *)
+        EVAL M3CBackEnd.StdUnaryTypeOp(M3CStdProcs.T.First, fixedType, low);
+        EVAL M3CBackEnd.StdUnaryTypeOp(M3CStdProcs.T.Last, fixedType, high);
+        RETURN M3CBackEnd.NumStatus.Valid;
+
     | M3AST_AS.WideChar_type(wideCharType) =>
         EVAL M3CBackEnd.StdUnaryTypeOp(M3CStdProcs.T.First, wideCharType, low);
         EVAL M3CBackEnd.StdUnaryTypeOp(M3CStdProcs.T.Last, wideCharType, high);

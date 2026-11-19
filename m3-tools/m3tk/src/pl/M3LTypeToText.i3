@@ -52,6 +52,9 @@ CONST
   ObjectCh          = 'o';
   OpaqueCh          = 'q';
   MethodCh          = 'm'; (* introduces the object type for a method *)
+  (* This fork: a fixed-width type, followed by 'w' (WordN) or 's'
+     (SignedN) and a digit, 0 to 3 for 8, 16, 32 or 64 bits. *)
+  FixedCh           = 'z';
 
   TypeIndexOneCh    = '#';
   TypeIndexTwoCh    = '$';

@@ -335,6 +335,12 @@ PROCEDURE WideChar_type(<*UNUSED*> n: M3AST_AS_F.Integer_type): TEXT RAISES {}=
     RETURN "WideChar_type";
   END WideChar_type;
 
+(* This fork *)
+PROCEDURE Fixed_type(<*UNUSED*> n: M3AST_AS_F.Fixed_type): TEXT RAISES {}=
+  BEGIN
+    RETURN "Fixed_type";
+  END Fixed_type;
+
 
 PROCEDURE Real_type(<*UNUSED*> n: M3AST_AS_F.Real_type): TEXT RAISES {}=
   BEGIN

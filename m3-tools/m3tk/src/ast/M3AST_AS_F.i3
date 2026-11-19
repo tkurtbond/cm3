@@ -323,6 +323,10 @@ TYPE
   Integer_type = M3AST_AS.INT_TYPE OBJECT END;
   Longint_type = M3AST_AS.INT_TYPE OBJECT END;
   WideChar_type = M3AST_AS.INT_TYPE OBJECT END;
+  Fixed_type = M3AST_AS.INT_TYPE OBJECT (* This fork *)
+    fx_bits: INTEGER := 0;
+    fx_signed := FALSE;
+  END;
   FLOAT_TYPE = M3AST_AS.TYPE_SPEC OBJECT END;
   Real_type = M3AST_AS.FLOAT_TYPE OBJECT END;
   LongReal_type = M3AST_AS.FLOAT_TYPE OBJECT END;
@@ -442,6 +446,7 @@ REVEAL
   M3AST_AS.Integer_type <: Integer_type;
   M3AST_AS.Longint_type <: Longint_type;
   M3AST_AS.WideChar_type <: WideChar_type;
+  M3AST_AS.Fixed_type <: Fixed_type; (* This fork *)
   M3AST_AS.FLOAT_TYPE <: FLOAT_TYPE;
   M3AST_AS.Real_type <: Real_type;
   M3AST_AS.LongReal_type <: LongReal_type;

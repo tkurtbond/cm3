@@ -909,9 +909,35 @@ stubgen writes LONGINT subrange bounds as LONGINT literals. Testing it
 found that m3tk zeroed every negative lower bound of a LONGINT subrange
 (and a negative upper bound of an INTEGER one), also fixed; see
 [`BUGS.md`](BUGS.md). A server and client exchanging LONGINT and
-LONGINT-subrange values over TCP agree. What remains of Phase 6 is the
-decision whether network objects need the new types, before the
-`m3tk` work.
+LONGINT-subrange values over TCP agree.
+
+Status (2026-11-19): network objects support the new types (the user
+decided they should). m3tk has a new node, `Fixed_type <: INT_TYPE`
+(`fx_bits`, `fx_signed`), in every AST view, with copy, name, display
+and prelinker (`pl`) support. Instead of the standard types, m3tk
+breaks the import cycle after parsing: `sem/M3CFixedType.Transform`,
+called from `M3CGo.Parse`, turns the `T` of `Word8Rep` .. `Signed64Rep`
+into a `Fixed_type` and drops their `IMPORT WordN`, so `WordN.T` is
+`GenWordN`'s `Rep.T` as in m3front. Type identity and subtyping
+(`M3CTypeCompare`, `M3CTypeRelation`, `M3COrdinal`), `FIRST`/`LAST`,
+`BITSIZE`, `VAL` and subrange bounds (`M3CBackEnd_C`,
+`M3CExpValue.GetBounds`) handle it; values are `Longint_value`s.
+stubgen has `Type.Fixed`, a `Subrange` named `WordN.T` or `SignedN.T`,
+and marshals every fixed type, and every subrange of one, as a LONGINT
+(`VAL (x, LONGINT)` out; `VAL (StubLib.InLongint (c, rep, min, max),
+T)` in; `Word64.T` as its bits through `ToLong`/`FromLong`). No
+`StubLib` change was needed. A server and client exchanging all eight
+types, subranges of three, a VAR pair and a record over TCP agree, and
+the server rejects a `Word64.T` subrange value out of range.
+
+Known limits (from reading, not tested): m3tk's operator checks
+compare TYPECODEs, so they accept
+`Word32.T + Word64.T`, which m3front rejects (m3tk checks less than
+m3front anyway); m3tk takes `LAST (Word64.T)` to be `LAST (LONGINT)`,
+since its values are LONGINTs, and doesn't fold calls on `WordN`
+procedures (`sem/M3CWordProcs.m3` knows only `Word`). `sharedobjgen`,
+also built on m3tk, should now get past the import cycle but has no
+marshaling for the types.
 
 ## Open questions
 
