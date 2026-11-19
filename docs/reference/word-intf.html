@@ -120,6 +120,30 @@ The operations are the same except that they operate on
 <TT>T = LONGINT</TT> instead of <TT>T = INTEGER</TT>.
 <P>
 
+<!-- This fork: the fixed-width integer interfaces. -->
+<H2>The fixed-width interfaces (this fork)</H2>
+<P>
+
+This fork of CM3 also has the interfaces <TT>Word8</TT>,
+<TT>Word16</TT>, <TT>Word32</TT> and <TT>Word64</TT>, whose types are
+unsigned integers of that many bits whose arithmetic wraps around, and
+<TT>Signed8</TT> .. <TT>Signed64</TT>, whose types are signed integers
+whose arithmetic is checked. They are a language extension: upstream
+CM3 doesn't have them. Each <TT>WordN</TT> interface has the operations
+above, at its own width, plus conversions to and from
+<TT>Word.T</TT> and <TT>Long.T</TT>.
+<P>
+
+A <TT>Word.T</TT> is an <TT>INTEGER</TT>, so the operators on it are
+signed, and only the procedures of this interface treat it as unsigned.
+A <TT>WordN.T</TT> is a type of its own, whose operators are unsigned.
+With <TT>w: Word.T := -1</TT>, <TT>w &lt; 1</TT> is <TT>TRUE</TT>, and
+<TT>Word.LT (w, 1)</TT> and
+<TT>Word64.FromWord (w) &lt; VAL (1, Word64.T)</TT> are <TT>FALSE</TT>.
+The two kinds of type aren't assignable to each other.
+See <A HREF="../../README-fixed-width-integers.md">README-fixed-width-integers.md</A>.
+<P>
+
 The
 <A HREF="/public/m3core/src/Word.i3">
 CM Modula-3 version of Word</A>

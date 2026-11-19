@@ -73,6 +73,13 @@ are the predeclared ordinal types:
     BOOLEAN   The enumeration <TT>{FALSE, TRUE}</TT>
     CHAR      An enumeration containing at least 256 elements
 </PRE>
+<!-- This fork: the fixed-width integer types. -->
+This fork of CM3 also has the ordinal types <TT>Word8.T</TT> ..
+<TT>Word64.T</TT> and <TT>Signed8.T</TT> .. <TT>Signed64.T</TT>,
+declared in builtin interfaces (see
+<A HREF="word-intf.html">the Word interface</A> and
+<A HREF="../../README-fixed-width-integers.md">README-fixed-width-integers.md</A>).
+<P>
 The first 256 elements of type <TT>CHAR</TT> represent characters in the
 ISO-Latin-1 code, which is an extension of ASCII.  The language does
 not specify the names of the elements of the <TT>CHAR</TT> enumeration.

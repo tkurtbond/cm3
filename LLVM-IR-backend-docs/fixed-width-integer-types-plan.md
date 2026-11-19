@@ -932,6 +932,19 @@ the server rejects a `Word64.T` subrange value out of range. These are
 `m3-comm/netobj/tests/fixedwidth` (and `longint`, for bug 28), run by
 `m3-comm/netobj/tests/run-netobj-tests.sh WORKDIR`.
 
+Status (2026-11-19): documentation. The user guide is
+[`README-fixed-width-integers.md`](../README-fixed-width-integers.md),
+at the top of the tree beside `README-ex_stack.md`. Its examples were
+compiled and run with the installed compiler (26a4f28a2), including
+the static errors and the overflow checks it shows. The hand-written
+reference pages `docs/reference/word-intf.html` and `ordinal.html` get
+a short, marked section that links to it. The LaTeX reference
+(`docs/reference/complete/`) is unchanged: its HTML, PDF and
+PostScript are generated with `latex2html`, which isn't installed
+here, and it is the language definition, which this extension is
+not part of. `Cstdint` and the optional `Word.T` warning are still
+open.
+
 Known limits (from reading, not tested): m3tk's operator checks
 compare TYPECODEs, so they accept
 `Word32.T + Word64.T`, which m3front rejects (m3tk checks less than
