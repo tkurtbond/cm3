@@ -38,6 +38,9 @@ REVEAL
     exported   : M3.Flag; (* reset in each compilation *)
     exportable : M3.Flag; (* reset in each compilation *)
     inTypeOf   : M3.Flag; (* reset in each compilation *)
+    wwDeclared : M3.Type := NIL;
+    (* This fork: for WordWarn, the declared type of a TYPE declaration
+       or a field, before Check strips it of its names. *)
     inToExpr   : M3.Flag; (* reset in each compilation *)
     inToType   : M3.Flag; (* reset in each compilation *)
     lazyAligned: M3.Flag;

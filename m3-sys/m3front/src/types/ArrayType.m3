@@ -275,6 +275,7 @@ PROCEDURE Check (p: P) =
       p.indexType := ErrType.T;
     END;
 
+    p.wwDeclared := p.elementType; (* This fork: WordWarn *)
     p.elementType := Type.CheckInfo (p.elementType, (*OUT*) elt_info);
     IF (elt_info.class = Type.Class.OpenArray) THEN
       Error.Msg ("Fixed array element type cannot be open array (2.2.3).");

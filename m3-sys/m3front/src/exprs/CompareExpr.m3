@@ -9,7 +9,7 @@
 MODULE CompareExpr;
 
 IMPORT M3, CG, Expr, ExprRep, Type, Int, LInt, Reel, LReel, EReel;
-IMPORT FixedType; (* This fork *)
+IMPORT FixedType, WordWarn; (* This fork *)
 IMPORT EnumType, SetType, Bool, Module, Addr, Target, TInt;
 IMPORT IntegerExpr, EnumExpr, ReelExpr, AddressExpr;
 IMPORT SetExpr, Error;
@@ -42,6 +42,9 @@ CONST
     (*LT*) OpDesc { -1, -1, "\'<\'" },
     (*LE*) OpDesc { -1,  0, "\'<=\'" }
   };
+
+  (* This fork: the unsigned Word procedures, for WordWarn. *)
+  Unsigned = ARRAY Op OF TEXT { "GT", "GE", "LT", "LE" };
 
 TYPE
   P = ExprRep.Tabc BRANDED "CompareExpr.P" OBJECT
@@ -114,6 +117,9 @@ PROCEDURE Check (p: P;  VAR cs: Expr.CheckState) =
       AND ((p.op = CG.Cmp.LT) OR (p.op = CG.Cmp.GT))
       AND (info.size <= Target.Integer.size) THEN
       p.bad_set := TRUE;
+    END;
+    IF (p.class = cINT) OR (p.class = cLINT) THEN (* This fork *)
+      WordWarn.Check (p.a, p.b, Ops[p.op].name, Unsigned[p.op]);
     END;
   END Check;
 

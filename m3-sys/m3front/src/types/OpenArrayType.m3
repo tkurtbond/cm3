@@ -137,6 +137,7 @@ PROCEDURE Check (p: P) =
       := MAX (MAX (Target.Byte, Target.Structure_size_boundary),
               MAX (Target.Address.align, Target.Integer.align));
   BEGIN
+    p.wwDeclared := p.EltType; (* This fork: WordWarn *)
     p.EltType := Type.Check (p.EltType);
     LNonopenEltType := Type.CheckInfo (NonopenEltType (p), NonopenEltInfo);
     p.NonopenEltAlign := NonopenEltInfo.alignment;

@@ -125,6 +125,7 @@ PROCEDURE Check (p: P) =
       END;
     END;
     
+    p.wwDeclared := p.baseType; (* This fork: WordWarn *)
     p.baseType := Type.CheckInfo (p.baseType, baseInfo);
     IF baseInfo.class = Type.Class.OpenArray THEN
       Error.Msg

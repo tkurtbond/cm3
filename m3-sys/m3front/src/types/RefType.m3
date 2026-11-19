@@ -160,6 +160,7 @@ PROCEDURE Check (p: P) =
     INC (Type.recursionDepth); (*------------------------------------*)
       p.checked := TRUE;
       IF (p.target # NIL) THEN
+        p.wwDeclared := p.target; (* This fork: WordWarn *)
         p.target := Type.CheckInfo (p.target, targetInfo);
         targetAlign := targetInfo.alignment;
         targetIsTraced := targetInfo.isTraced;

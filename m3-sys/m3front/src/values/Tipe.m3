@@ -115,6 +115,7 @@ PROCEDURE DefineOpaque (name: TEXT;  super: Type.T): Type.T =
 PROCEDURE Check (t: T;  <*UNUSED*> VAR cs: Value.CheckState) =
   VAR info: Type.Info;  initial := t.value;  typename: QID;  name: TEXT;
   BEGIN
+    t.wwDeclared := initial; (* This fork: WordWarn *)
     t.value := Type.CheckInfo (t.value, info);
 
     IF (NOT t.imported)

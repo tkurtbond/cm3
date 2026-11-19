@@ -29,6 +29,10 @@ REVEAL
     checked     : M3.Flag;
     errored     : M3.Flag;
     next        : TT;   (* linked list of all types in the same module *)
+    wwDeclared  : TT := NIL;
+    (* This fork: for WordWarn, the declared type of the component that
+       'check' strips of its names (an array's element, an open array's
+       element, a REF's target, a BITS FOR's base). *)
   METHODS
     check       ();
     no_straddle (offset: INTEGER; IsEltOrField: BOOLEAN): BOOLEAN;

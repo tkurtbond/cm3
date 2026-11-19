@@ -12,6 +12,7 @@ MODULE WithStmt;
 IMPORT M3ID, CG, Expr, Scope, Value, Variable, OpenArrayType;
 IMPORT Type, Stmt, StmtRep, Token, M3RT, Target, Tracer, AssignStmt;
 IMPORT ArrayExpr;
+IMPORT WordWarn; (* This fork *)
 FROM Scanner IMPORT Match, MatchID, GetToken, cur;
 
 TYPE
@@ -91,6 +92,7 @@ PROCEDURE Check (p: P;  VAR cs: Stmt.CheckState) =
     Variable.BindType (p.var, t, indirect := (p.kind = Kind.designator),
                        readonly := NOT Expr.IsWritable (p.expr, traced := FALSE),
                        open_array_ok := TRUE,  needs_init := FALSE);
+    WordWarn.NoteWith (p.var, p.expr); (* This fork *)
 
     Scope.TypeCheck (p.scope, cs);
     zz := Scope.Push (p.scope);

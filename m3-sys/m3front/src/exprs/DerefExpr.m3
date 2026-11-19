@@ -57,6 +57,16 @@ PROCEDURE SetOffset (e: Expr.T; n: INTEGER) =
     END;
   END SetOffset;
 
+(* This fork: see the interface. *)
+PROCEDURE Split (e: Expr.T;  VAR a: Expr.T): BOOLEAN =
+  BEGIN
+    TYPECASE e OF
+    | NULL => RETURN FALSE;
+    | P(p) => a := p.a;  RETURN TRUE;
+    ELSE      RETURN FALSE;
+    END;
+  END Split;
+
 PROCEDURE TypeOf (p: P): Type.T =
   VAR ta, target: Type.T;
   BEGIN

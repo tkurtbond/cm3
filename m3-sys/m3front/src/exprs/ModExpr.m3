@@ -9,7 +9,7 @@
 MODULE ModExpr;
 
 IMPORT CG, Expr, ExprRep, Type, Int, LInt, IntegerExpr, Target;
-IMPORT FixedType; (* This fork *)
+IMPORT FixedType, WordWarn; (* This fork *)
 IMPORT Reel, LReel, EReel, ReelExpr, DivExpr, TInt;
 
 TYPE
@@ -94,6 +94,9 @@ PROCEDURE Check (p: P;  VAR cs: Expr.CheckState) =
       p.class := Class.cEXTND;
     ELSE p.class := Class.cERR;  ta := Int.T;
       ta := Expr.BadOperands ("MOD", ta, tb);
+    END;
+    IF (p.class = Class.cINT) OR (p.class = Class.cLINT) THEN (* This fork *)
+      WordWarn.Check (p.a, p.b, "MOD", "Mod");
     END;
     p.type := ta;
     p.repType := ta;

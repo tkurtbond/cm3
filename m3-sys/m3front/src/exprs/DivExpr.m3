@@ -9,7 +9,7 @@
 MODULE DivExpr;
 
 IMPORT CG, Expr, ExprRep, Type, Int, LInt, IntegerExpr, TInt, Target;
-IMPORT FixedType; (* This fork *)
+IMPORT FixedType, WordWarn; (* This fork *)
 IMPORT TargetMap;
 
 TYPE
@@ -68,8 +68,10 @@ PROCEDURE Check (p: P;  VAR cs: Expr.CheckState) =
     tb := Type.Base (Expr.TypeOf (p.b));
     IF (ta = Int.T) AND (tb = Int.T) THEN
       p.type := Int.T;
+      WordWarn.Check (p.a, p.b, "DIV", "Divide"); (* This fork *)
     ELSIF (ta = LInt.T) AND (tb = LInt.T) THEN
       p.type := LInt.T;
+      WordWarn.Check (p.a, p.b, "DIV", "Divide"); (* This fork *)
     ELSIF FixedType.Is (ta) AND (ta = tb) THEN (* This fork *)
       p.type := ta;
     ELSE

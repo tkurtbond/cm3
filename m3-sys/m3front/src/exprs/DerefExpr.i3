@@ -12,6 +12,9 @@ IMPORT Expr;
 
 PROCEDURE New (a: Expr.T): Expr.T;
 
+PROCEDURE Split (e: Expr.T;  VAR a: Expr.T): BOOLEAN;
+(* This fork: if 'e' is 'a^', set 'a' and return TRUE. *)
+
 PROCEDURE SetOffset (e: Expr.T; n: INTEGER);
 
 END DerefExpr.

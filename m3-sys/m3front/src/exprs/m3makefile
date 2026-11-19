@@ -22,6 +22,7 @@ module ("ConsExpr")
 module ("DerefExpr")
 module ("DivExpr")
 module ("DivideExpr")
+module ("WordWarn") % This fork: signed operators on Word.T
 module ("EnumExpr")
 module ("EqualExpr")
 module ("ExprParse")

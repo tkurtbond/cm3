@@ -131,7 +131,8 @@ PROCEDURE RepTypeOf (t: T): Type.T =
 PROCEDURE TypeCheck (t: T;  VAR cs: Value.CheckState) =
   VAR info: Type.Info;
   BEGIN
-    t.tipe := Type.CheckInfo (TypeOf (t), info);
+    t.wwDeclared := TypeOf (t); (* This fork: WordWarn *)
+    t.tipe := Type.CheckInfo (t.wwDeclared, info);
     IF (info.isEmpty) THEN
       Error.ID (t.name, "A field's type may not be empty (2.2.4).");
     END;

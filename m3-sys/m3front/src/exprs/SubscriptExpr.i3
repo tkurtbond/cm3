@@ -11,4 +11,8 @@ IMPORT Expr;
 
 PROCEDURE New (a, b: Expr.T): Expr.T;
 
+PROCEDURE Split (e: Expr.T;  VAR a: Expr.T): BOOLEAN;
+(* This fork: if 'e' is 'a[b]', set 'a' and return TRUE.  After 'e' is
+   checked, an implicit dereference is explicit in 'a'. *)
+
 END SubscriptExpr.
