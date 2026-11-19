@@ -87,7 +87,11 @@ PROCEDURE Compile (p: P; StaticOnly: BOOLEAN) =
   VAR e := p.folded;  fixed: FixedType.Info;
   BEGIN
     <* ASSERT NOT StaticOnly *>
-    IF (e = NIL) AND FixedType.Split (p.type, fixed) THEN
+    IF (e = NIL) AND FixedType.Split (p.type, fixed) AND fixed.signed THEN
+      (* This fork: checked *)
+      Expr.Compile (p.a);
+      FixedType.Negate (fixed);
+    ELSIF (e = NIL) AND FixedType.Split (p.type, fixed) THEN
       (* This fork: 0 - a, wrapped *)
       CG.Load_integer (FixedType.StackType (fixed), TInt.Zero);
       Expr.Compile (p.a);

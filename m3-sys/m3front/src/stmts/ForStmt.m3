@@ -405,18 +405,20 @@ PROCEDURE Compile (p: P): Stmt.Outcomes =
    step and then compares with the limit, so a loop up to LAST (T) would
    wrap around and never end.  This one leaves the loop before the
    step when fewer than |step| values remain, testing (to - i) < |step|
-   counting up and (i - to) < |step| counting down, all unsigned.  The
-   step is of the fixed type, so counts up, or an INTEGER of either
-   sign; when its sign isn't known at compile time it's tested at run
-   time. *)
+   counting up and (i - to) < |step| counting down, all unsigned (for a
+   SignedN too: the difference and |step| may not fit in the signed
+   stack type, and the sum, though in range, is computed unsigned to
+   stay clear of signed overflow in C).  The step is of the fixed type
+   or an INTEGER; when its sign isn't known at compile time it's tested
+   at run time. *)
 PROCEDURE CompileFixed (p: P;  type: Type.T;
                         READONLY fixed: FixedType.Info): Stmt.Outcomes =
   VAR
     stk := FixedType.StackType (fixed);
-    int := Target.Integer.cg_type;
-    uid, int_uid: INTEGER;
+    ot  := stk;  (* the type of the step and test; see above *)
+    sty := FixedType.OrdStackType (Expr.TypeOf (p.step));
+    uid, sty_uid: INTEGER;
     step_min, step_max: Target.Int;
-    step_int := NOT FixedType.Is (Expr.TypeOf (p.step));
     t_index, t_to, t_by: CG.Val;
     index, to, by, sby: CG.Var;
     l_top, l_exit, l_down_entry, l_down_step: CG.Label;
@@ -433,15 +435,22 @@ PROCEDURE CompileFixed (p: P;  type: Type.T;
                                f := CG.Always);
     END Local;
 
+  PROCEDURE Load (v: CG.Var) =
+    (* push v as an 'ot' *)
+    BEGIN
+      CG.Load_int (stk, v);
+      IF ot # stk THEN CG.Loophole (stk, ot) END;
+    END Load;
+
   PROCEDURE LoadMag (neg: BOOLEAN) =
     (* push |step| *)
     BEGIN
       IF neg THEN
-        CG.Load_integer (stk, TInt.Zero);
-        CG.Load_int (stk, by);
-        CG.Subtract (stk);
+        CG.Load_integer (ot, TInt.Zero);
+        Load (by);
+        CG.Subtract (ot);
       ELSE
-        CG.Load_int (stk, by);
+        Load (by);
       END;
     END LoadMag;
 
@@ -460,27 +469,37 @@ PROCEDURE CompileFixed (p: P;  type: Type.T;
     (* leave if fewer than |step| values remain, else step and loop *)
     BEGIN
       IF up THEN
-        CG.Load_int (stk, to);
-        CG.Load_int (stk, index);
+        Load (to);
+        Load (index);
       ELSE
-        CG.Load_int (stk, index);
-        CG.Load_int (stk, to);
+        Load (index);
+        Load (to);
       END;
-      CG.Subtract (stk);
+      CG.Subtract (ot);
       LoadMag (NOT up);
-      CG.If_compare (stk, CG.Cmp.LT, l_exit, CG.Maybe);
-      CG.Load_int (stk, index);
+      CG.If_compare (ot, CG.Cmp.LT, l_exit, CG.Maybe);
+      Load (index);
       LoadMag (NOT up);
-      IF up THEN CG.Add (stk) ELSE CG.Subtract (stk) END;
+      IF up THEN CG.Add (ot) ELSE CG.Subtract (ot) END;
+      IF ot # stk THEN CG.Loophole (ot, stk) END;
       CG.Store_int (stk, index);
       CG.Jump (l_top);
     END StepAndTest;
 
   BEGIN
-    int_uid := Type.GlobalUID (Int.T);
     IF TargetMap.CG_Size[stk] = Target.Integer.size
-      THEN uid := int_uid;
+      THEN uid := Type.GlobalUID (Int.T);
       ELSE uid := Type.GlobalUID (LInt.T);
+    END;
+    IF TargetMap.CG_Size[sty] = Target.Integer.size
+      THEN sty_uid := Type.GlobalUID (Int.T);
+      ELSE sty_uid := Type.GlobalUID (LInt.T);
+    END;
+    IF fixed.signed THEN
+      IF stk = Target.Integer.cg_type
+        THEN ot := Target.Word.cg_type;
+        ELSE ot := Target.Long.cg_type;
+      END;
     END;
 
     Expr.GetBounds (p.step, step_min, step_max);
@@ -514,19 +533,19 @@ PROCEDURE CompileFixed (p: P;  type: Type.T;
       CG.Push (t_index);  CG.Store_int (stk, index);  CG.Free (t_index);
       CG.Push (t_to);     CG.Store_int (stk, to);     CG.Free (t_to);
       IF (dir = 0) THEN
-        sby := Local (int, int_uid);
+        sby := Local (sty, sty_uid);
         CG.Push (t_by);
-        CG.Store_int (int, sby);
+        CG.Store_int (sty, sby);
       END;
       CG.Push (t_by);
-      IF step_int AND (int # stk) THEN CG.Loophole (int, stk) END;
+      IF sty # stk THEN CG.Loophole (sty, stk) END;
       CG.Store_int (stk, by);
       CG.Free (t_by);
 
       IF (dir = 0) THEN
-        CG.Load_int (int, sby);
-        CG.Load_integer (int, TInt.Zero);
-        CG.If_compare (int, CG.Cmp.LT, l_down_entry, CG.Maybe);
+        CG.Load_int (sty, sby);
+        CG.Load_integer (sty, TInt.Zero);
+        CG.If_compare (sty, CG.Cmp.LT, l_down_entry, CG.Maybe);
         EntryTest (up := TRUE);
         CG.Jump (l_top);
         CG.Set_label (l_down_entry);
@@ -549,9 +568,9 @@ PROCEDURE CompileFixed (p: P;  type: Type.T;
 
       CG.Gen_location (p.origin);
       IF (dir = 0) THEN
-        CG.Load_int (int, sby);
-        CG.Load_integer (int, TInt.Zero);
-        CG.If_compare (int, CG.Cmp.LT, l_down_step, CG.Maybe);
+        CG.Load_int (sty, sby);
+        CG.Load_integer (sty, TInt.Zero);
+        CG.If_compare (sty, CG.Cmp.LT, l_down_step, CG.Maybe);
         StepAndTest (up := TRUE);
         CG.Set_label (l_down_step);
         StepAndTest (up := FALSE);

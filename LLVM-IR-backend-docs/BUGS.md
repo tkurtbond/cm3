@@ -353,3 +353,26 @@ every back end.
   fixed front end. `RTTipe` can't work around it for code already
   compiled: the wrong bytes are also valid encodings of other values
   (both -129 and -127 came out as 16_7f).
+
+## Bug 26: `FIRST (INTEGER) DIV -1` and `MOD -1` die with SIGFPE
+
+- **Where:** upstream, `m3-sys/m3back/src/M3C.m3` (`m3_div_T`,
+  `m3_mod_T`); and this fork's `m3-sys/m3llvmir/src/M3LLVMIR.m3`
+  (`DivMod`), which copies the behavior.
+- **Status:** open. Found while designing Phase 5 of
+  [`fixed-width-integer-types-plan.md`](fixed-width-integer-types-plan.md),
+  2026-11-18. Checked with a small program on AMD64_LINUX: both
+  expressions, on variables, kill the program with SIGFPE under the C
+  back end and under `LlvmIR`.
+- **Detail:** both back ends divide with the machine's signed division
+  (C's `/` and `%`, LLVM's `sdiv` and `srem`). For `FIRST (INTEGER)`
+  and -1 that is undefined in C and in LLVM, and x86's `idiv` traps.
+  The same holds for LONGINT on 32-bit targets.
+- **Effect:** `FIRST (INTEGER) MOD -1` should be 0; it is never an
+  error. `FIRST (INTEGER) DIV -1` overflows, and Modula-3 leaves
+  overflow checking to the implementation, but the result should
+  at least not be a signal that isn't mapped to a Modula-3 error.
+- **Fix (not done):** test for a divisor of -1 before dividing: `MOD`
+  gives 0, `DIV` negates (wrapping, as `-` does since bug 2). The
+  checked `Signed64` operations of Phase 5 do this themselves, so they
+  don't depend on this fix.

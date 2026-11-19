@@ -25,6 +25,7 @@ TYPE
         class: Class;
         tmp1 : CG.Var;
         tmp2 : CG.Var;
+        val  : CG.Val := NIL; (* This fork: see FixedType.PrepOperate *)
       OVERRIDES
         typeOf       := TypeOf;
         repTypeOf    := RepTypeOf;
@@ -103,8 +104,13 @@ PROCEDURE Prep (p: P) =
   BEGIN
     Expr.Prep (p.a);
     Expr.Prep (p.b);
-    IF (p.class # Class.cINT) AND (p.class # Class.cLINT)
-      AND (p.class # Class.cFIXED) (* This fork *) THEN
+    IF (p.class = Class.cFIXED) THEN (* This fork *)
+      VAR fixed: FixedType.Info;  b := FixedType.Split (p.type, fixed);
+      BEGIN
+        <*ASSERT b*>
+        p.val := FixedType.PrepOperate (fixed, FixedType.Op.Mod, p.a, p.b);
+      END;
+    ELSIF (p.class # Class.cINT) AND (p.class # Class.cLINT) THEN
       (* floating point: x MOD y == x - y * FLOOR (x / y)  *)
       EVAL Type.CheckInfo (p.a.type, info);
       sz := info.size;
@@ -130,9 +136,13 @@ PROCEDURE Compile (p: P; StaticOnly: BOOLEAN) =
     divisor, mask: Target.Int;
     log: INTEGER;
     t: Type.T;
+    fixed: FixedType.Info;
   BEGIN
     <* ASSERT NOT StaticOnly *>
-    IF (p.class = Class.cINT) OR (p.class = Class.cLINT)
+    IF (p.val # NIL) THEN (* This fork: a signed MOD, compiled in Prep *)
+      EVAL FixedType.Split (p.type, fixed);
+      FixedType.CompileOperate (fixed, FixedType.Op.Mod, p.a, p.b, p.val);
+    ELSIF (p.class = Class.cINT) OR (p.class = Class.cLINT)
       OR (p.class = Class.cFIXED) (* This fork *) THEN
       cg_type := Type.CGType (p.type);
       e1 := Expr.ConstValue (p.a);
@@ -160,7 +170,12 @@ PROCEDURE Compile (p: P; StaticOnly: BOOLEAN) =
         IF (e2 = NIL) THEN e2 := p.b; END;
         Expr.Compile (e1);
         Expr.Compile (e2);
-        CG.Mod (cg_type, Expr.GetSign (e1), Expr.GetSign (e2));
+        IF FixedType.Split (p.type, fixed) THEN (* This fork *)
+          FixedType.Operate (fixed, FixedType.Op.Mod,
+                             Expr.GetSign (e1), Expr.GetSign (e2));
+        ELSE
+          CG.Mod (cg_type, Expr.GetSign (e1), Expr.GetSign (e2));
+        END;
       END;
     ELSE
       (* floating point: x MOD y == x - y * FLOOR (x / y)  *)

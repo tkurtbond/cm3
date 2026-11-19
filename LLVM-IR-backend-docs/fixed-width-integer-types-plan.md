@@ -149,7 +149,8 @@ Checked against the sources on branch `dev` (commit 992071694).
    behavior.
 7. **Error code.** Reuse `RuntimeError.ValueOutOfRange`. Adding a code
    would mean appending to the `RuntimeError` enum and the runtime's
-   tables.
+   tables. (Changed for Phase 5: arithmetic overflow raises the
+   existing `IntegerOverflow`; `VAL` keeps `ValueOutOfRange`.)
 
 ## Compatibility
 
@@ -680,6 +681,126 @@ end built each one):
   the integrated back end, `M3CG_LLVM`) and in the M3CG tools
   (`M3CG_Wr`, `Rd`, `BinWr`, `BinRd`, `Check`, `MultiPass`, `Tee`).
   That is why it is last.
+
+Design (2026-11-18; the error code and `ABS` approved by the user the
+same day). It reuses Phases
+2 and 3 wherever it can. `FixedType.Info` already has `signed`, and
+every place that assumes unsigned either asserts `NOT info.signed`
+(`FixedType.Wrap`, `Mask`) or is marked "This fork". What was checked
+first:
+
+- **Error code: `IntegerOverflow`, not `ValueOutOfRange`.**
+  `RuntimeError.T` (`m3core`) and `M3CG.RuntimeError` (`m3middle`)
+  already have `IntegerOverflow` (14, "integer result too large to
+  represent"). Only Windows' `RTSignal` raises it today. Using it
+  for arithmetic needs no new enum value, and it tells overflow
+  apart from a bad `VAL`, which keeps `ValueOutOfRange` (correction
+  7 is unchanged for `VAL`). Decided: this replaces correction 7
+  for arithmetic.
+- **The checks are run-time errors that can be caught.** A program
+  can catch them as `RuntimeError.E`, which `p208` already does for
+  `<*ASSERT*>`. So one `p` test can check every overflow case and
+  print which error each raised.
+- **Constant overflow behaves as for INTEGER.** Today
+  `CONST C = LAST (INTEGER) + 1` is "Value of CONST is not constant",
+  because folding gives up and leaves the expression to run time.
+  `SignedN` folding gives up in the same way, so an overflowing
+  `CONST` is the same error, and an overflowing constant expression
+  elsewhere fails its check at run time.
+- **`FIRST (INTEGER) DIV -1` and `MOD -1` die with SIGFPE today,
+  with both back ends** (checked on AMD64_LINUX). `MOD` should give
+  0. This is an upstream bug for INTEGER (bug 26 in
+  [`BUGS.md`](BUGS.md)), outside this phase, but
+  `Signed64` must not inherit it: its `DIV` and `MOD` test for a
+  divisor of -1 before dividing.
+
+How it would be built:
+
+- **Representation.** `FixedType.New` gets a `signed` argument, and
+  `Initialize` makes `Signed8` to `Signed64` with `Target.Int8` to
+  `Int64` as their representation and tags `$signed8` and so on.
+  The stack type is `Target.Integer`'s for widths up to the word
+  size and `Target.Longint`'s above, so compares, `DIV` and `MOD`
+  are signed with no change to `CompareExpr` and `DivExpr`. Values
+  on the stack are always sign-extended and in range. `GenMap` uses
+  `Int_1` to `Int_8`. The back ends see subranges, as now.
+- **Checked arithmetic, in one place.** `FixedType` gets procedures
+  that take the operands on the stack and leave the result:
+  `Add`, `Subtract`, `Multiply`, `Negate`, `Div`, `Mod`. For
+  `WordN` they are the operation plus `Mask`, so `AddExpr` and the
+  others call them instead of `Mask` and lose their own fixed-type
+  code. For `SignedN` there are two cases:
+  - **Narrower than the stack type** (8 to 32 bits on 64-bit
+    targets): compute in the stack type, which can't overflow
+    (`(-2^31)^2 = 2^62`), then `Check_range (min, max,
+    IntegerOverflow)`. `MOD` needs no check. `DIV` needs none
+    before dividing, because the operation itself can't trap; the
+    range check catches `FIRST DIV -1`.
+  - **As wide as the stack type** (`Signed64`, and `Signed32` on
+    32-bit targets), with operands in temporaries:
+    - `a + b`: `r := a + b`, overflow if `(a XOR r) AND (b XOR r)`
+      is negative (`Check_lo (0)` on that value, then discard it).
+    - `a - b`: `r := a - b`, overflow if `(a XOR b) AND (a XOR r)`
+      is negative.
+    - `-a`: `Check_lo (a, FIRST + 1)`, then negate.
+    - `a * b`: `r := a * b` wrapped. If `a` is 0 there is no
+      overflow; if `a` is -1, overflow if `b = FIRST`; otherwise
+      overflow unless `r MOD a = 0` and `r DIV a = b` (together they
+      mean `r = a * b` exactly, which holds with `DIV`'s rounding
+      down). Two divisions: slow, as expected above.
+    - `a DIV b`: if `b = -1`, `-a` checked as above; else `a DIV b`.
+    - `a MOD b`: if `b = -1`, 0; else `a MOD b`.
+
+    The C back end already compiles `+ - *` through the unsigned
+    type (Phase 0), and `m3llvmir` emits them without `nsw`, so the
+    wrapped `r` is defined in both.
+  - **`-NoChecks`.** The overflow checks follow `Host.doRangeChk`,
+    as `INC`, `DEC` and assignment checks do. With it off, `SignedN`
+    arithmetic wraps.
+- **`INC` and `DEC`** (decision 8: the step may be an INTEGER).
+  Narrow: check the step against `[-(max - min) .. max - min]` first,
+  so the sum can't overflow the stack type, then add and range check.
+  Full width: the checked `Add`, after converting an INTEGER step to
+  the stack type.
+- **Folding.** `IntegerExpr` adds with `TInt` and gives up when the
+  result is outside `[min .. max]`. `Wrap` folds as `TWord.Truncate`
+  and then sign-extends. `DIV` and `MOD` fold signed, not with
+  `TWord`.
+- **`ABS`** accepts `SignedN` (it rejects `WordN`) and is checked:
+  `ABS (FIRST (Signed8.T))` fails.
+- **The other Phase 2 places** need review, not new design:
+  `ForStmt.CompileFixed` (signed compares should just work),
+  `SubscriptExpr`'s biased index for a signed index type,
+  `SubrangeType`, `Val`, `Ord`, `First`, `Last`, `Number`,
+  `CheckExpr`, `Type.m3`, and `IntegerExpr`'s printed form (`INT8<`
+  and so on).
+- **Interfaces (Phase 3's pattern).** `SignedN` exports `T`, `Size`,
+  `Wrap`, `Brand`, `Equal`, `Hash` and `Compare` (decision 1).
+  `Wrap` sign-extends the low N bits, so `Signed32.Wrap (w32)`
+  reinterprets. In `m3core`: `GenSignedN.ig/.mg`, `SignedNRep.i3`,
+  `SignedN.i3/.m3`, built under `M3_FIXED_WIDTH_INTEGERS` like the
+  `WordN` units. `Builder.ImportsBuiltinFixed` and
+  `FixedType.IsInterface` extend to the new names.
+- **Tests.**
+  - `p303`: arithmetic at each width up to the edges, folding,
+    `DIV`/`MOD` rounding with negative operands, `MOD -1`, compares,
+    `ABS`, `INC`/`DEC`, `FOR`, subranges, sets, arrays, `CASE`,
+    `Wrap`.
+  - `p304`: every overflow case, at each width and for constants and
+    variables, caught as `RuntimeError.E` with its tag printed; and
+    the same operations just inside the range, which must not fail.
+  - `p305`: the `SignedN` procedures, as `p300` does for `WordN`.
+  - `e043`: mixing `SignedN` with `WordN`, INTEGER, LONGINT and other
+    widths; `ABS` of a `WordN`.
+  - `r011`, `r012`: an uncaught `Signed64` `+` and a `Signed8` `*`
+    overflow, to fix the message's form.
+
+  All with C and `LlvmIR` at `-O0` and `-O`, as in Phase 4.
+
+Order of work: the type and its operators (as Phase 2), with `p303`,
+`p304` and `e043`; then the interfaces and `m3core` units (as Phase
+3), with `p305`; then a concierge upgrade of a copy of the install,
+the full m3tests run, and the plan's status.
 
 ### Phase 6: The rest of the system
 

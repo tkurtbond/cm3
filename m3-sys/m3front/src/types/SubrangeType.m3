@@ -172,7 +172,7 @@ PROCEDURE Check (p: P) =
     p.info.min_size  := MinSize (p);
     p.info.alignment := TargetMap.CG_Align[p.rep];
     p.info.mem_type  := p.rep;
-    IF FixedType.Is (p.baseType) THEN (* This fork: always unsigned *)
+    IF FixedType.Is (p.baseType) THEN (* This fork: the base type's *)
       p.info.stk_type := FixedType.OrdStackType (p.baseType);
     ELSIF Type.IsSubtype (p.baseType, LInt.T) THEN
       IF Target.SignedType [p.rep]

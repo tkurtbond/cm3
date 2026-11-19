@@ -1,0 +1,257 @@
+-- 8 bits
+8: LAST + 1: Integer result too large to represent.
+8: LAST-1 + 1 = 127
+8: FIRST + -1: Integer result too large to represent.
+8: FIRST+1 + -1 = -128
+8: LAST + LAST: Integer result too large to represent.
+8: FIRST + FIRST: Integer result too large to represent.
+8: LAST + FIRST = -1
+8: FIRST - 1: Integer result too large to represent.
+8: FIRST+1 - 1 = -128
+8: LAST - -1: Integer result too large to represent.
+8: LAST-1 - -1 = 127
+8: 0 - FIRST: Integer result too large to represent.
+8: -1 - FIRST = 127
+8: FIRST - LAST: Integer result too large to represent.
+8: -1 - LAST = -128
+8: FIRST * -1: Integer result too large to represent.
+8: -1 * FIRST: Integer result too large to represent.
+8: FIRST+1 * -1 = 127
+8: -1 * LAST = -127
+8: FIRST * 1 = -128
+8: FIRST * 0 = 0
+8: LAST * 2: Integer result too large to represent.
+8: 2 * LAST: Integer result too large to represent.
+8: FIRST * 2: Integer result too large to represent.
+8: FIRST/2 * 2 = -128
+8: 2 * FIRST/2 = -128
+8: -2 * -FIRST/2 = -128
+8: -FIRST/2 * 2: Integer result too large to represent.
+8: 11 * 11 = 121
+8: 12 * 12: Integer result too large to represent.
+8: -12 * 12: Integer result too large to represent.
+8: FIRST DIV -1: Integer result too large to represent.
+8: FIRST+1 DIV -1 = 127
+8: FIRST MOD -1 = 0
+8: FIRST DIV 1 = -128
+8: -FIRST: Integer result too large to represent.
+8: -(FIRST+1) = 127
+8: ABS (FIRST): Integer result too large to represent.
+8: ABS (FIRST+1) = 127
+8: INC (LAST): Integer result too large to represent.
+8: INC (LAST-1) = 127
+8: DEC (FIRST): Integer result too large to represent.
+8: DEC (FIRST+1) = -128
+8: INC (LAST, T 1): Integer result too large to represent.
+8: DEC (FIRST, T 1): Integer result too large to represent.
+8: DEC (0, T FIRST): Integer result too large to represent.
+8: DEC (-1, T FIRST) = 127
+8: INC (FIRST, 255) = 127
+8: INC (FIRST, 256): Integer result too large to represent.
+8: DEC (LAST, 255) = -128
+8: DEC (LAST, 256): Integer result too large to represent.
+8: INC (0, LAST (INTEGER)): Integer result too large to represent.
+8: DEC (0, FIRST (INTEGER)): Integer result too large to represent.
+8: INC (0, LAST+1): Integer result too large to represent.
+8: const LAST + 1: Integer result too large to represent.
+8: const FIRST - 1: Integer result too large to represent.
+8: const -FIRST: Integer result too large to represent.
+8: const LAST * 2: Integer result too large to represent.
+8: const FIRST DIV -1: Integer result too large to represent.
+8: const ABS (FIRST): Integer result too large to represent.
+8: const LAST - 1 + 1 = 127
+-- 16 bits
+16: LAST + 1: Integer result too large to represent.
+16: LAST-1 + 1 = 32767
+16: FIRST + -1: Integer result too large to represent.
+16: FIRST+1 + -1 = -32768
+16: LAST + LAST: Integer result too large to represent.
+16: FIRST + FIRST: Integer result too large to represent.
+16: LAST + FIRST = -1
+16: FIRST - 1: Integer result too large to represent.
+16: FIRST+1 - 1 = -32768
+16: LAST - -1: Integer result too large to represent.
+16: LAST-1 - -1 = 32767
+16: 0 - FIRST: Integer result too large to represent.
+16: -1 - FIRST = 32767
+16: FIRST - LAST: Integer result too large to represent.
+16: -1 - LAST = -32768
+16: FIRST * -1: Integer result too large to represent.
+16: -1 * FIRST: Integer result too large to represent.
+16: FIRST+1 * -1 = 32767
+16: -1 * LAST = -32767
+16: FIRST * 1 = -32768
+16: FIRST * 0 = 0
+16: LAST * 2: Integer result too large to represent.
+16: 2 * LAST: Integer result too large to represent.
+16: FIRST * 2: Integer result too large to represent.
+16: FIRST/2 * 2 = -32768
+16: 2 * FIRST/2 = -32768
+16: -2 * -FIRST/2 = -32768
+16: -FIRST/2 * 2: Integer result too large to represent.
+16: 181 * 181 = 32761
+16: 182 * 182: Integer result too large to represent.
+16: -182 * 182: Integer result too large to represent.
+16: FIRST DIV -1: Integer result too large to represent.
+16: FIRST+1 DIV -1 = 32767
+16: FIRST MOD -1 = 0
+16: FIRST DIV 1 = -32768
+16: -FIRST: Integer result too large to represent.
+16: -(FIRST+1) = 32767
+16: ABS (FIRST): Integer result too large to represent.
+16: ABS (FIRST+1) = 32767
+16: INC (LAST): Integer result too large to represent.
+16: INC (LAST-1) = 32767
+16: DEC (FIRST): Integer result too large to represent.
+16: DEC (FIRST+1) = -32768
+16: INC (LAST, T 1): Integer result too large to represent.
+16: DEC (FIRST, T 1): Integer result too large to represent.
+16: DEC (0, T FIRST): Integer result too large to represent.
+16: DEC (-1, T FIRST) = 32767
+16: INC (FIRST, 65535) = 32767
+16: INC (FIRST, 65536): Integer result too large to represent.
+16: DEC (LAST, 65535) = -32768
+16: DEC (LAST, 65536): Integer result too large to represent.
+16: INC (0, LAST (INTEGER)): Integer result too large to represent.
+16: DEC (0, FIRST (INTEGER)): Integer result too large to represent.
+16: INC (0, LAST+1): Integer result too large to represent.
+16: const LAST + 1: Integer result too large to represent.
+16: const FIRST - 1: Integer result too large to represent.
+16: const -FIRST: Integer result too large to represent.
+16: const LAST * 2: Integer result too large to represent.
+16: const FIRST DIV -1: Integer result too large to represent.
+16: const ABS (FIRST): Integer result too large to represent.
+16: const LAST - 1 + 1 = 32767
+-- 32 bits
+32: LAST + 1: Integer result too large to represent.
+32: LAST-1 + 1 = 2147483647
+32: FIRST + -1: Integer result too large to represent.
+32: FIRST+1 + -1 = -2147483648
+32: LAST + LAST: Integer result too large to represent.
+32: FIRST + FIRST: Integer result too large to represent.
+32: LAST + FIRST = -1
+32: FIRST - 1: Integer result too large to represent.
+32: FIRST+1 - 1 = -2147483648
+32: LAST - -1: Integer result too large to represent.
+32: LAST-1 - -1 = 2147483647
+32: 0 - FIRST: Integer result too large to represent.
+32: -1 - FIRST = 2147483647
+32: FIRST - LAST: Integer result too large to represent.
+32: -1 - LAST = -2147483648
+32: FIRST * -1: Integer result too large to represent.
+32: -1 * FIRST: Integer result too large to represent.
+32: FIRST+1 * -1 = 2147483647
+32: -1 * LAST = -2147483647
+32: FIRST * 1 = -2147483648
+32: FIRST * 0 = 0
+32: LAST * 2: Integer result too large to represent.
+32: 2 * LAST: Integer result too large to represent.
+32: FIRST * 2: Integer result too large to represent.
+32: FIRST/2 * 2 = -2147483648
+32: 2 * FIRST/2 = -2147483648
+32: -2 * -FIRST/2 = -2147483648
+32: -FIRST/2 * 2: Integer result too large to represent.
+32: 46340 * 46340 = 2147395600
+32: 46341 * 46341: Integer result too large to represent.
+32: -46341 * 46341: Integer result too large to represent.
+32: FIRST DIV -1: Integer result too large to represent.
+32: FIRST+1 DIV -1 = 2147483647
+32: FIRST MOD -1 = 0
+32: FIRST DIV 1 = -2147483648
+32: -FIRST: Integer result too large to represent.
+32: -(FIRST+1) = 2147483647
+32: ABS (FIRST): Integer result too large to represent.
+32: ABS (FIRST+1) = 2147483647
+32: INC (LAST): Integer result too large to represent.
+32: INC (LAST-1) = 2147483647
+32: DEC (FIRST): Integer result too large to represent.
+32: DEC (FIRST+1) = -2147483648
+32: INC (LAST, T 1): Integer result too large to represent.
+32: DEC (FIRST, T 1): Integer result too large to represent.
+32: DEC (0, T FIRST): Integer result too large to represent.
+32: DEC (-1, T FIRST) = 2147483647
+32: INC (FIRST, 4294967295) = 2147483647
+32: INC (FIRST, 4294967296): Integer result too large to represent.
+32: DEC (LAST, 4294967295) = -2147483648
+32: DEC (LAST, 4294967296): Integer result too large to represent.
+32: INC (0, LAST (INTEGER)): Integer result too large to represent.
+32: DEC (0, FIRST (INTEGER)): Integer result too large to represent.
+32: INC (0, LAST+1): Integer result too large to represent.
+32: const LAST + 1: Integer result too large to represent.
+32: const FIRST - 1: Integer result too large to represent.
+32: const -FIRST: Integer result too large to represent.
+32: const LAST * 2: Integer result too large to represent.
+32: const FIRST DIV -1: Integer result too large to represent.
+32: const ABS (FIRST): Integer result too large to represent.
+32: const LAST - 1 + 1 = 2147483647
+-- 64 bits
+64: LAST + 1: Integer result too large to represent.
+64: LAST-1 + 1 = 9223372036854775807
+64: FIRST + -1: Integer result too large to represent.
+64: FIRST+1 + -1 = -9223372036854775808
+64: LAST + LAST: Integer result too large to represent.
+64: FIRST + FIRST: Integer result too large to represent.
+64: LAST + FIRST = -1
+64: FIRST - 1: Integer result too large to represent.
+64: FIRST+1 - 1 = -9223372036854775808
+64: LAST - -1: Integer result too large to represent.
+64: LAST-1 - -1 = 9223372036854775807
+64: 0 - FIRST: Integer result too large to represent.
+64: -1 - FIRST = 9223372036854775807
+64: FIRST - LAST: Integer result too large to represent.
+64: -1 - LAST = -9223372036854775808
+64: FIRST * -1: Integer result too large to represent.
+64: -1 * FIRST: Integer result too large to represent.
+64: FIRST+1 * -1 = 9223372036854775807
+64: -1 * LAST = -9223372036854775807
+64: FIRST * 1 = -9223372036854775808
+64: FIRST * 0 = 0
+64: LAST * 2: Integer result too large to represent.
+64: 2 * LAST: Integer result too large to represent.
+64: FIRST * 2: Integer result too large to represent.
+64: FIRST/2 * 2 = -9223372036854775808
+64: 2 * FIRST/2 = -9223372036854775808
+64: -2 * -FIRST/2 = -9223372036854775808
+64: -FIRST/2 * 2: Integer result too large to represent.
+64: 3037000499 * 3037000499 = 9223372030926249001
+64: 3037000500 * 3037000500: Integer result too large to represent.
+64: -3037000500 * 3037000500: Integer result too large to represent.
+64: 2^32 * 2^32: Integer result too large to represent.
+64: -2^32 * -2^31: Integer result too large to represent.
+64: -2^32 * 2^31 = -9223372036854775808
+64: 3 * 6148914691236517206: Integer result too large to represent.
+64: 3 * 3074457345618258602 = 9223372036854775806
+64: FIRST DIV -1: Integer result too large to represent.
+64: FIRST+1 DIV -1 = 9223372036854775807
+64: FIRST MOD -1 = 0
+64: FIRST DIV 1 = -9223372036854775808
+64: -FIRST: Integer result too large to represent.
+64: -(FIRST+1) = 9223372036854775807
+64: ABS (FIRST): Integer result too large to represent.
+64: ABS (FIRST+1) = 9223372036854775807
+64: INC (LAST): Integer result too large to represent.
+64: INC (LAST-1) = 9223372036854775807
+64: DEC (FIRST): Integer result too large to represent.
+64: DEC (FIRST+1) = -9223372036854775808
+64: INC (LAST, T 1): Integer result too large to represent.
+64: DEC (FIRST, T 1): Integer result too large to represent.
+64: DEC (0, T FIRST): Integer result too large to represent.
+64: DEC (-1, T FIRST) = 9223372036854775807
+64: INC (1, LAST (INTEGER)): Integer result too large to represent.
+64: INC (0, LAST (INTEGER)) = 9223372036854775807
+64: DEC (0, FIRST (INTEGER)): Integer result too large to represent.
+64: DEC (-1, FIRST (INTEGER)) = 9223372036854775807
+64: const LAST + 1: Integer result too large to represent.
+64: const FIRST - 1: Integer result too large to represent.
+64: const -FIRST: Integer result too large to represent.
+64: const LAST * 2: Integer result too large to represent.
+64: const FIRST DIV -1: Integer result too large to represent.
+64: const ABS (FIRST): Integer result too large to represent.
+64: const LAST - 1 + 1 = 9223372036854775807
+-- VAL
+VAL (128, S8): An enumeration or subrange value was out of range.
+VAL (127, S8) = 127
+VAL (FIRST (S16), S8): An enumeration or subrange value was out of range.
+VAL (LAST (INTEGER), S32): An enumeration or subrange value was out of range.
+Sub16 := 4: An enumeration or subrange value was out of range.
+Sub16 := -3 = -3

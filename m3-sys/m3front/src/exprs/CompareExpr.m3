@@ -101,7 +101,7 @@ PROCEDURE Check (p: P;  VAR cs: Expr.CheckState) =
       IF Module.IsSafe () THEN Error.Msg ("unsafe operation") END;
       p.class := cADDR;
     ELSIF FixedType.Is (ta) AND (ta = tb)    THEN  p.class := cFIXED;
-      (* This fork: compared unsigned, in the stack type *)
+      (* This fork: compared in the stack type, unsigned for WordN *)
     ELSIF  NOT Type.IsEqual (ta, tb, NIL)    THEN  Err (p, ta, tb);
     ELSIF EnumType.Is (ta)                   THEN  p.class := cENUM;
     ELSIF SetType.Split (ta, range)          THEN

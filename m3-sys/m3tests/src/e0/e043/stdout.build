@@ -1,0 +1,33 @@
+"../Main.m3", line 13: Types are not assignable in assignment (2.3.1).
+"../Main.m3", line 14: Types are not assignable in assignment (2.3.1).
+"../Main.m3", line 15: Types are not assignable in assignment (2.3.1).
+"../Main.m3", line 16: Types are not assignable in assignment (2.3.1).
+"../Main.m3", line 17: Types are not assignable in assignment (2.3.1).
+"../Main.m3", line 18: Types are not assignable in assignment (2.3.1).
+"../Main.m3", line 19: Types are not assignable in assignment (2.3.1).
+"../Main.m3", line 20: Types are not assignable in assignment (2.3.1).
+"../Main.m3", line 21: Types are not assignable in assignment (2.3.1).
+"../Main.m3", line 22: illegal operand(s) for '+'
+"../Main.m3", line 23: illegal operand(s) for '+'
+"../Main.m3", line 24: illegal operand(s) for '-'
+"../Main.m3", line 25: illegal operand(s) for '*'
+"../Main.m3", line 26: illegal operand(s) for '*'
+"../Main.m3", line 27: illegal operand(s) for DIV
+"../Main.m3", line 28: illegal operand(s) for MOD
+"../Main.m3", line 29: illegal operand(s) for '/'
+"../Main.m3", line 30: ABS: wrong argument type
+"../Main.m3", line 31: ABS: wrong argument type
+"../Main.m3", line 32: incompatible argument types: MIN
+"../Main.m3", line 33: incompatible argument types: MAX
+"../Main.m3", line 34: illegal operand(s) for '<'
+"../Main.m3", line 35: illegal operand(s) for '='
+"../Main.m3", line 36: illegal operand(s) for '>'
+"../Main.m3", line 37: second argument must be of the first argument's base type or an INTEGER: INC
+"../Main.m3", line 38: second argument must be of the first argument's base type or an INTEGER: INC
+"../Main.m3", line 39: second argument must be of the first argument's base type or an INTEGER: INC
+"../Main.m3", line 40: second argument must be an INTEGER: INC
+"../Main.m3", line 41: 'from' and 'to' expressions must be compatible ordinals
+"../Main.m3", line 42: 'from' and 'to' expressions must be compatible ordinals
+"../Main.m3", line 43: 'by' expression must be an integer
+31 errors encountered
+Fatal Error: package build failed

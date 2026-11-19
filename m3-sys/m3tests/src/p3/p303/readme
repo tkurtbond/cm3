@@ -1,0 +1,14 @@
+The signed fixed-width integer types Signed8.T, Signed16.T, Signed32.T
+and Signed64.T (this fork; see
+LLVM-IR-backend-docs/fixed-width-integer-types-plan.md).
+
+Arithmetic stays inside the range here; p304 tests overflow.  Values
+are sign-extended, comparisons and DIV/MOD are signed (DIV rounds
+down, MOD takes the divisor's sign), x MOD -1 is 0 even for FIRST,
+ABS works up to -LAST, and full-width multiplication is exact up to
+the edges.  Constant folding must agree with run-time arithmetic.
+Also: INC and DEC up to the edges with INTEGER and SignedN steps, FOR
+loops to FIRST and LAST and with negative steps, subranges, packed
+fields, arrays, sets, CASE, VAR parameters and VAL.  Every line of
+output should be the same with every backend and at every
+optimization level.

@@ -14,6 +14,7 @@ IMPORT TargetMap;
 
 TYPE
   P = ExprRep.Tab BRANDED "DivExpr.P" OBJECT
+        val: CG.Val := NIL; (* This fork: see FixedType.PrepOperate *)
       OVERRIDES
         typeOf       := TypeOf;
         repTypeOf    := RepTypeOf;
@@ -69,7 +70,7 @@ PROCEDURE Check (p: P;  VAR cs: Expr.CheckState) =
       p.type := Int.T;
     ELSIF (ta = LInt.T) AND (tb = LInt.T) THEN
       p.type := LInt.T;
-    ELSIF FixedType.Is (ta) AND (ta = tb) THEN (* This fork: unsigned *)
+    ELSIF FixedType.Is (ta) AND (ta = tb) THEN (* This fork *)
       p.type := ta;
     ELSE
       p.type := Expr.BadOperands ("DIV", ta, tb);
@@ -78,16 +79,25 @@ PROCEDURE Check (p: P;  VAR cs: Expr.CheckState) =
   END Check;
 
 PROCEDURE Prep (p: P) =
+  VAR fixed: FixedType.Info;
   BEGIN
     Expr.Prep (p.a);
     Expr.Prep (p.b);
+    IF FixedType.Split (p.type, fixed) THEN (* This fork *)
+      p.val := FixedType.PrepOperate (fixed, FixedType.Op.Div, p.a, p.b);
+    END;
   END Prep;
 
 PROCEDURE Compile (p: P; StaticOnly: BOOLEAN) =
   VAR e1, e2, e3: Expr.T;  divisor: Target.Int;  log: INTEGER;
-      t: Type.T;  cg_type: CG.Type;
+      t: Type.T;  cg_type: CG.Type;  fixed: FixedType.Info;
   BEGIN
     <* ASSERT NOT StaticOnly *>
+    IF (p.val # NIL) THEN (* This fork: a signed DIV, compiled in Prep *)
+      EVAL FixedType.Split (p.type, fixed);
+      FixedType.CompileOperate (fixed, FixedType.Op.Div, p.a, p.b, p.val);
+      RETURN;
+    END;
     e1 := Expr.ConstValue (p.a);
     e2 := Expr.ConstValue (p.b);
     e3 := NIL;
@@ -103,7 +113,7 @@ PROCEDURE Compile (p: P; StaticOnly: BOOLEAN) =
       ELSE
         Expr.Compile (e1);
         cg_type := Type.CGType (p.type);
-        CG.Extract_mn (cg_type, NOT FixedType.Is (p.type) (* This fork *),
+        CG.Extract_mn (cg_type, NOT FixedType.IsWord (p.type) (* This fork *),
                        log, TargetMap.CG_Size[cg_type] - log);
       END;
     ELSE
@@ -111,7 +121,12 @@ PROCEDURE Compile (p: P; StaticOnly: BOOLEAN) =
       IF (e2 = NIL) THEN e2 := p.b; END;
       Expr.Compile (e1);
       Expr.Compile (e2);
-      CG.Div (Type.CGType (p.type), Expr.GetSign (e1), Expr.GetSign (e2));
+      IF FixedType.Split (p.type, fixed) THEN (* This fork *)
+        FixedType.Operate (fixed, FixedType.Op.Div,
+                           Expr.GetSign (e1), Expr.GetSign (e2));
+      ELSE
+        CG.Div (Type.CGType (p.type), Expr.GetSign (e1), Expr.GetSign (e2));
+      END;
     END;
   END Compile;
 

@@ -545,6 +545,8 @@ readonly proc p_test (group, uid, comment) is
   run_test ("_ptests", group, uid, comment, "run", cm3opts, runopts, "probeForTargetSpecificFiles")
 end
 
+p_test ("p3", "p304", "SignedN overflow raises IntegerOverflow; just inside the range does not")
+p_test ("p3", "p303", "signed fixed-width integer types Signed8.T .. Signed64.T")
 p_test ("p3", "p302", "Wrap round trips and x + 1 > x at LAST for Word8 .. Word64")
 p_test ("p3", "p301", "SHA256 on Word32.T")
 p_test ("p3", "p300", "procedures of the builtin interfaces Word8 .. Word64")
@@ -868,6 +870,7 @@ readonly proc e_test (group, uid, comment) is
   run_test ("_etests", group, uid, comment, "", cm3opts, runopts, "probeForTargetSpecificFiles")
 end
 
+e_test ("e0", "e043", "SignedN do not mix with WordN, INTEGER, LONGINT or each other; ABS of WordN")
 e_test ("e0", "e042", "fixed-width integer types do not mix with each other or INTEGER")
 e_test ("e0", "e041", "Illegal mutually recursive revealed opaque types in separate units")
 e_test ("e0", "e040", "Bad SUBARRAY actuals")

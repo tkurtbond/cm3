@@ -28,6 +28,7 @@ CONST
 TYPE
   P = ExprRep.Tabc BRANDED "MultiplyExpr.T" OBJECT
         tmp : CG.Var;
+        val : CG.Val := NIL; (* This fork: see FixedType.PrepOperate *)
       OVERRIDES
         typeOf       := TypeOf;
         repTypeOf    := RepTypeOf;
@@ -108,7 +109,14 @@ PROCEDURE Prep (p: P) =
   BEGIN
     Expr.Prep (p.a);
     Expr.Prep (p.b);
-    IF (p.class = cSET) THEN
+    IF (p.class = cFIXED) THEN (* This fork *)
+      VAR fixed: FixedType.Info;  b := FixedType.Split (p.type, fixed);
+      BEGIN
+        <*ASSERT b*>
+        p.val := FixedType.PrepOperate (fixed, FixedType.Op.Multiply,
+                                        p.a, p.b);
+      END;
+    ELSIF (p.class = cSET) THEN
       EVAL Type.CheckInfo (p.type, info);
       size := info.size;
       IF (size > Target.Integer.size) THEN
@@ -135,14 +143,12 @@ PROCEDURE Compile (p: P; StaticOnly: BOOLEAN) =
       Expr.Compile (p.a);
       Expr.Compile (p.b);
       CG.Multiply (Target.Longint.cg_type);
-    ELSIF (p.class = cFIXED) THEN (* This fork: wrap *)
+    ELSIF (p.class = cFIXED) THEN (* This fork *)
       VAR fixed: FixedType.Info;  b := FixedType.Split (p.type, fixed);
       BEGIN
         <*ASSERT b*>
-        Expr.Compile (p.a);
-        Expr.Compile (p.b);
-        CG.Multiply (FixedType.StackType (fixed));
-        FixedType.Mask (fixed);
+        FixedType.CompileOperate (fixed, FixedType.Op.Multiply,
+                                  p.a, p.b, p.val);
       END;
     ELSIF (p.class # cSET) THEN
       Expr.Compile (p.a);

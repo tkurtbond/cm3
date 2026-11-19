@@ -10,6 +10,7 @@ MODULE Abs;
 
 IMPORT CG, CallExpr, Expr, ExprRep, Type, Procedure, Error;
 IMPORT Target, TInt, Int, LInt, Reel, LReel, EReel, IntegerExpr, ReelExpr;
+IMPORT FixedType; (* This fork *)
 
 VAR Z: CallExpr.MethodList;
 
@@ -25,16 +26,22 @@ PROCEDURE Check (ce: CallExpr.T;  <*UNUSED*> VAR cs: Expr.CheckState) =
     IF (t = Int.T) OR (t = LInt.T)
       OR (t = Reel.T) OR (t = LReel.T) OR (t = EReel.T) THEN
       (* ok *)
+    ELSIF FixedType.Is (t) AND NOT FixedType.IsWord (t) THEN
+      (* This fork: SignedN, checked *)
     ELSE
       Error.Msg ("ABS: wrong argument type");
     END;
   END Check;
 
 PROCEDURE Compile (ce: CallExpr.T) =
-  VAR e := ce.args[0];
+  VAR e := ce.args[0];  fixed: FixedType.Info;
   BEGIN
     Expr.Compile (e);
-    CG.Abs (Type.CGType (Expr.TypeOf (e)));
+    IF FixedType.Split (Expr.TypeOf (e), fixed) THEN (* This fork *)
+      FixedType.Abs (fixed);
+    ELSE
+      CG.Abs (Type.CGType (Expr.TypeOf (e)));
+    END;
   END Compile;
 
 PROCEDURE Fold (ce: CallExpr.T): Expr.T =

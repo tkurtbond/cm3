@@ -25,6 +25,7 @@ TYPE
   P = ExprRep.Tab BRANDED "AddExpr.P" OBJECT
         class   : Class;
         tmp     : CG.Var;
+        val     : CG.Val := NIL; (* This fork: see FixedType.PrepOperate *)
       OVERRIDES
         typeOf       := TypeOf;
         repTypeOf    := RepTypeOf;
@@ -119,7 +120,9 @@ PROCEDURE Prep (p: P) =
   BEGIN
     Expr.Prep (p.a);
     Expr.Prep (p.b);
-    IF (p.class = Class.cSET) THEN
+    IF (p.class = Class.cFIXED) THEN (* This fork *)
+      PrepFixed (p, FixedType.Op.Add);
+    ELSIF (p.class = Class.cSET) THEN
       EVAL Type.CheckInfo (p.type, info);
       IF (info.size > Target.Word.size) THEN
         p.tmp := CG.Declare_temp (info.size, Target.Word.align,
@@ -160,8 +163,8 @@ PROCEDURE Compile (p: P; StaticOnly: BOOLEAN) =
         Expr.Compile (p.a);
         Expr.Compile (p.b);
         CG.Add (Target.Longint.cg_type);
-    | Class.cFIXED => (* This fork: wrap *)
-        CompileFixed (p, CG.Add);
+    | Class.cFIXED => (* This fork *)
+        CompileFixed (p, FixedType.Op.Add);
     | Class.cREAL, Class.cLONG, Class.cEXTND =>
         Expr.Compile (p.a);
         Expr.Compile (p.b);
@@ -169,14 +172,18 @@ PROCEDURE Compile (p: P; StaticOnly: BOOLEAN) =
     END;
   END Compile;
 
-PROCEDURE CompileFixed (p: P;  op: PROCEDURE (t: CG.AType)) =
+PROCEDURE PrepFixed (p: P;  op: FixedType.Op) =
   VAR fixed: FixedType.Info;  b := FixedType.Split (p.type, fixed);
   BEGIN
     <*ASSERT b*>
-    Expr.Compile (p.a);
-    Expr.Compile (p.b);
-    op (FixedType.StackType (fixed));
-    FixedType.Mask (fixed);
+    p.val := FixedType.PrepOperate (fixed, op, p.a, p.b);
+  END PrepFixed;
+
+PROCEDURE CompileFixed (p: P;  op: FixedType.Op) =
+  VAR fixed: FixedType.Info;  b := FixedType.Split (p.type, fixed);
+  BEGIN
+    <*ASSERT b*>
+    FixedType.CompileOperate (fixed, op, p.a, p.b, p.val);
   END CompileFixed;
 
 PROCEDURE Fold (p: P): Expr.T =

@@ -105,7 +105,8 @@ PROCEDURE Add (a, b: Expr.T;  VAR c: Expr.T): BOOLEAN =
   VAR x, y, min, max, res: Target.Int;  t: Type.T;  fixed: FixedType.Info;
   BEGIN
     IF NOT SplitPair (a, b, x, y, t) THEN RETURN FALSE END;
-    IF FixedType.Split (t, fixed) THEN (* This fork: wrap *)
+    IF FixedType.Split (t, fixed) AND NOT fixed.signed THEN
+      (* This fork: wrap WordN; SignedN folds as INTEGER does *)
       TWord.Add (x, y, res);
       FixedType.Wrap (fixed, res, res);
       c := New (t, res);
@@ -122,7 +123,8 @@ PROCEDURE Subtract (a, b: Expr.T;  VAR c: Expr.T): BOOLEAN =
   VAR x, y, min, max, res: Target.Int;  t: Type.T;  fixed: FixedType.Info;
   BEGIN
     IF NOT SplitPair (a, b, x, y, t) THEN RETURN FALSE END;
-    IF FixedType.Split (t, fixed) THEN (* This fork: wrap *)
+    IF FixedType.Split (t, fixed) AND NOT fixed.signed THEN
+      (* This fork: wrap WordN; SignedN folds as INTEGER does *)
       TWord.Subtract (x, y, res);
       FixedType.Wrap (fixed, res, res);
       c := New (t, res);
@@ -139,7 +141,8 @@ PROCEDURE Multiply (a, b: Expr.T;  VAR c: Expr.T): BOOLEAN =
   VAR x, y, min, max, res: Target.Int;  t: Type.T;  fixed: FixedType.Info;
   BEGIN
     IF NOT SplitPair (a, b, x, y, t) THEN RETURN FALSE END;
-    IF FixedType.Split (t, fixed) THEN (* This fork: wrap *)
+    IF FixedType.Split (t, fixed) AND NOT fixed.signed THEN
+      (* This fork: wrap WordN; SignedN folds as INTEGER does *)
       TWord.Multiply (x, y, res);
       FixedType.Wrap (fixed, res, res);
       c := New (t, res);
@@ -186,7 +189,8 @@ PROCEDURE Negate (a: Expr.T;  VAR c: Expr.T): BOOLEAN =
   VAR x, min, max, res: Target.Int;  t: Type.T;  fixed: FixedType.Info;
   BEGIN
     IF NOT Split (a, x, t) THEN RETURN FALSE END;
-    IF FixedType.Split (t, fixed) THEN (* This fork: wrap *)
+    IF FixedType.Split (t, fixed) AND NOT fixed.signed THEN
+      (* This fork: wrap WordN; SignedN folds as INTEGER does *)
       TWord.Subtract (TInt.Zero, x, res);
       FixedType.Wrap (fixed, res, res);
       c := New (t, res);
@@ -257,7 +261,10 @@ PROCEDURE GenFPLiteral (p: P;  buf: M3Buf.T) =
     IF    p.type = Int.T  THEN M3Buf.PutText (buf, "INT<");
     ELSIF p.type = LInt.T THEN M3Buf.PutText (buf, "LINT<");
     ELSIF FixedType.Split (p.type, fixed) THEN (* This fork *)
-      M3Buf.PutText (buf, "WORD" & Fmt.Int (fixed.bits) & "<");
+      IF fixed.signed
+        THEN M3Buf.PutText (buf, "INT" & Fmt.Int (fixed.bits) & "<");
+        ELSE M3Buf.PutText (buf, "WORD" & Fmt.Int (fixed.bits) & "<");
+      END;
     ELSE <*ASSERT FALSE*> END;
     M3Buf.PutIntt (buf, p.value);
     M3Buf.PutChar (buf, '>');

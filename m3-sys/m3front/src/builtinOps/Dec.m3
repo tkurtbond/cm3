@@ -125,10 +125,14 @@ PROCEDURE Compile (ce: CallExpr.T) =
     Expr.NoteWrite (lhs);
   END Compile;
 
-(* This fork: INC and DEC of a fixed type wrap modulo 2^N.  The step is
-   of the variable's base type or an INTEGER; an INTEGER is converted to
-   the stack type, which gives the right result modulo 2^N even when it
-   is negative.  A subrange is then checked against its bounds. *)
+(* This fork: INC and DEC of a WordN wrap modulo 2^N; of a SignedN they
+   are checked as its '+' and '-' are.  The step is of the variable's
+   base type or an INTEGER; an INTEGER is converted to the stack type,
+   which gives the right result modulo 2^N even when it is negative.
+   For a SignedN narrower than its stack type an INTEGER step is first
+   checked to lie within +-(LAST - FIRST), so that the sum can't
+   overflow the stack type.  A subrange is then checked against its
+   bounds. *)
 PROCEDURE CompileFixed (ce: CallExpr.T;  up: BOOLEAN): BOOLEAN =
   VAR
     lhs    := ce.args[0];
@@ -136,8 +140,9 @@ PROCEDURE CompileFixed (ce: CallExpr.T;  up: BOOLEAN): BOOLEAN =
     fixed  : FixedType.Info;
     check  : [0..3] := 0;
     lvalue : CG.Val;
-    bmin, bmax: Target.Int;
+    bmin, bmax, span, nspan: Target.Int;
     stk    : CG.Type;
+    b      : BOOLEAN;
   BEGIN
     IF NOT FixedType.Split (Expr.TypeOf (lhs), fixed) THEN RETURN FALSE END;
     EVAL Type.CheckInfo (Expr.TypeOf (lhs), info);
@@ -159,12 +164,20 @@ PROCEDURE CompileFixed (ce: CallExpr.T;  up: BOOLEAN): BOOLEAN =
            from = FixedType.OrdStackType (Expr.TypeOf (step)) DO
         Expr.Compile (step);
         IF from # stk THEN CG.Loophole (from, stk) END;
+        IF fixed.signed AND Host.doRangeChk AND NOT FixedType.Fills (fixed)
+          AND NOT FixedType.Is (Expr.TypeOf (step)) THEN
+          b := TInt.Subtract (fixed.max, fixed.min, span);  <*ASSERT b*>
+          b := TInt.Subtract (TInt.Zero, span, nspan);  <*ASSERT b*>
+          CG.Check_range (stk, nspan, span, CG.RuntimeError.IntegerOverflow);
+        END;
       END;
     ELSE
       CG.Load_integer (stk, TInt.One);
     END;
-    IF up THEN CG.Add (stk) ELSE CG.Subtract (stk) END;
-    FixedType.Mask (fixed);
+    IF up
+      THEN FixedType.Operate (fixed, FixedType.Op.Add);
+      ELSE FixedType.Operate (fixed, FixedType.Op.Subtract);
+    END;
 
     CASE check OF
     | 0 => (* no range checking *)
