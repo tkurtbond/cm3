@@ -451,8 +451,13 @@ every back end.
 - **Tested** with a server and a client in separate processes on
   127.0.0.1 (`TCPNetObj.Listen`/`Locate`), on AMD64_LINUX with
   LlvmIR: LONGINT and `[-5L .. 16_1ffffffffL]` arguments, results and
-  VAR parameters, values beyond 32 bits, `LAST(LONGINT)`, and an
-  out-of-range result, which is rejected. stubgen's bounds for
+  VAR parameters, values beyond 32 bits, and `LAST(LONGINT)`. An
+  out-of-range `[-5L .. 16_1ffffffffL]` argument (made with LOOPHOLE)
+  is rejected by the server's unmarshaling, which raises
+  `NetObj.Error` in the client, and the server keeps serving. (An
+  earlier version of the test claimed this too, but its client error
+  came from the server crashing on a range check in its own code.)
+  stubgen's bounds for
   `[-5L ..]`, `[NegFive ..]`, `[0L - 5L ..]`, `[FIRST(LONGINT) .. -1L]`,
   `[-10 .. -1]` and full-range LONGINT were checked in the generated
   stubs. The byte-swapping path isn't tested: that needs a peer with
