@@ -545,6 +545,8 @@ PROCEDURE ProcessTypeSpec (h: Handle; ts: M3AST_AS.TYPE_SPEC): Type.T =
       | M3AST_AS.Extended_type => t := Type.extended;
       | M3AST_AS.Integer_type => t := Type.integer;
       | M3AST_AS.Longint_type => t := Type.longint;
+      | M3AST_AS.Fixed_type (fx) => (* This fork *)
+        t := Type.NewFixed(fx.fx_bits, fx.fx_signed);
       | M3AST_AS.WideChar_type => t := Type.widechar;
       | M3AST_AS.Null_type => t := Type.null;
       | M3AST_AS.RefAny_type => t := Type.refany;
@@ -601,7 +603,8 @@ PROCEDURE ProcessTypeSpec (h: Handle; ts: M3AST_AS.TYPE_SPEC): Type.T =
         t := NEW(Type.Set, range := ProcessM3Type(h, set.as_type));
       | M3AST_AS.Subrange_type (sub) =>
         TYPECASE sub.sm_base_type_spec OF
-        | M3AST_AS.Longint_type =>
+        | M3AST_AS.Longint_type,
+          M3AST_AS.Fixed_type => (* This fork: Fixed_type *)
           WITH baseType = ProcessTypeSpec(h, sub.sm_base_type_spec),
                e1 = NARROW(sub.as_range, M3AST_AS.Range).as_exp1,
                e2 = NARROW(sub.as_range, M3AST_AS.Range).as_exp2,

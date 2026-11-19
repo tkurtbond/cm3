@@ -7,7 +7,7 @@
    the results, including that the server's unmarshaling rejects an
    out-of-range value.  The client prints "ok" or "WRONG" for each
    check and exits with status 1 if any is wrong.  The default port is
-   18877.  ../run-netobj-tests.sh runs both. *)
+   18877.  ../../run-netobj-tests.sh runs both. *)
 
 UNSAFE MODULE LongintTest EXPORTS Main;
 IMPORT L, NetObj, TCPNetObj, IP, IO, Fmt, Params, Process, Scan, Text, Thread, Lex, FloatMode;

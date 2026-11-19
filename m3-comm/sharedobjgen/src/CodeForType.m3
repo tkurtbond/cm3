@@ -41,6 +41,20 @@ PROCEDURE ToText (t: Type.T; byName: BOOLEAN := TRUE;
           BEGIN
             IF sub = Type.integer THEN RETURN "INTEGER" END;
             IF sub = Type.longint THEN RETURN "LONGINT" END;
+            (* This fork: fixed-width types and their subranges. *)
+            TYPECASE sub OF
+            | Type.Fixed (f) => RETURN Type.ToText(f);
+            ELSE
+            END;
+            TYPECASE sub.base OF
+            | Type.Fixed (f) =>
+              RETURN "[" &
+                     Type.FixedVal(NARROW(sub.min, Value.Longint).val, f) &
+                     ".." &
+                     Type.FixedVal(NARROW(sub.max, Value.Longint).val, f) &
+                     "]";
+            ELSE
+            END;
             IF sub.base = Type.longint OR sub.base = Type.longcard THEN
               WITH min = NARROW(sub.min, Value.Longint).val,
                    max = NARROW(sub.max, Value.Longint).val DO
@@ -272,6 +286,11 @@ PROCEDURE ImportLst(t: Type.Object;
     END;
   END ImportLst;
 
+(* This fork: TRUE while ImportSOLst runs, so that ImportFromType also
+   imports the interfaces of fixed-width base types, which only the SO
+   module's marshaling code names. *)
+VAR importFixedBases := FALSE;
+
 PROCEDURE ImportFromType(t: Type.T; importTbl: ImportList.T;
                          byName: BOOLEAN:= TRUE) =
   BEGIN
@@ -281,6 +300,27 @@ PROCEDURE ImportFromType(t: Type.T; importTbl: ImportList.T;
     END;
     TYPECASE t OF
     | Type.Reference (ref) => ImportRevelations(ref, importTbl);
+    | Type.Subrange (sub) =>
+      (* This fork: the marshaling code names a fixed-width base type
+         ("VAL(x, Word32.T)", "Word64.FromLong(x)") even for a named
+         subrange.  Only the SO module marshals; see ImportSOLst. *)
+      IF importFixedBases THEN
+        WITH f = Type.FixedBase(sub) DO
+          IF f # NIL THEN EVAL importTbl.put(f.name.intf, NIL) END;
+        END;
+      END;
+    | Type.Packed (p) =>
+      (* This fork: the same for a named "BITS n FOR" a fixed-width type
+         or a subrange of one. *)
+      IF importFixedBases THEN
+        TYPECASE p.base OF
+        | Type.Subrange (sub) =>
+          WITH f = Type.FixedBase(sub) DO
+            IF f # NIL THEN EVAL importTbl.put(f.name.intf, NIL) END;
+          END;
+        ELSE
+        END;
+      END;
     ELSE
     END;
     IF byName AND t.name # NIL THEN
@@ -468,6 +508,7 @@ PROCEDURE ImportSOLst(t: Type.Object;
                        <* UNUSED *> umethods: AtomList.T) =
   VAR obj: Type.Reference := t;
   BEGIN
+    importFixedBases := TRUE; (* This fork *)
     (* add the raises information *)
     FOR i := 0 TO LAST(methods^) DO
       WITH sig = methods[i].sig DO
@@ -490,6 +531,7 @@ PROCEDURE ImportSOLst(t: Type.Object;
       END;
       obj := NARROW(obj, Type.Object).super;
     END;
+    importFixedBases := FALSE; (* This fork *)
   END ImportSOLst;
 
 PROCEDURE AugmentExceptionList(VAR (*in/out*) exceptionList: AtomList.T;

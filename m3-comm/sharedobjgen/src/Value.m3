@@ -40,6 +40,8 @@ PROCEDURE ToText(v: T; type: Type.T): TEXT =
         IF (type = Type.longint) OR (type = Type.longcard) THEN
           RETURN Fmt.LongInt(i.val); 
         ELSE TYPECASE type OF
+          | Type.Fixed (f) => (* This fork *)
+            RETURN Type.FixedVal(i.val, f);
           | Type.Subrange (sub) =>
             RETURN ToText(NEW(Longint,
                               val := i.val +  NARROW(sub.min, Longint).val),

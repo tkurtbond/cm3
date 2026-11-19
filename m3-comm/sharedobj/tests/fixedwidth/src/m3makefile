@@ -1,0 +1,20 @@
+% This fork: shared objects with fixed-width integer type arguments and
+% fields.  Run by ../../../../netobj/tests/run-netobj-tests.sh
+% (as "sharedobj/tests/fixedwidth"), which starts a server and a client.
+
+import("libm3")
+import("netobj")
+import("tcp")
+import("sharedobj")
+
+interface("FW")
+Module("FWF")
+sharedobj("FW", ["T"], ["FWF"])
+interface("Holder")
+% Version 2 stubs: they pickle FW.T with the shared-object Pickle2
+% special, which makes the client's copy a replica.  Version 1 stubs
+% (netobj()) would give the client a standalone copy.
+netobjv2("Holder", "T")
+implementation("Main")
+
+program("fixedwidthtest")

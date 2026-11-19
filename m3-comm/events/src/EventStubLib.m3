@@ -650,6 +650,47 @@ PROCEDURE AlignWr(wr: Wr.T; align: CARDINAL) : ADDRESS
      aligned.
    *)
 
+(* This fork: LONGINT is 64 bits on every platform, so only the byte
+   order can differ. *)
+PROCEDURE InLongint(c: Handle; 
+                    min := FIRST(LONGINT);
+                    max := LAST(LONGINT)): LONGINT
+    RAISES {Event.Error, Rd.Failure, Thread.Alerted} =
+  VAR i: LONGINT := 0L;
+  BEGIN
+    WITH e = c.event, hdr = e.hdr, rd = e.rd, rep = hdr.rep DO
+      TRY
+        AcquireRd(c);
+        i := LOOPHOLE(AlignRd(rd, BYTESIZE(LONGINT)), UNTRACED REF LONGINT)^;
+        INC(rd.cur, BYTESIZE(LONGINT));
+        IF NOT NativeEndian(rep) THEN i := SwapLongint(i); END;
+        IF i < min OR i > max THEN RaiseUnmarshalFailure(); END;
+        RETURN i;
+      FINALLY
+        ReleaseRd(c);
+      END;
+    END;
+  END InLongint;
+
+PROCEDURE SwapLongint(i: LONGINT): LONGINT =
+  TYPE Bytes = ARRAY [0..BYTESIZE(LONGINT)-1] OF CHAR;
+  VAR a := LOOPHOLE(i, Bytes); r: LONGINT;
+  BEGIN
+    WITH b = LOOPHOLE(r, Bytes) DO
+      FOR j := FIRST(a) TO LAST(a) DO b[j] := a[LAST(a) - j]; END;
+    END;
+    RETURN r;
+  END SwapLongint;
+
+(* This fork: see InLongint. *)
+PROCEDURE OutLongint(c: Handle; i: LONGINT)
+    RAISES {Wr.Failure, Thread.Alerted} =
+  VAR ip := LOOPHOLE(AlignWr(c.wr, BYTESIZE(LONGINT)), UNTRACED REF LONGINT);
+  BEGIN
+    ip^ := i;
+    INC(c.wr.cur, BYTESIZE(LONGINT));
+  END OutLongint;
+
 PROCEDURE InByte(c: Handle; 
                  max := LAST(Byte8)): Byte8
      RAISES {Event.Error, Rd.Failure, Thread.Alerted} =

@@ -1,9 +1,11 @@
 #!/bin/sh
 # This fork: runs the network-object tests that check results
-# (longint and fixedwidth; the older tests here are run by hand):
+# (longint and fixedwidth; the older tests here are run by hand), and
+# the shared-object test sharedobj/tests/fixedwidth:
 #
 #   run-netobj-tests.sh WORKDIR [TEST...]
 #
+# A TEST is a directory here, or one under m3-comm if it has a slash.
 # Each test is copied to WORKDIR and built there with the cm3 on PATH
 # (cm3 builds in the package directory).  Then its server is started,
 # its client is run against it on 127.0.0.1, and the server is stopped.
@@ -22,21 +24,26 @@ here=$(cd "$(dirname "$0")" && pwd)
 mkdir -p "$1"
 work=$(cd "$1" && pwd)
 shift
-[ $# -gt 0 ] || set -- longint fixedwidth
+[ $# -gt 0 ] || set -- longint fixedwidth sharedobj/tests/fixedwidth
 
 port=${NETOBJ_TEST_PORT-18877}
 failed=
-for t in "$@"; do
-  echo "=== $t"
-  rm -rf "$work/$t"
-  cp -R "$here/$t" "$work/$t"
+for test in "$@"; do
+  echo "=== $test"
+  case $test in
+    */*) src=$here/../../$test ;;
+    *) src=$here/$test ;;
+  esac
+  t=$(echo "$test" | tr / -)
+  rm -rf "${work:?}/$t"
+  cp -R "$src" "$work/$t"
   if ! (cd "$work/$t" && cm3 >build.log 2>&1); then
     cat "$work/$t/build.log"
     echo "$t: build FAILED"
     failed="$failed $t"
     continue
   fi
-  prog=$(ls "$work/$t"/*/"${t}test" 2>/dev/null | head -1)
+  prog=$(ls "$work/$t"/*/"$(basename "$test")test" 2>/dev/null | head -1)
   "$prog" server "$port" >"$work/$t/server.log" 2>&1 &
   server=$!
   i=0

@@ -1170,6 +1170,8 @@ PROCEDURE MarshalTypedVal (fmtWr      : Formatter.T;
           StubLibCall(fmtWr, "Integer", varName, libName, d);
         ELSIF t = Type.longint THEN
           StubLibCall(fmtWr, "Longint", varName, libName, d);
+        ELSIF Type.FixedBase(sub) # NIL THEN (* This fork *)
+          FixedVal(fmtWr, varName, libName, sub, d);
         ELSE
           SubRange(fmtWr, varName, libName, t, d, sub.min, sub.max);
         END;
@@ -1254,8 +1256,10 @@ PROCEDURE SubRange (fmtWr   : Formatter.T;
     IF t = Type.longint OR t.base = Type.longint THEN
       WITH min = NARROW(min, Value.Longint).val,
            max = NARROW(max, Value.Longint).val DO
+        (* This fork: LONGINT literals; see bug 28 in
+           LLVM-IR-backend-docs/BUGS.md. *)
         StubLibCall(fmtWr, "Longint", varName, libName, d,
-                    ", " & Fmt.LongInt(min) & ", " & Fmt.LongInt(max));
+                    ", " & LongLit(min) & ", " & LongLit(max));
       END;
     ELSIF t = Type.integer OR t.base = Type.integer THEN
       WITH min = NARROW(min, Value.Integer).val,
@@ -1277,6 +1281,56 @@ PROCEDURE SubRange (fmtWr   : Formatter.T;
       END;
     END;
   END SubRange;
+
+(* This fork: marshal a value of a fixed-width type (Word8.T ..
+   Word64.T, Signed8.T .. Signed64.T) or a subrange of one, through
+   libName (SharedObjStubLib or PickleStubs).  On the wire it is a
+   LONGINT; Word64.T goes as its bit pattern.  Ported from stubgen. *)
+PROCEDURE FixedVal (fmtWr  : Formatter.T;
+                    varName: TEXT;
+                    libName: TEXT;
+                    t      : Type.Subrange;
+                    d      : Direction) =
+  VAR
+    f := Type.FixedBase(t);
+    typeName := Type.ToText(f);
+    min := NARROW(t.min, Value.Longint).val;
+    max := NARROW(t.max, Value.Longint).val;
+    word64 := f.bits >= 64 AND NOT f.signed;
+    bounds: TEXT;
+  BEGIN
+    IF d = Direction.Out THEN
+      IF word64 THEN
+        PutLine(fmtWr, libName & ".OutLongint(out, Word64.ToLong("
+                         & varName & "));");
+      ELSE
+        PutLine(fmtWr, libName & ".OutLongint(out, VAL(" & varName
+                         & ", LONGINT));");
+      END;
+    ELSE
+      IF word64 AND (t = f OR min < 0L OR max < min) THEN
+        (* Bit patterns above LAST(LONGINT): no bounds to check. *)
+        bounds := "";
+      ELSE
+        bounds := ", " & LongLit(min) & ", " & LongLit(max);
+      END;
+      IF word64 THEN
+        PutLine(fmtWr, varName & " := Word64.FromLong(" & libName
+                         & ".InLongint(in" & bounds & "));");
+      ELSE
+        PutLine(fmtWr, varName & " := VAL(" & libName & ".InLongint(in"
+                         & bounds & "), " & typeName & ");");
+      END;
+    END;
+  END FixedVal;
+
+(* This fork: a LONGINT literal for v.  FIRST(LONGINT) has no literal:
+   its magnitude is out of range. *)
+PROCEDURE LongLit (v: LONGINT): TEXT =
+  BEGIN
+    IF v = FIRST(LONGINT) THEN RETURN "FIRST(LONGINT)" END;
+    RETURN Fmt.LongInt(v) & "L";
+  END LongLit;
 
 PROCEDURE Enumeration (fmtWr   : Formatter.T;
                        varName : TEXT;

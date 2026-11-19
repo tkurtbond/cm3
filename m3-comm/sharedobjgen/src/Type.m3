@@ -12,6 +12,7 @@
 MODULE Type;
 
 IMPORT Atom, Fmt, SOxCodeUtils, Text, Value, ValueProc;
+IMPORT Word; (* This fork *)
 
 <* FATAL SOxCodeUtils.Error *>
 
@@ -51,6 +52,18 @@ PROCEDURE ToText (t: T; byName: BOOLEAN := TRUE): Text.T =
         BEGIN
           IF sub = integer THEN RETURN "INTEGER" END;
           IF sub = longint THEN RETURN "LONGINT" END;
+          (* This fork: fixed-width types and their subranges. *)
+          TYPECASE sub OF
+          | Fixed (f) => RETURN QidToText(f.name);
+          ELSE
+          END;
+          TYPECASE sub.base OF
+          | Fixed (f) =>
+            RETURN "[" & FixedVal(NARROW(sub.min, Value.Longint).val, f) &
+                   ".." & FixedVal(NARROW(sub.max, Value.Longint).val, f) &
+                   "]";
+          ELSE
+          END;
           IF sub.base = longint THEN
             WITH min = NARROW(sub.min, Value.Longint).val,
                  max = NARROW(sub.max, Value.Longint).val DO
@@ -261,6 +274,83 @@ PROCEDURE IsEmpty (t: T): BOOLEAN =
 *)
 
 VAR nullAtm: Atom.T;
+
+(* This fork: fixed-width integer types; see Type.i3. *)
+
+VAR fixedTypes: ARRAY BOOLEAN, [0..3] OF Fixed;
+
+PROCEDURE NewFixed(bits: INTEGER; signed: BOOLEAN): Fixed =
+  VAR i: [0..3]; prefix: TEXT; min, max: LONGINT;
+  BEGIN
+    CASE bits OF
+    | 8 => i := 0;
+    | 16 => i := 1;
+    | 32 => i := 2;
+    ELSE i := 3;
+    END;
+    IF fixedTypes[signed, i] = NIL THEN
+      IF signed THEN
+        prefix := "Signed";
+        IF bits >= 64 THEN
+          min := FIRST(LONGINT); max := LAST(LONGINT);
+        ELSE
+          max := VAL(Word.Shift(1, bits - 1), LONGINT) - 1L;
+          min := -max - 1L;
+        END;
+      ELSE
+        prefix := "Word";
+        min := 0L;
+        IF bits >= 64 THEN
+          max := LAST(LONGINT);
+        ELSE
+          max := VAL(Word.Shift(1, bits), LONGINT) - 1L;
+        END;
+      END;
+      WITH f = NEW(Fixed, bits := bits, signed := signed,
+                   min := NEW(Value.Longint, val := min),
+                   max := NEW(Value.Longint, val := max),
+                   name := NEW(Qid,
+                               intf := Atom.FromText(prefix & Fmt.Int(bits)),
+                               item := Atom.FromText("T"))) DO
+        f.base := f;
+        fixedTypes[signed, i] := f;
+      END;
+    END;
+    RETURN fixedTypes[signed, i];
+  END NewFixed;
+
+PROCEDURE FixedBase(t: Subrange): Fixed =
+  BEGIN
+    LOOP
+      TYPECASE t OF
+      | NULL => RETURN NIL;
+      | Fixed (f) => RETURN f;
+      ELSE
+        IF t.base = t THEN RETURN NIL END;
+        TYPECASE t.base OF
+        | Subrange (s) => t := s;
+        ELSE RETURN NIL;
+        END;
+      END;
+    END;
+  END FixedBase;
+
+PROCEDURE FixedVal(v: LONGINT; f: Fixed): Text.T =
+  VAR lit: TEXT;
+  BEGIN
+    IF v = FIRST(LONGINT) THEN
+      lit := "FIRST(LONGINT)";
+    ELSE
+      lit := Fmt.LongInt(v) & "L";
+    END;
+    IF f.bits >= 64 AND NOT f.signed AND v < 0L THEN
+      (* v is the bit pattern of a value >= 2^63, which VAL would reject.
+         This is not a constant expression, but the generator only needs
+         it where the type is printed in full, which is rare. *)
+      RETURN "Word64.FromLong(" & lit & ")";
+    END;
+    RETURN "VAL(" & lit & ", " & QidToText(f.name) & ")";
+  END FixedVal;
 
 BEGIN
   nullAtm := Atom.FromText("");
