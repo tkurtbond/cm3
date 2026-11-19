@@ -11,7 +11,7 @@ is in upstream cm3 too, so the fix may be worth offering there. Where a
 claim comes from reading code rather than from a test, the entry says
 so.
 
-Bugs 1 to 10, 12, 14, 24, 25, 27 and 29 are fixed; 23 turned out not to be a bug; the
+Bugs 1 to 10, 12, 14, 24, 25 and 27 to 29 are fixed; 23 turned out not to be a bug; the
 others are open.
 
 ## Bug 1: C back end: set and word operations give wrong results
@@ -416,21 +416,48 @@ every back end.
 ## Bug 28: `stubgen` emits `StubLib.InLongint` and `OutLongint`, which don't exist
 
 - **Where:** upstream, `m3-comm/stubgen/src/ModuleStubCode.m3`
-  (`MarshalTypedVal`) and `m3-comm/netobj/src/netobjrt/StubLib.i3`.
-- **Status:** open. Found while surveying Phase 6 of
+  (`MarshalTypedVal`), `m3-comm/netobj/src/netobjrt/StubLib.i3`, and
+  (for the bounds) `m3-tools/m3tk/src/target/M3CBackEnd_C.m3`.
+- **Status:** fixed (marked "This fork" in the source). Found while
+  surveying Phase 6 of
   [`fixed-width-integer-types-plan.md`](fixed-width-integer-types-plan.md),
   2026-11-18, by reading: `MarshalTypedVal` calls
   `StubLibCall (..., "Longint", ...)` for LONGINT, but no `InLongint`
-  or `OutLongint` is declared anywhere under `m3-comm` (they exist only
+  or `OutLongint` was declared anywhere under `m3-comm` (they exist only
   in `libm3`'s `PickleStubs` and `m3-db`'s `StableLog`). Checked on
   AMD64_LINUX: a network object with a method `add (x: LONGINT):
-  LONGINT` gets stubs that fail with "unknown qualification '.'
+  LONGINT` got stubs that fail with "unknown qualification '.'
   (InLongint)" and "(OutLongint)".
-- **Effect:** network objects can't have LONGINT parameters or
+- **Effect:** network objects couldn't have LONGINT parameters or
   results.
-- **Fix (not done):** add `InLongint` and `OutLongint` to `StubLib`,
-  with byte-order handling for the `DataRep`, as `InInteger` and
-  `OutInteger` have.
+- **Fix:** three parts.
+  - `StubLib` has `OutLongint` and `InLongint`, written like
+    `OutInt32` and `InInt32`: 8-byte aligned, native byte order, with
+    the bytes reversed when the sender's `DataRep` has the other byte
+    order, and a range check that raises `NetObj.Error`.
+  - For a LONGINT subrange, stubgen wrote the bounds without the `L`
+    suffix; it now writes LONGINT literals, and `FIRST(LONGINT)`
+    (whose magnitude has no literal).
+  - Testing that showed every negative lower bound of a LONGINT
+    subrange arriving in stubgen as 0, so the stubs rejected valid
+    negative values. The cause is in m3tk's bit-size code
+    (`M3CBackEnd_C.m3`): for LONGINT subranges `s2` was bound to the
+    lower bound instead of the upper one, and `s1` and `s2` were `WITH`
+    aliases of the bounds' values, so `IF s2 < 0L THEN s2 := 0L`
+    overwrote the lower bound. The INTEGER branch had the same
+    aliasing, with the right bound: a negative upper bound became 0
+    (the installed stubgen gives `[-10 .. -1]` the bounds `-10, 0`).
+    Both now copy the bounds into variables.
+- **Tested** with a server and a client in separate processes on
+  127.0.0.1 (`TCPNetObj.Listen`/`Locate`), on AMD64_LINUX with
+  LlvmIR: LONGINT and `[-5L .. 16_1ffffffffL]` arguments, results and
+  VAR parameters, values beyond 32 bits, `LAST(LONGINT)`, and an
+  out-of-range result, which is rejected. stubgen's bounds for
+  `[-5L ..]`, `[NegFive ..]`, `[0L - 5L ..]`, `[FIRST(LONGINT) .. -1L]`,
+  `[-10 .. -1]` and full-range LONGINT were checked in the generated
+  stubs. The byte-swapping path isn't tested: that needs a peer with
+  the other byte order. There is no m3tests test, because m3tests has
+  no network-object tests.
 
 ## Bug 29: `RTPacking.Encode` overflows on a max_align of 128, so pickles misread records
 

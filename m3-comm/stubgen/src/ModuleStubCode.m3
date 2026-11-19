@@ -513,8 +513,10 @@ PROCEDURE SubRange(fmtWr: Formatter.T;
     IF t = Type.longint OR t.base = Type.longint THEN
       WITH min = NARROW(min, Value.Longint).val,
            max = NARROW(max, Value.Longint).val DO
+        (* This fork: LONGINT literals; see bug 28 in
+           LLVM-IR-backend-docs/BUGS.md. *)
         StubLibCall(fmtWr, "Longint", varName, d, 
-                    ", "  & Fmt.LongInt(min) & ", " & Fmt.LongInt(max));
+                    ", "  & LongLit(min) & ", " & LongLit(max));
       END;
     ELSIF t = Type.integer OR t.base = Type.integer THEN
       WITH min = NARROW(min, Value.Integer).val,
@@ -534,6 +536,14 @@ PROCEDURE SubRange(fmtWr: Formatter.T;
       END;
     END;
   END SubRange;
+
+(* This fork: a LONGINT literal for v.  FIRST(LONGINT) has no literal:
+   its magnitude is out of range. *)
+PROCEDURE LongLit(v: LONGINT): TEXT =
+  BEGIN
+    IF v = FIRST(LONGINT) THEN RETURN "FIRST(LONGINT)" END;
+    RETURN Fmt.LongInt(v) & "L";
+  END LongLit;
 
 PROCEDURE Enumeration(fmtWr: Formatter.T;
                       varName: TEXT;

@@ -323,6 +323,11 @@ PROCEDURE OutInt32(c: Conn; i: Int32)
     RAISES {Wr.Failure, Thread.Alerted};
 (* Marshal a 32-bit integer in native format. *)
 
+(* This fork: LONGINT. *)
+PROCEDURE OutLongint(c: Conn; i: LONGINT)
+    RAISES {Wr.Failure, Thread.Alerted};
+(* Marshal a longint (64 bits on every platform) in native format. *)
+
 PROCEDURE OutByte(c: Conn; i: Byte8)
     RAISES {Wr.Failure, Thread.Alerted};
 (* Marshal a byte. *)
@@ -386,6 +391,15 @@ PROCEDURE InInt32(
     max := LAST(Int32)): Int32
     RAISES {NetObj.Error, Rd.Failure, Thread.Alerted};
 (* Unmarshal a 32-bit integer, checking that its value is in  "[min..max]". *)
+
+(* This fork: LONGINT. *)
+PROCEDURE InLongint(
+    c: Conn; 
+    rep: DataRep;
+    min := FIRST(LONGINT);
+    max := LAST(LONGINT)): LONGINT
+    RAISES {NetObj.Error, Rd.Failure, Thread.Alerted};
+(* Unmarshal a longint, checking that its value is in  "[min..max]". *)
 
 PROCEDURE InByte(
     c: Conn; 

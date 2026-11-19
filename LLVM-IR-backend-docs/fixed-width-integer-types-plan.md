@@ -902,7 +902,16 @@ packings the 64-bit converters (the survey's check above ran under
 that bug), and pickles of ordinary records written by one process
 couldn't be read by another. That is fixed too. Bug 30 (a front-end
 crash on records with a `BITS FOR` field and an EXTENDED field) was
-found on the way and is open. Next: bug 28.
+found on the way and is open.
+
+Bug 28 is fixed too: `StubLib` has `InLongint` and `OutLongint`, and
+stubgen writes LONGINT subrange bounds as LONGINT literals. Testing it
+found that m3tk zeroed every negative lower bound of a LONGINT subrange
+(and a negative upper bound of an INTEGER one), also fixed; see
+[`BUGS.md`](BUGS.md). A server and client exchanging LONGINT and
+LONGINT-subrange values over TCP agree. What remains of Phase 6 is the
+decision whether network objects need the new types, before the
+`m3tk` work.
 
 ## Open questions
 

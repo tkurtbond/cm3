@@ -470,6 +470,32 @@ PROCEDURE InInt32(c: Conn;
     RETURN i;
   END InInt32;
 
+(* This fork: LONGINT is 64 bits on every platform, so only the byte
+   order can differ. *)
+PROCEDURE InLongint(c: Conn; 
+                    rep: DataRep;
+                    min := FIRST(LONGINT);
+                    max := LAST(LONGINT)): LONGINT
+    RAISES {NetObj.Error, Rd.Failure, Thread.Alerted} =
+  VAR i: LONGINT;
+  BEGIN
+    i := LOOPHOLE(AlignRd(c.rd, BYTESIZE(LONGINT)), UNTRACED REF LONGINT)^;
+    INC(c.rd.cur, BYTESIZE(LONGINT));
+    IF NOT NativeEndian(rep) THEN i := SwapLongint(i); END;
+    IF i < min OR i > max THEN RaiseUnmarshalFailure(); END;
+    RETURN i;
+  END InLongint;
+
+PROCEDURE SwapLongint(i: LONGINT): LONGINT =
+  TYPE Bytes = ARRAY [0..BYTESIZE(LONGINT)-1] OF CHAR;
+  VAR a := LOOPHOLE(i, Bytes); r: LONGINT;
+  BEGIN
+    WITH b = LOOPHOLE(r, Bytes) DO
+      FOR j := FIRST(a) TO LAST(a) DO b[j] := a[LAST(a) - j]; END;
+    END;
+    RETURN r;
+  END SwapLongint;
+
 PROCEDURE AlignRd(rd: Rd.T; nb: CARDINAL) : ADDRESS
     RAISES {NetObj.Error, Rd.Failure, Thread.Alerted} =
   VAR diff := rd.cur MOD nb;
@@ -510,6 +536,15 @@ PROCEDURE OutInt32(c: Conn; i: Int32)
     ip^ := i;
     INC(c.wr.cur, BYTESIZE(Int32));
   END OutInt32;
+
+(* This fork: see InLongint. *)
+PROCEDURE OutLongint(c: Conn; i: LONGINT)
+    RAISES {Wr.Failure, Thread.Alerted} =
+  VAR ip := LOOPHOLE(AlignWr(c.wr, BYTESIZE(LONGINT)), UNTRACED REF LONGINT);
+  BEGIN
+    ip^ := i;
+    INC(c.wr.cur, BYTESIZE(LONGINT));
+  END OutLongint;
 
 PROCEDURE AlignWr(wr: Wr.T; align: CARDINAL) : ADDRESS
     RAISES {Wr.Failure, Thread.Alerted} =
