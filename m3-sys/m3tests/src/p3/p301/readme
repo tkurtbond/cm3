@@ -1,0 +1,8 @@
+SHA256 written on the builtin type Word32.T (this fork; see
+LLVM-IR-backend-docs/fixed-width-integer-types-plan.md, Phase 4),
+with plain +, the Word32 rotates and shifts, and no masking.  Main
+checks its digests against libm3's SHA256 (which masks INTEGERs) and
+against the published values of the standard test vectors, including
+the lengths at which the padding needs a second block.  Every line
+of output should be the same with every backend and at every
+optimization level.

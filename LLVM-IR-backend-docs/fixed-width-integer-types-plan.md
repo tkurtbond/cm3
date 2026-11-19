@@ -137,10 +137,10 @@ Checked against the sources on branch `dev` (commit 992071694).
    - `FIRST (Word64.T)` and `LAST (Word64.T)` work as for any ordinal
      type.
 
-   Suffixes such as `16_FFFFFFFFFFFFFFFFW64` remain a possible later
-   convenience. With suffixes, `-128I8` would be a static error (the
-   literal `128I8` is out of range before negation), as decimal
-   `FIRST(INTEGER)` is today.
+   Suffixes such as `16_FFFFFFFFFFFFFFFFW64` were considered and are
+   not needed (Phase 1, decision 6). With suffixes, `-128I8` would
+   have been a static error (the literal `128I8` is out of range
+   before negation), as decimal `FIRST(INTEGER)` is today.
 6. **Checked overflow needs no new IR operation.** The front end can
    emit the wrapped operation in the unsigned M3CG type and test the
    sign bits (for `+`: overflow if `(a XOR r) AND (b XOR r)` is
@@ -308,7 +308,7 @@ Status (2026-11-18): done.
 Status (2026-11-18): decisions 2, 3 and 5 to 8 are written down below
 as proposed defaults, checked against the front end and the installed
 compiler; they stand unless the maintainer changes them. Decision 6
-is deliberately left open until Phase 4.
+was left open until Phase 4, which showed suffixes aren't needed.
 
 2. Ordinal rules (decided): follow LONGINT, which is allowed wherever
    an ordinal type is. A test with the installed compiler accepts
@@ -410,11 +410,25 @@ is deliberately left open until Phase 4.
    `SignedN`; that equals keeping the low N bits. So
    `Word32.Wrap (x64)` truncates and `Signed32.Wrap (w32)`
    reinterprets. It folds when `x` is constant and never fails.
-6. Literal suffixes (open until Phase 4). Constants are written with
-   `VAL` and `Wrap` (correction 5). Decision 8 removes the commonest
-   case, `INC (x)` and `INC (x, 1)`, but `x + 1` still has to be
-   written `x + One`, with `CONST One = VAL (1, Word32.T)`. Phase 4's
-   SHA256 rewrite will show how often that matters; decide then.
+6. Literal suffixes (decided after Phase 4: not needed). Constants
+   are written with `VAL` and `Wrap` (correction 5). Decision 8
+   removes the commonest case, `INC (x)` and `INC (x, 1)`, but
+   `x + 1` still has to be written `x + One`, with
+   `CONST One = VAL (1, Word32.T)`. This was left open until Phase 4's
+   SHA256 rewrite showed how often that matters.
+   - **Decided after Phase 4: not needed.** The SHA256
+     rewrite (`p301`) has 80 `VAL`s. 72 are its constant tables
+     (`K` and the initial state), written once as
+     `VAL (16_428a2f98, W)` with `W = Word32.T`: longer than a
+     suffix, but just as clear. 6 convert variables (bytes to
+     `Word32.T`, the length to `Word64.T`, a byte back to INTEGER),
+     which suffixes wouldn't help. That leaves two literals in
+     expressions, both `Word64.T` (the 8 bits per byte and a byte
+     mask), and no `x + One`: the round's additions are all of
+     `Word32.T` values, and `INC` takes the variable's own type. A
+     suffix would change the scanner, every tool that reads Modula-3
+     (`m3tk`, `m3browser`, editors' modes), and the language
+     reference, for little gain.
 7. `VAL` (decided). `VAL (x, T)` accepts any integer type for `x`,
    not only INTEGER and LONGINT (`builtinOps/Val.m3` allows only
    those two today), and any ordinal type for `T`. It is checked the
@@ -622,6 +636,37 @@ the bullets above:
   `r0` runtime-error tests for `VAL` narrowing. All on C and `LlvmIR`,
   at `-O0` and `-O`.
 
+Status (2026-11-18): done. Tests, all passing with C and `LlvmIR`,
+each at `-O0` and `-O` (44 runs, built and compared by hand as the
+harness does; the kept `Main.m3.cpp` or `Main.m3.ll` showed which back
+end built each one):
+
+- **`p301`: SHA256 on `Word32.T`.** `Sha256W32.m3` is SHA256 written
+  as the type allows: plain `+` for the wrapping additions, the
+  `Word32` rotates, shifts and logical operations, the message length
+  as a `Word64.T`, and no masking anywhere. `Main` checks it against
+  `libm3`'s `SHA256` (which masks INTEGERs) and against the published
+  digests: the empty string, `"abc"`, the 448- and 896-bit NIST
+  messages, a million `a`s, 55, 56, 63 and 64 `a`s (where the
+  padding needs a second block), and the bytes 0 to 255. The expected
+  digests were checked with `sha256sum` and Python's `hashlib`.
+  `libm3`'s `SHA256` itself is unchanged.
+- **`p302`: `Wrap` round trips and `x + 1 > x`.** For INTEGERs and
+  LONGINTs including negative ones, `FIRST` and `LAST`: `WordN.Wrap
+  (x)` widened again equals `x MOD 2^N`, `VAL` back to the integer
+  type gives the same, and wrapping a wider fixed type gives what
+  wrapping `x` does. At `LAST (WordN.T)` and every width, `x + 1 > x`
+  is `FALSE`, both for variables and for constants the front end
+  folds, and for variables `x + 1 = FIRST` is `TRUE`. (`p298`
+  already covers wrapping at each width, unsigned compare, `DIV` and
+  `MOD`, and folding.)
+- **`r008` to `r010`: `VAL` narrowing.** `VAL` of a `Word64.T` of
+  2^63 to INTEGER, of INTEGER -1 to `Word32.T`, and of a `Word32.T`
+  of 256 to `Word8.T` each fail with `ValueOutOfRange` at the `VAL`.
+  With `r006` (negative LONGINT to `Word64.T`) that covers both
+  directions.
+- **Literal suffixes.** Not needed; see Phase 1, decision 6.
+
 ### Phase 5: Checked signed family
 
 - Same steps as Phases 2 and 3, for builtin interfaces `Signed8` to
@@ -654,6 +699,6 @@ the bullets above:
 
 - Is upstream interested? A language extension kept only in this fork
   makes programs that use it unportable to upstream cm3.
-- Literal suffixes (Phase 1, decision 6), after Phase 4.
+- Answered: literal suffixes are not needed (Phase 1, decision 6).
 - Answered: array index and set base types accept the new types, as
   they accept LONGINT subranges (Phase 1, decision 2).

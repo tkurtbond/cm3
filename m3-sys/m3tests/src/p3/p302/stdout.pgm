@@ -1,0 +1,36 @@
+0: 16_0 16_0 16_0 16_0
+1: 16_1 16_1 16_1 16_1
+-1: 16_ff 16_ffff 16_ffffffff 16_ffffffffffffffff
+127: 16_7f 16_7f 16_7f 16_7f
+128: 16_80 16_80 16_80 16_80
+255: 16_ff 16_ff 16_ff 16_ff
+256: 16_0 16_100 16_100 16_100
+-128: 16_80 16_ff80 16_ffffff80 16_ffffffffffffff80
+-129: 16_7f 16_ff7f 16_ffffff7f 16_ffffffffffffff7f
+-256: 16_0 16_ff00 16_ffffff00 16_ffffffffffffff00
+32767: 16_ff 16_7fff 16_7fff 16_7fff
+32768: 16_0 16_8000 16_8000 16_8000
+65535: 16_ff 16_ffff 16_ffff 16_ffff
+65536: 16_0 16_0 16_10000 16_10000
+-32768: 16_0 16_8000 16_ffff8000 16_ffffffffffff8000
+2147483647: 16_ff 16_ffff 16_7fffffff 16_7fffffff
+2147483648: 16_0 16_0 16_80000000 16_80000000
+4294967295: 16_ff 16_ffff 16_ffffffff 16_ffffffff
+4294967296: 16_0 16_0 16_0 16_100000000
+-2147483648: 16_0 16_0 16_80000000 16_ffffffff80000000
+-2147483649: 16_ff 16_ffff 16_7fffffff 16_ffffffff7fffffff
+81985529216486895: 16_ef 16_cdef 16_89abcdef 16_123456789abcdef
+-9223372036854775808: 16_0 16_0 16_0 16_8000000000000000
+9223372036854775807: 16_ff 16_ffff 16_ffffffff 16_7fffffffffffffff
+0L: 16_0 16_0 16_0 16_0
+-1L: 16_ff 16_ffff 16_ffffffff 16_ffffffffffffffff
+255L: 16_ff 16_ff 16_ff 16_ff
+256L: 16_0 16_100 16_100 16_100
+-4294967296L: 16_0 16_0 16_0 16_ffffffff00000000
+-81985529216486896L: 16_10 16_3210 16_76543210 16_fedcba9876543210
+-9223372036854775808L: 16_0 16_0 16_0 16_8000000000000000
+9223372036854775807L: 16_ff 16_ffff 16_ffffffff 16_7fffffffffffffff
+x + 1 > x at LAST, variables: FALSE FALSE FALSE FALSE
+x + 1 > x at LAST, constants: FALSE FALSE FALSE FALSE
+x + 1 = 0 at LAST, variables: TRUE TRUE TRUE TRUE
+0 failures

@@ -1,0 +1,7 @@
+The builtin fixed-width types Word8.T .. Word64.T (this fork; see
+LLVM-IR-backend-docs/fixed-width-integer-types-plan.md, Phase 4):
+WordN.Wrap of INTEGERs and LONGINTs, including negative ones and
+FIRST and LAST, keeps the low N bits, and widening the result again
+gives x MOD 2^N; and at LAST (WordN.T), x + 1 > x is FALSE, both for
+variables and for constants the front end folds.  Every line of output
+should be the same with every backend and at every optimization level.

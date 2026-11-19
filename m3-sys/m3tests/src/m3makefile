@@ -545,6 +545,8 @@ readonly proc p_test (group, uid, comment) is
   run_test ("_ptests", group, uid, comment, "run", cm3opts, runopts, "probeForTargetSpecificFiles")
 end
 
+p_test ("p3", "p302", "Wrap round trips and x + 1 > x at LAST for Word8 .. Word64")
+p_test ("p3", "p301", "SHA256 on Word32.T")
 p_test ("p3", "p300", "procedures of the builtin interfaces Word8 .. Word64")
 p_test ("p2", "p299", "procedures of the builtin interface Word32")
 p_test ("p2", "p298", "unsigned fixed-width integer types Word8.T .. Word64.T")
@@ -914,6 +916,9 @@ readonly proc r_test (group, uid, comment) is
   run_test ("_rtests", group, uid, comment, "run", cm3opts, runopts, "probeForTargetSpecificFiles")
 end
 
+r_test ("r0", "r010", "VAL of a Word32.T above 255 to Word8.T")
+r_test ("r0", "r009", "VAL of a negative INTEGER to Word32.T")
+r_test ("r0", "r008", "VAL of a Word64.T above LAST (INTEGER) to INTEGER")
 r_test ("r0", "r007", "Word32.LeftShift checks its shift count")
 r_test ("r0", "r006", "VAL of a negative LONGINT to Word64.T")
 r_test ("r0", "r005", "assertion failure messages include expression")

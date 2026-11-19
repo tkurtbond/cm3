@@ -1,0 +1,6 @@
+import ("libm3")
+interface ("Sha256W32")
+implementation ("Sha256W32")
+implementation ("Main")
+build_standalone ()
+include ("../../Test.common")
