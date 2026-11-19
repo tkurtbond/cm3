@@ -6,7 +6,7 @@ MODULE FixedType;
 
 IMPORT M3, M3ID, CG, Type, TypeRep, Target, TInt, TWord, TipeMap, TipeDesc;
 IMPORT Tipe, Scope, Module, NamedType, Constant, IntegerExpr, Int, LInt;
-IMPORT Scanner, Host;
+IMPORT Scanner, Host, FixedWord;
 
 TYPE
   P = Type.T BRANDED "FixedType.P" OBJECT
@@ -31,6 +31,10 @@ TYPE
 VAR
   all   : ARRAY [0..3] OF P;
   names : ARRAY [0..3] OF M3ID.T;
+
+CONST
+  hasUnit = ARRAY [0..3] OF BOOLEAN { FALSE, FALSE, TRUE, FALSE };
+  (* which of all[] m3core implements, in src/word *)
 
 PROCEDURE New (bits: INTEGER;  READONLY rep: Target.Int_type;
                tag, name: TEXT): P =
@@ -66,6 +70,7 @@ PROCEDURE InitializeInterfaces () =
             b := TInt.FromInt (p.bits, size);  <*ASSERT b*>
             EVAL Constant.Declare ("Size", IntegerExpr.New (Int.T, size),
                                    FALSE);
+            FixedWord.Define (p, p.name);
           Scope.Pop (zz);
         Scanner.Pop ();
       END;
@@ -79,6 +84,14 @@ PROCEDURE IsInterface (name: M3ID.T): BOOLEAN =
     END;
     RETURN FALSE;
   END IsInterface;
+
+PROCEDURE HasNoUnit (name: M3ID.T): BOOLEAN =
+  BEGIN
+    FOR i := FIRST (names) TO LAST (names) DO
+      IF names[i] = name THEN RETURN NOT hasUnit[i] END;
+    END;
+    RETURN FALSE;
+  END HasNoUnit;
 
 PROCEDURE Split (t: Type.T;  VAR info: Info): BOOLEAN =
   VAR u := Type.Check (Type.Base (t));
@@ -133,6 +146,11 @@ PROCEDURE Mask (READONLY info: Info) =
       CG.And (stk);
     END;
   END Mask;
+
+PROCEDURE Fills (READONLY info: Info): BOOLEAN =
+  BEGIN
+    RETURN info.bits >= TargetSize (info.type.info.stk_type);
+  END Fills;
 
 PROCEDURE TargetSize (t: CG.Type): INTEGER =
   BEGIN

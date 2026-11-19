@@ -545,6 +545,7 @@ readonly proc p_test (group, uid, comment) is
   run_test ("_ptests", group, uid, comment, "run", cm3opts, runopts, "probeForTargetSpecificFiles")
 end
 
+p_test ("p2", "p299", "procedures of the builtin interface Word32")
 p_test ("p2", "p298", "unsigned fixed-width integer types Word8.T .. Word64.T")
 p_test ("p2", "p297", "RTTipe sizes subranges the way the compiler does")
 p_test ("p2", "p296", "INTEGER and LONGINT overflow wraps (no C undefined behavior)")
@@ -912,6 +913,7 @@ readonly proc r_test (group, uid, comment) is
   run_test ("_rtests", group, uid, comment, "run", cm3opts, runopts, "probeForTargetSpecificFiles")
 end
 
+r_test ("r0", "r007", "Word32.LeftShift checks its shift count")
 r_test ("r0", "r006", "VAL of a negative LONGINT to Word64.T")
 r_test ("r0", "r005", "assertion failure messages include expression")
 r_test ("r0", "r004", "negative size for an open array")

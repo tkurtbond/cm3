@@ -13,6 +13,7 @@ IMPORT Variable, Type, Procedure, Ident, M3Buf, BlockStmt, Int;
 IMPORT Host, Token, Revelation, Coverage, Decl, Scanner, WebInfo;
 IMPORT ProcBody, Target, M3RT, Marker, File, Tracer, Wr;
 IMPORT Jmpbufs;
+IMPORT FixedType; (* This fork *)
 
 FROM Scanner IMPORT GetToken, Fail, Match, MatchID, cur;
 
@@ -558,7 +559,11 @@ PROCEDURE LookUp (name: M3ID.T;  internal: BOOLEAN): T =
     cs := M3.OuterCheckState;
     rd: File.T;
   BEGIN
-    IF NOT internal THEN
+    IF NOT internal
+      AND NOT FixedType.IsInterface (name) (* This fork: a builtin
+        interface is never parsed from source, so it can't be part of
+        an import cycle; m3core's Word32Rep imports the builtin Word32 *)
+    THEN
       IF NOT PushInterface (name) THEN RETURN NIL END;
     END;
 

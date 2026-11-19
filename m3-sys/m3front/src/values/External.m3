@@ -340,9 +340,9 @@ PROCEDURE GenInitLinks (p: Port;  imported: BOOLEAN;
     WHILE (x # NIL) DO
       y := p;
       LOOP
-        IF (x = y) AND FixedType.IsInterface (x.module.name) THEN
-          (* This fork: Word8 .. Word64 have no unit, so nothing links to
-             them.  See FixedType.IsInterface. *)
+        IF (x = y) AND FixedType.HasNoUnit (x.module.name) THEN
+          (* This fork: nothing links to a WordN that m3core doesn't
+             implement.  See FixedType.HasNoUnit. *)
           EXIT;
         ELSIF (x = y) THEN
           Module.ImportInterface (x.module);

@@ -1,0 +1,5 @@
+The procedures of the builtin interface Word32 (this fork; see
+LLVM-IR-backend-docs/fixed-width-integer-types-plan.md): inline calls,
+constant folds, and the same procedures used as procedure values,
+which call m3core's Word32 module.  Every line of output should be
+the same with every backend and at every optimization level.

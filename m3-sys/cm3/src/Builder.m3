@@ -1873,7 +1873,11 @@ PROCEDURE CheckImp (s: State;  u: Mx.Unit;  READONLY z: Mx.InfoList;  kind: UK) 
   BEGIN
     FOR i := z.start TO z.start + z.cnt - 1 DO
       unit := M3Unit.Get (s.units, u.info[i], kind);
-      IF (unit # NIL) THEN CompileOne (s, unit) END;
+      IF (unit # NIL)
+        AND NOT ImportsBuiltinFixed (u.name, u.info[i]) (* This fork *)
+      THEN
+        CompileOne (s, unit)
+      END;
     END;
   END CheckImp;
 
@@ -2031,7 +2035,7 @@ PROCEDURE RunM3Front (s: State;  u: M3Unit.T;  object: TEXT)
     source.contents := input;
 
     IF (ok) AND ((u.stale_src) OR (u.missing_info)) THEN
-      Pass0_CheckImports (s, source);
+      Pass0_CheckImports (s, u, source);
       FlushPending (s);
       (* finally, generate the deferred message *)
       IF (u.missing_info) THEN
@@ -2091,18 +2095,46 @@ PROCEDURE Pass0_InitCodeGenerator (env: Env): M3CG.T =
     RETURN env.cg;
   END Pass0_InitCodeGenerator;
 
-PROCEDURE Pass0_CheckImports (s: State;  VAR source: M3Front.SourceFile) =
+PROCEDURE Pass0_CheckImports (s: State;  u: M3Unit.T;
+                              VAR source: M3Front.SourceFile) =
   VAR ids: M3Front.IDList;  unit: M3Unit.T;
   BEGIN
     ResetEnv (s, NIL, source.name, NIL);
     ids := M3Front.ParseImports (source, s.m3env);
     WHILE (ids # NIL) DO
       unit := M3Unit.Get (s.units, ids.interface, UK.I3);
-      IF (unit # NIL) THEN CompileOne (s, unit) END;
+      IF (unit # NIL)
+        AND NOT ImportsBuiltinFixed (u.name, ids.interface) (* This fork *)
+      THEN
+        CompileOne (s, unit)
+      END;
       ids := ids.next;
     END;
     Utils.RewindReader (source.contents, source.name);
   END Pass0_CheckImports;
+
+(* This fork: the front end predefines the interfaces Word8 .. Word64
+   (m3front's FixedType), and m3core's WordN.i3 imports WordNRep.i3,
+   which imports the builtin WordN for its type.  WordNRep's import
+   reads the builtin, so it mustn't make the driver compile or merge
+   m3core's WordN.i3 first: WordN.i3 needs WordNRep's exports. *)
+
+VAR fixedNames, repNames := ARRAY [0..3] OF M3ID.T { M3ID.NoID, .. };
+
+PROCEDURE ImportsBuiltinFixed (importer, name: M3ID.T): BOOLEAN =
+  CONST Widths = ARRAY [0..3] OF TEXT { "8", "16", "32", "64" };
+  BEGIN
+    IF fixedNames[0] = M3ID.NoID THEN
+      FOR i := FIRST (Widths) TO LAST (Widths) DO
+        fixedNames[i] := M3ID.Add ("Word" & Widths[i]);
+        repNames[i]   := M3ID.Add ("Word" & Widths[i] & "Rep");
+      END;
+    END;
+    FOR i := FIRST (fixedNames) TO LAST (fixedNames) DO
+      IF fixedNames[i] = name THEN RETURN importer = repNames[i] END;
+    END;
+    RETURN FALSE;
+  END ImportsBuiltinFixed;
 
 PROCEDURE Pass0_Trace (source: TEXT;  config, user: Arg.List) =
   VAR x: Arg.T;

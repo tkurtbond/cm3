@@ -10,6 +10,15 @@ Interface("Word")
 Interface("LongRep")
 Interface("Long")
 
+% This fork: unsigned fixed-width integers (see GenWordN.ig)
+Generic_interface("GenWordN")
+Interface("Word32Rep")
+Interface("Word32")
+
 generic_implementation("GenWord")
 implementation ("Word")
 implementation ("Long")
+
+% This fork
+generic_implementation("GenWordN")
+implementation ("Word32")

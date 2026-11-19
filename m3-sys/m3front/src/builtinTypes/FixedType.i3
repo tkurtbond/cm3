@@ -31,9 +31,12 @@ PROCEDURE InitializeInterfaces ();
    Size.  Called from M3Front. *)
 
 PROCEDURE IsInterface (name: M3ID.T): BOOLEAN;
-(* Is 'name' one of the interfaces Word8 .. Word64?  No unit exports
-   them, so the front end records no version stamps for what they
-   declare. *)
+(* Is 'name' one of the interfaces Word8 .. Word64? *)
+
+PROCEDURE HasNoUnit (name: M3ID.T): BOOLEAN;
+(* Is 'name' one of the interfaces Word8 .. Word64 that m3core doesn't
+   yet implement?  Nothing exports those, so the front end records no
+   version stamps for what they declare and links to no unit. *)
 
 PROCEDURE Split (t: Type.T;  VAR info: Info): BOOLEAN;
 (* If 't', or the base type of 't' when 't' is a subrange or packed,
@@ -53,6 +56,9 @@ PROCEDURE OrdStackType (t: Type.T): CG.Type;
 (* The CG stack type of a value of the integer type 't': the stack type
    of a fixed type, else Longint for subtypes of LONGINT, else Integer
    (INTEGER subranges and enumerations). *)
+
+PROCEDURE Fills (READONLY info: Info): BOOLEAN;
+(* Does the type fill its stack type, so that no masking is needed? *)
 
 PROCEDURE Mask (READONLY info: Info);
 (* Reduce the value on top of the CG stack, of type StackType (info),

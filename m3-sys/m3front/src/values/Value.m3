@@ -213,7 +213,7 @@ PROCEDURE Declare (t: T) =
     t.declared := TRUE;
     GetVSFlags (t, f);
     IF t.declare () AND (Host.versionStamps) AND (f.need_vs)
-      AND NOT FixedType.IsInterface (Scope.ModuleName (t)) (* This fork *)
+      AND NOT FixedType.HasNoUnit (Scope.ModuleName (t)) (* This fork *)
     THEN
       fp := ToFP (t);
       Host.env.note_version_stamp (Scope.ModuleName (t), t.name,
