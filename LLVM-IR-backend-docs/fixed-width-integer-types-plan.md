@@ -943,17 +943,97 @@ a short, marked section that links to it. The LaTeX reference
 (`docs/reference/complete/`) is unchanged: its HTML, PDF and
 PostScript are generated with `latex2html`, which isn't installed
 here, and it is the language definition, which this extension is
-not part of. `Cstdint` and the optional `Word.T` warning are still
-open.
+not part of.
 
-Known limits (from reading, not tested): m3tk's operator checks
-compare TYPECODEs, so they accept
-`Word32.T + Word64.T`, which m3front rejects (m3tk checks less than
-m3front anyway); m3tk takes `LAST (Word64.T)` to be `LAST (LONGINT)`,
-since its values are LONGINTs, and doesn't fold calls on `WordN`
-procedures (`sem/M3CWordProcs.m3` knows only `Word`). `sharedobjgen`,
-also built on m3tk, should now get past the import cycle but has no
-marshaling for the types.
+`Cstdint` (2026-11-19): left as it is, not re-aliased. Its types are
+subranges of INTEGER and LONGINT (`uint32_t = Ctypes.unsigned =
+[16_0 .. 16_ffffffff]`), so they mix with INTEGER freely. The fixed-width
+types are not assignable to or from INTEGER. Re-aliasing would make
+every such use an error, and the uses are widespread. `Utypes` and
+`WinBaseTypes` re-export the `Cstdint` types, and through them
+`WinDef.DWORD` and the other Win32 types. About 90 files name
+them. A typical use is `libm3/src/os/WIN32/FSWin32.m3`,
+`nSid: WinDef.DWORD := BYTESIZE(sid)`, which re-aliasing would turn
+into an error. An optional switch would split those interfaces into two
+incompatible versions, so there is none. New bindings that want wrapping
+or checked fixed-width types can name `WordN.T` and `SignedN.T`
+directly. (This has not been tested against C code.)
+
+The optional `Word.T` warning (2026-11-19, item 5 of "`Word.T` versus
+`WordN.T`"): `m3front/src/exprs/WordWarn.m3`, called from
+`CompareExpr`, `DivExpr` and `ModExpr` when the operation is INTEGER
+or LONGINT. It follows the operand's type through `NamedType`s to a
+value whose global name is `Word.T` or `Long.T`, and reports at level
+0, which only `cm3 -w0` shows: "'<' on Word.T is signed; Word.LT is
+unsigned". `Expr.TypeOf` keeps the declared name only for variables and
+formals (including `FROM Word IMPORT T`). Checking replaces the others
+with the stripped type `Type.Check` returns, so the front end now keeps
+the declared type beside it, in a field `wwDeclared` added to the type
+and value objects (`TypeRep`, `ValueRep`). That field is set by
+`Tipe.Check` (`TYPE U = Word.T`), `Field.TypeCheck`, `ArrayType`,
+`OpenArrayType`, `RefType`, `PackedType` (`BITS n FOR Word.T`), and
+`WithStmt` (through `WordWarn.NoteWith`). `WordWarn.Declared` finds it
+through `QualifyExpr.Split`, `NamedExpr.Split` and new `Split`
+procedures in `SubscriptExpr` and `DerefExpr`. A call's result comes
+from `ProcType.Result`, which `ProcType.Check` doesn't strip. A name
+seen through `EXPORTS` is a proxy value, so `Interface` follows
+`Value.Base` first. Code generation doesn't read `wwDeclared`.
+
+Checked with the driver built in place (`cm3 -override -DROOT=...`, not
+installed). A test of 19 operands warns on exactly those 19:
+- each kind above, including object fields, a method result, open
+  array elements, a field through an implicit `^`, and an alias in an
+  exported or an imported interface;
+- `Long.T`, `DIV` and `MOD`;
+- nested `WITH`.
+
+It gives no message for:
+- INTEGER fields, elements and results;
+- `w + 1 < 3` (an INTEGER);
+- `=`, `Word.LT` or `Word32.T`.
+
+`-w0` on libm3 gives 14 messages and on m3core 1 (Fmt, ConvertPacking,
+PackingTypeCode, DragonInt). None is a bug: the values are known to be
+nonnegative, or, in `PackingTypeCode.Compare`, any consistent order
+will do. With the default `-w1` both build with no messages.
+
+Known limits of m3tk, tested with stubgen on 2026-11-19 (bugs 31
+and 32 were found and fixed then):
+
+- Fixed: m3tk gave arithmetic on the fixed types no type, so stubgen
+  crashed on a bound such as `LAST (Word32.T) - VAL (10, Word32.T)`
+  (bug 31). Arithmetic now has the operands' type, `DIV` of LONGINTs
+  or fixed types is no longer typed INTEGER, and mixed operands
+  (`Word32.T + Word64.T`) are rejected, as m3front rejects them.
+- Fixed: constant folding now wraps `WordN` results (N < 64) and
+  reports overflow for `SignedN`, so
+  `VAL (200, Word8.T) + VAL (100, Word8.T)` is 44, as in m3front
+  (checked in the stubs' bounds, and with `BITS 6 FOR` and `BITS 5
+  FOR` a subrange up to it).
+- Not fixed: m3tk's values are LONGINTs, so `LAST (Word64.T)` is
+  `LAST (LONGINT)`. A `Word64.T` subrange up to `LAST (Word64.T)` gets
+  the bounds `0L .. 9223372036854775807L` in the stubs, which reject
+  larger values. A constant `Word64.T` expression outside that range
+  can't be evaluated. Fixing it would take unsigned 64-bit values in
+  m3tk's back end.
+- Not fixed: m3tk doesn't fold calls on the `WordN` procedures
+  (`sem/M3CWordProcs.m3` knows only `Word`; it doesn't fold `Long`
+  either).
+
+`sharedobjgen` (2026-11-19), also built on m3tk, gets stubgen's
+`Type.Fixed` (`AstToType`, `Type`, `Value`, `CodeForType`), and
+`SOxModuleSOCode.MarshalTypedVal` marshals the fixed types and their
+subranges as LONGINTs through `SharedObjStubLib` (update-method
+arguments) or `PickleStubs` (the object's fields). LONGINT itself
+didn't work in `sharedobjgen` either: bug 33. Only the SO module
+imports the fixed base types' interfaces (`WordN`), since only its
+marshaling code names them; the callback interfaces don't. Tested by
+`m3-comm/sharedobj/tests/fixedwidth` with all eight types, LONGINT, a
+LONGINT subrange and subranges of `Word32.T` and `Word64.T`: an
+update method in one process, pickling the object, and update methods
+in both directions between a sequencer and a replica in two processes
+over TCP. `m3-obliq/obliqrt`, the only shared object in the tree,
+regenerates byte-identical stubs apart from the date line.
 
 ## Open questions
 

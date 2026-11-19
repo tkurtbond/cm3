@@ -11,8 +11,8 @@ is in upstream cm3 too, so the fix may be worth offering there. Where a
 claim comes from reading code rather than from a test, the entry says
 so.
 
-Bugs 1 to 10, 12, 14, 24, 25 and 27 to 29 are fixed; 23 turned out not to be a bug; the
-others are open.
+Bugs 1 to 10, 12, 14, 24 to 29 and 31 to 33 are fixed; 23 turned out
+not to be a bug; the others are open.
 
 ## Bug 1: C back end: set and word operations give wrong results
 
@@ -533,3 +533,87 @@ every back end.
   without it, or when only `r.b` is used, the program builds.
 - **Detail (not investigated):** the record seems to get a 64-bit
   alignment when it has a packed field, less than EXTENDED's 128.
+
+## Bug 31: stubgen crashes on arithmetic in a bound of a fixed-width subrange
+
+- **Where:** this fork, `m3-tools/m3tk/src/sem/M3CExpTypeSpec.m3`
+  (`IRL`) and `sem/M3CTypeCheck.m3` (`Binary`), from the m3tk support
+  for the fixed-width integer types (Phase 6 of
+  [`fixed-width-integer-types-plan.md`](fixed-width-integer-types-plan.md)).
+- **Status:** fixed (marked "This fork" in the source). Found
+  2026-11-19 while testing m3tk's limits with stubgen.
+- **Effect:** a network-object interface with a subrange such as
+  `[LAST (Word32.T) - VAL (10, Word32.T) .. LAST (Word32.T)]` stopped
+  stubgen with "An explicit or implicit NARROW() operation failed",
+  in `AstToType.m3` line 269. Plain `VAL` and `LAST` bounds worked.
+  Separately, m3tk accepted `VAL (1, Word32.T) + VAL (1, Word64.T)`,
+  and folded `WordN` arithmetic without wrapping.
+- **Cause:** `IRL`, which gives `+`, `-`, `*`, `MOD` and unary `-`
+  their result type, had no case for `Fixed_type`, so the result had
+  no type and its folded value wasn't the LONGINT value stubgen
+  expects. `DIV` was always typed INTEGER (wrong for LONGINT too).
+  `Binary` compared only the operands' TYPECODEs, which are the same
+  for every fixed type.
+- **Fix:** `IRL` returns the fixed type; `DIV` takes its type from
+  its operands; `Binary` requires both operands of the same fixed
+  type (`M3CFixedType.Same`); and `M3CExpValue` brings a folded
+  result back into its type (`FixFixed`): `WordN` (N < 64) wraps,
+  `SignedN` out of range is "expression overflow", and a `Word64.T`
+  outside `0 .. LAST (LONGINT)`, which m3tk can't represent, is
+  "expression cannot be evaluated".
+- **Tested** with stubgen on AMD64_LINUX: the bound above and its
+  `Word64.T` version; `DIV` in a bound; the mixed sum (now "type error
+  in arguments to binary operator"); `VAL (100, Signed8.T) +
+  VAL (100, Signed8.T)` (overflow); `VAL (0, Word64.T) - VAL (1,
+  Word64.T)` (can't be evaluated); `VAL (200, Word8.T) + VAL (100,
+  Word8.T)` and `-VAL (100, Word8.T)`, whose bounds in the stubs are
+  44 and 156. `m3-comm/netobj/tests/fixedwidth` now passes an
+  arithmetic bound and a wrapped one over the wire, and checks that
+  45 is rejected for `[0 .. 200 + 100]`. The stubs of obliqrt,
+  obliqparse, pkgobj and zeus still generate.
+
+## Bug 32: stubgen leaves out the import for `BITS n FOR` a fixed-width type
+
+- **Where:** this fork, `m3-comm/stubgen/src/CodeForType.m3`
+  (`ImportFromType`).
+- **Status:** fixed (marked "This fork" in the source). Found
+  2026-11-19 with bug 31.
+- **Effect:** for a named `BITS 8 FOR Word8.T`, or `BITS n FOR` a
+  subrange of a fixed type, the stubs use `VAL (..., Word8.T)` but
+  don't import `Word8`, so they fail with "undefined (Word8)".
+- **Cause:** `ImportFromType` added the fixed type's interface for a
+  named subrange, but returned early for any other named type,
+  including a packed one.
+- **Fix:** a named `Packed` type whose base is a fixed type, or a
+  subrange of one, imports the fixed type's interface too.
+- **Tested:** `m3-comm/netobj/tests/fixedwidth` passes a
+  `BITS 8 FOR Word8.T` and a `BITS 6 FOR` a subrange of `Word8.T`.
+
+## Bug 33: `sharedobjgen` emits `SharedObjStubLib.InLongint` and `OutLongint`, which don't exist
+
+- **Where:** upstream, `m3-comm/sharedobjgen/src/SOxModuleSOCode.m3`
+  (`MarshalTypedVal`, `SubRange`), `m3-comm/sharedobj/src/SharedObjStubLib.i3`
+  and `m3-comm/events/src/EventStubLib.i3`.
+- **Status:** fixed (marked "This fork" in the source). Found
+  2026-11-19 while adding the fixed-width types to `sharedobjgen`; the
+  same bug as bug 28, in `stubgen`'s sibling.
+- **Effect** (from reading; the unfixed generator wasn't run): an
+  update method with a LONGINT argument gets stubs that call
+  `SharedObjStubLib.InLongint` and `OutLongint`, which neither
+  `SharedObjStubLib` nor `EventStubLib`, under it, declared. A LONGINT
+  subrange's bounds were written without the `L` suffix, so they were
+  INTEGER literals where LONGINTs are needed. Fields of a shared
+  object are pickled through `PickleStubs`, which has `InLongint` and
+  `OutLongint`, so a plain LONGINT field was fine, but not a LONGINT
+  subrange field.
+- **Fix:** `EventStubLib` has `OutLongint` and `InLongint`, written
+  like its `OutInteger` and `InInteger` (and `StubLib`'s, bug 28):
+  8-byte aligned, native byte order, bytes reversed for a sender of
+  the other byte order, and a range check that raises `Event.Error`.
+  `SharedObjStubLib` wraps them as it wraps the others, turning
+  `Event.Error` into `SharedObj.Error`. `sharedobjgen` writes LONGINT
+  literals for the bounds, and `FIRST(LONGINT)`.
+- **Tested:** `m3-comm/sharedobj/tests/fixedwidth` passes a LONGINT
+  (`FIRST(LONGINT) + 1L`, `7L`) and a `[-5L .. 5L]` (both ends) as
+  update-method arguments between two processes, and as fields
+  through a pickle. The byte-swapping path isn't tested.

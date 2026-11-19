@@ -197,6 +197,21 @@ Each `WordN` interface has the same procedures as `Word`, so code
 written as `Word.LT (a, b)` keeps its meaning when `a` and `b` become
 `Word32.T`s and `Word.LT` becomes `Word32.LT`.
 
+`cm3 -w0` points out the signed operators on `Word.T` and `Long.T`. It
+reports `<`, `<=`, `>`, `>=`, `DIV` and `MOD` with an operand declared
+as `Word.T` or `Long.T`, as in
+
+```
+"../src/Main.m3", line 8: info: '<' on Word.T is signed; Word.LT is unsigned
+```
+
+Signed use is legal, so this is an informational message, and only
+`-w0` shows it (the default is `-w1`). The operand can be a variable,
+a parameter, a record or object field, an array element, a REF's
+referent, a procedure or method result, or a `WITH` name bound to any
+of these, and its type can be `Word.T`, a name for it
+(`TYPE Hash = Word.T`) or `BITS n FOR Word.T`.
+
 ## The interfaces
 
 `Word8` .. `Word64` (`m3-libs/m3core/src/word/GenWordN.ig`):
@@ -223,11 +238,27 @@ written as `Word.LT (a, b)` keeps its meaning when `a` and `b` become
   Tests: `m3-comm/netobj/tests/fixedwidth`, run with
   `m3-comm/netobj/tests/run-netobj-tests.sh WORKDIR`.
 - **`m3tk`**, the front end of `stubgen` and other tools, knows the
-  types but checks less than the compiler. From reading its code (not
-  tested), it accepts `Word32.T + Word64.T`, takes `LAST (Word64.T)` to
-  be `LAST (LONGINT)`, and doesn't fold calls on the `WordN`
-  procedures.
-- **`sharedobjgen`** has no marshaling for the types.
+  types. It rejects mixed operands such as `Word32.T + Word64.T`, and
+  folds constant expressions as the compiler does: `WordN` results
+  wrap, and a `SignedN` result out of range is an error. Its limits,
+  tested with `stubgen`:
+  - Its values are LONGINTs, so it takes `LAST (Word64.T)` to be
+    `LAST (LONGINT)`. A network-object argument of type
+    `[VAL (0, Word64.T) .. LAST (Word64.T)]` gets the bounds
+    `0 .. 2^63 - 1` in the stubs, so values of `2^63` and above are
+    rejected (`Word64.T` itself has no such limit). A constant
+    `Word64.T` expression whose value is outside `0 .. 2^63 - 1` is
+    the error "expression cannot be evaluated".
+  - It doesn't fold calls on the `WordN` procedures (nor on `Long`'s),
+    so `Word32.And (...)` in a subrange bound is "expression is not
+    constant". Use the operators, or a literal.
+- **Shared objects**: `sharedobjgen` accepts the types, and subranges
+  of them, as arguments of update methods and as fields of a shared
+  object, marshaled as LONGINTs as `stubgen` does. Test:
+  `m3-comm/sharedobj/tests/fixedwidth`, run with
+  `m3-comm/netobj/tests/run-netobj-tests.sh WORKDIR
+  sharedobj/tests/fixedwidth` (with no test named, the script runs it
+  along with the network-object tests).
 
 ## Notes
 
