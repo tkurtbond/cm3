@@ -1998,8 +1998,13 @@ PROCEDURE cvt_float (u: U; t: AType; r: RType) =
   END cvt_float;
 
 PROCEDURE DivMod (u: U; t: IType; a, b: Sign; is_div: BOOLEAN) =
+  (* sdiv and srem of FIRST (T) by -1 are undefined in LLVM, and trap
+     on x86 (bug 26). Unless an operand is known to be non-negative,
+     divide by 1 instead when the divisor is -1: srem then gives the
+     right MOD, 0, and the DIV is -x, which wraps as "-" does. *)
   VAR y := PopAs (u, t);  x := PopAs (u, t);  lt := LType (t);
-      q, r, c1, c2, adj: TEXT;
+      q, r, c1, c2, adj, res, m1: TEXT;
+      guard := a # Sign.Positive AND b # Sign.Positive;
   BEGIN
     IF NOT IsSigned (t) THEN
       IF is_div
@@ -2008,29 +2013,39 @@ PROCEDURE DivMod (u: U; t: IType; a, b: Sign; is_div: BOOLEAN) =
       END;
       RETURN;
     END;
+    IF guard THEN
+      m1 := Instr (u, "icmp eq " & lt & " " & y & ", -1");
+      y := Instr (u, "select i1 " & m1 & ", " & lt & " 1, " & lt & " " & y);
+    END;
     IF a = b AND a # Sign.Unknown THEN
       IF is_div
-        THEN Push (u, t, Instr (u, "sdiv " & lt & " " & x & ", " & y));
-        ELSE Push (u, t, Instr (u, "srem " & lt & " " & x & ", " & y));
+        THEN res := Instr (u, "sdiv " & lt & " " & x & ", " & y);
+        ELSE res := Instr (u, "srem " & lt & " " & x & ", " & y);
       END;
-      RETURN;
-    END;
-    (* Round toward minus infinity. *)
-    q := Instr (u, "sdiv " & lt & " " & x & ", " & y);
-    r := Instr (u, "srem " & lt & " " & x & ", " & y);
-    c1 := Instr (u, "icmp ne " & lt & " " & r & ", 0");
-    c2 := Instr (u, "xor " & lt & " " & r & ", " & y);
-    c2 := Instr (u, "icmp slt " & lt & " " & c2 & ", 0");
-    adj := Instr (u, "and i1 " & c1 & ", " & c2);
-    IF is_div THEN
-      c1 := Instr (u, "sub " & lt & " " & q & ", 1");
-      Push (u, t, Instr (u, "select i1 " & adj & ", " & lt & " " & c1
-                              & ", " & lt & " " & q));
     ELSE
-      c1 := Instr (u, "add " & lt & " " & r & ", " & y);
-      Push (u, t, Instr (u, "select i1 " & adj & ", " & lt & " " & c1
-                              & ", " & lt & " " & r));
+      (* Round toward minus infinity. *)
+      q := Instr (u, "sdiv " & lt & " " & x & ", " & y);
+      r := Instr (u, "srem " & lt & " " & x & ", " & y);
+      c1 := Instr (u, "icmp ne " & lt & " " & r & ", 0");
+      c2 := Instr (u, "xor " & lt & " " & r & ", " & y);
+      c2 := Instr (u, "icmp slt " & lt & " " & c2 & ", 0");
+      adj := Instr (u, "and i1 " & c1 & ", " & c2);
+      IF is_div THEN
+        c1 := Instr (u, "sub " & lt & " " & q & ", 1");
+        res := Instr (u, "select i1 " & adj & ", " & lt & " " & c1
+                           & ", " & lt & " " & q);
+      ELSE
+        c1 := Instr (u, "add " & lt & " " & r & ", " & y);
+        res := Instr (u, "select i1 " & adj & ", " & lt & " " & c1
+                           & ", " & lt & " " & r);
+      END;
     END;
+    IF guard AND is_div THEN
+      c1 := Instr (u, "sub " & lt & " 0, " & x);
+      res := Instr (u, "select i1 " & m1 & ", " & lt & " " & c1
+                         & ", " & lt & " " & res);
+    END;
+    Push (u, t, res);
   END DivMod;
 
 PROCEDURE div (u: U; t: IType; a, b: Sign) =

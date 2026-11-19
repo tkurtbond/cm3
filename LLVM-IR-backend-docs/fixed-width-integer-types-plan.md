@@ -712,7 +712,8 @@ first:
   0. This is an upstream bug for INTEGER (bug 26 in
   [`BUGS.md`](BUGS.md)), outside this phase, but
   `Signed64` must not inherit it: its `DIV` and `MOD` test for a
-  divisor of -1 before dividing.
+  divisor of -1 before dividing. (Bug 26 was fixed in both back
+  ends on 2026-11-19; test `p307`.)
 
 How it would be built:
 

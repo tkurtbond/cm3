@@ -358,13 +358,13 @@ every back end.
 
 - **Where:** upstream, `m3-sys/m3back/src/M3C.m3` (`m3_div_T`,
   `m3_mod_T`); and this fork's `m3-sys/m3llvmir/src/M3LLVMIR.m3`
-  (`DivMod`), which copies the behavior.
-- **Status:** open. Found while designing Phase 5 of
+  (`DivMod`), which copied the behavior.
+- **Status:** fixed (2026-11-19). Found while designing Phase 5 of
   [`fixed-width-integer-types-plan.md`](fixed-width-integer-types-plan.md),
   2026-11-18. Checked with a small program on AMD64_LINUX: both
-  expressions, on variables, kill the program with SIGFPE under the C
-  back end and under `LlvmIR`.
-- **Detail:** both back ends divide with the machine's signed division
+  expressions, on variables, killed the program with SIGFPE under the
+  C back end and under `LlvmIR`.
+- **Detail:** both back ends divided with the machine's signed division
   (C's `/` and `%`, LLVM's `sdiv` and `srem`). For `FIRST (INTEGER)`
   and -1 that is undefined in C and in LLVM, and x86's `idiv` traps.
   The same holds for LONGINT on 32-bit targets.
@@ -372,10 +372,19 @@ every back end.
   error. `FIRST (INTEGER) DIV -1` overflows, and Modula-3 leaves
   overflow checking to the implementation, but the result should
   at least not be a signal that isn't mapped to a Modula-3 error.
-- **Fix (not done):** test for a divisor of -1 before dividing: `MOD`
-  gives 0, `DIV` negates (wrapping, as `-` does since bug 2). The
-  checked `Signed64` operations of Phase 5 do this themselves, so they
-  don't depend on this fix.
+- **Fix:** the back ends test for a divisor of -1 unless an operand is
+  known to be non-negative: `MOD` gives 0, and `DIV` negates, wrapping
+  as `-` does since bug 2, so `FIRST (INTEGER) DIV -1` is
+  `FIRST (INTEGER)`. In the C back end, `m3_div_T` and `m3_mod_T`
+  test `b == -1` first, and two operands both known to be negative
+  now go through them too instead of plain `/` and `%`
+  (`DivModIsPlain`). In `LlvmIR`, `DivMod` divides by 1 instead of -1
+  (a `select`) and then picks `-x` for `DIV`; with a constant divisor,
+  `opt -O2` removes the test (checked). Test: `p307` in `m3-sys/m3tests`, which
+  covers every combination of signs and agrees with Python's floor
+  division under both back ends, with and without `-O`. The checked
+  `Signed64` operations of Phase 5 already handled this case
+  themselves. Worth offering upstream.
 
 ## Bug 27: Pickles can't convert 64-bit subrange fields between byte orders and word sizes
 

@@ -45,9 +45,12 @@
 ; CHECK:      select i1 {{%t\.[0-9]+}}, i64 0,
 
 ; DIV: truncating sdiv, minus 1 when the remainder is nonzero and its
-; sign differs from the divisor's.
+; sign differs from the divisor's. A divisor of -1 is replaced by 1 and
+; the result by -a, since sdiv of FIRST (INTEGER) by -1 traps (bug 26).
 ; CHECK-LABEL: define i64 @Ops__Div(
-; CHECK:      [[Q:%t\.[0-9]+]] = sdiv i64 [[A:%t\.[0-9]+]], [[B:%t\.[0-9]+]]
+; CHECK:      [[M1:%t\.[0-9]+]] = icmp eq i64 [[B0:%t\.[0-9]+]], -1
+; CHECK:      [[B:%t\.[0-9]+]] = select i1 [[M1]], i64 1, i64 [[B0]]
+; CHECK:      [[Q:%t\.[0-9]+]] = sdiv i64 [[A:%t\.[0-9]+]], [[B]]
 ; CHECK:      [[R:%t\.[0-9]+]] = srem i64 [[A]], [[B]]
 ; CHECK:      [[NZ:%t\.[0-9]+]] = icmp ne i64 [[R]], 0
 ; CHECK:      [[X:%t\.[0-9]+]] = xor i64 [[R]], [[B]]
@@ -55,11 +58,16 @@
 ; CHECK:      [[ADJ:%t\.[0-9]+]] = and i1 [[NZ]], [[NEG]]
 ; CHECK:      [[QM1:%t\.[0-9]+]] = sub i64 [[Q]], 1
 ; CHECK:      [[RES:%t\.[0-9]+]] = select i1 [[ADJ]], i64 [[QM1]], i64 [[Q]]
-; CHECK:      ret i64 [[RES]]
+; CHECK:      [[NA:%t\.[0-9]+]] = sub i64 0, [[A]]
+; CHECK:      [[RES2:%t\.[0-9]+]] = select i1 [[M1]], i64 [[NA]], i64 [[RES]]
+; CHECK:      ret i64 [[RES2]]
 
-; MOD: srem, plus the divisor under the same condition.
+; MOD: srem, plus the divisor under the same condition; a divisor of
+; -1 is replaced by 1, which gives 0.
 ; CHECK-LABEL: define i64 @Ops__Mod(
-; CHECK:      [[R:%t\.[0-9]+]] = srem i64 [[A:%t\.[0-9]+]], [[B:%t\.[0-9]+]]
+; CHECK:      [[M1:%t\.[0-9]+]] = icmp eq i64 [[B0:%t\.[0-9]+]], -1
+; CHECK:      [[B:%t\.[0-9]+]] = select i1 [[M1]], i64 1, i64 [[B0]]
+; CHECK:      [[R:%t\.[0-9]+]] = srem i64 [[A:%t\.[0-9]+]], [[B]]
 ; CHECK:      [[NZ:%t\.[0-9]+]] = icmp ne i64 [[R]], 0
 ; CHECK:      [[X:%t\.[0-9]+]] = xor i64 [[R]], [[B]]
 ; CHECK:      [[NEG:%t\.[0-9]+]] = icmp slt i64 [[X]], 0
