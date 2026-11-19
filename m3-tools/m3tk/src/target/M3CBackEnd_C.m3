@@ -178,10 +178,12 @@ PROCEDURE MayBeExactBitSizeAndAlign(ts: M3AST_AS.TYPE_SPEC;
     | M3AST_AS.Subrange_type(t) =>
         TYPECASE t.sm_base_type_spec OF
         | M3AST_AS.Longint_type =>
-          WITH range = t.as_range,
-               s1 = NARROW(range.as_exp1.sm_exp_value, Longint_value).sm_value,
-               s2 = NARROW(range.as_exp1.sm_exp_value, Longint_value).sm_value
-           DO
+          (* Copies of the bounds, not aliases: "s2 := 0L" below must
+             not change the subrange's upper bound. *)
+          VAR range := t.as_range;
+              s1 := NARROW(range.as_exp1.sm_exp_value, Longint_value).sm_value;
+              s2 := NARROW(range.as_exp2.sm_exp_value, Longint_value).sm_value;
+          BEGIN
             IF s1 <= s2 THEN
               IF s1 >= 0L THEN
                 size := BitsForLongint(s2, exact);
@@ -195,10 +197,11 @@ PROCEDURE MayBeExactBitSizeAndAlign(ts: M3AST_AS.TYPE_SPEC;
             align := OrdAlign(size);
           END;
         ELSE
-          WITH range = t.as_range,
-               s1 = NARROW(range.as_exp1.sm_exp_value, Integer_value).sm_value,
-               s2 = NARROW(range.as_exp2.sm_exp_value, Integer_value).sm_value
-           DO
+          (* Copies, as above. *)
+          VAR range := t.as_range;
+              s1 := NARROW(range.as_exp1.sm_exp_value, Integer_value).sm_value;
+              s2 := NARROW(range.as_exp2.sm_exp_value, Integer_value).sm_value;
+          BEGIN
             IF s1 <= s2 THEN
               IF s1 >= 0 THEN
                 size := BitsForInt(s2, exact);
