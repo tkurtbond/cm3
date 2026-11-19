@@ -31,3 +31,16 @@ if defined("M3_FIXED_WIDTH_INTEGERS")
     implementation("Word" & n)
   end
 end
+
+% This fork: the same for the signed fixed-width integer interfaces
+% Signed8 .. Signed64 (see GenSignedN.ig), which a compiler has only
+% since Phase 5; it then defines M3_FIXED_WIDTH_SIGNED.
+if defined("M3_FIXED_WIDTH_SIGNED")
+  Generic_interface("GenSignedN")
+  generic_implementation("GenSignedN")
+  foreach n in [ "8", "16", "32", "64" ]
+    Interface("Signed" & n & "Rep")
+    Interface("Signed" & n)
+    implementation("Signed" & n)
+  end
+end

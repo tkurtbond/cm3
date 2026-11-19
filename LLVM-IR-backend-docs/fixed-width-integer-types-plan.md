@@ -778,8 +778,11 @@ How it would be built:
   `Wrap`, `Brand`, `Equal`, `Hash` and `Compare` (decision 1).
   `Wrap` sign-extends the low N bits, so `Signed32.Wrap (w32)`
   reinterprets. In `m3core`: `GenSignedN.ig/.mg`, `SignedNRep.i3`,
-  `SignedN.i3/.m3`, built under `M3_FIXED_WIDTH_INTEGERS` like the
-  `WordN` units. `Builder.ImportsBuiltinFixed` and
+  `SignedN.i3/.m3`, built under a guard like the `WordN` units.
+  (Built: the guard is a new quake variable,
+  `M3_FIXED_WIDTH_SIGNED`, not `M3_FIXED_WIDTH_INTEGERS`, because a
+  Phase 3 or 4 compiler defines the latter but has no builtin
+  `SignedN`.) `Builder.ImportsBuiltinFixed` and
   `FixedType.IsInterface` extend to the new names.
 - **Tests.**
   - `p303`: arithmetic at each width up to the edges, folding,
@@ -801,6 +804,35 @@ Order of work: the type and its operators (as Phase 2), with `p303`,
 `p304` and `e043`; then the interfaces and `m3core` units (as Phase
 3), with `p305`; then a concierge upgrade of a copy of the install,
 the full m3tests run, and the plan's status.
+
+Status (2026-11-18): done. The type and its operators are 2aa0c4f1b,
+the interfaces and units come after it. Where the build departs from
+the design above:
+
+- **Interfaces reuse `FixedWord`.** `FixedType.Mask` sign-extends a
+  signed type (`Extract_mn`) and `FixedType.Wrap` folds with
+  `TInt.Extend`, so `FixedWord`'s `Wrap`, `Equal`, `Hash` and
+  `Compare` work unchanged for `SignedN`. `FixedWord.Define` gives
+  a signed type only those and `Brand` (`DefineWrap`,
+  `DefineCommon`), in `GenSignedN.ig`'s order. `FixedType.hasUnit`
+  is now `TRUE` for all eight types, so `HasNoUnit` is always
+  `FALSE`. It is kept for a future type that starts without a
+  unit. `Builder.ImportsBuiltinFixed` skips the `SignedNRep` to
+  `SignedN` edge as it does for `WordN`.
+- **Bootstrapping.** As in Phase 3, but under the new guard
+  `M3_FIXED_WIDTH_SIGNED` (see Interfaces above). Checked by
+  upgrading a copy of the installed Phase 3 compiler (970c255eb)
+  with `concierge.py upgrade`. The first pass, built by the old
+  compiler, compiled `Word64.m3` but no `SignedN` unit, and the
+  next two passes compiled both. The copy's default backend stayed
+  `LlvmIR`.
+- **Tests.** `p303`, `p304`, `p305`, `e043`, `r011` and `r012` as
+  listed above. `p305`'s expected output comes from a Python model,
+  like `p300`'s. With the Phase 3 and 4 tests (`p299` to `p302`,
+  `r010`), they pass with C and `LlvmIR`, each at `-O0` and `-O`.
+  The full m3tests run with `LlvmIR` on the upgraded copy passes
+  311 of 312. The one failure, `p047`, fails with every back end
+  (bug 16).
 
 ### Phase 6: The rest of the system
 

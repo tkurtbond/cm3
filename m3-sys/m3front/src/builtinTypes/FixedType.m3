@@ -33,8 +33,7 @@ VAR
   names : ARRAY [0..7] OF M3ID.T;
 
 CONST
-  hasUnit = ARRAY [0..7] OF BOOLEAN { TRUE, TRUE, TRUE, TRUE,
-                                      FALSE, FALSE, FALSE, FALSE };
+  hasUnit = ARRAY [0..7] OF BOOLEAN { TRUE, .. };
   (* which of all[] m3core implements, in src/word *)
 
   Overflow = CG.RuntimeError.IntegerOverflow;
@@ -81,7 +80,7 @@ PROCEDURE InitializeInterfaces () =
             b := TInt.FromInt (p.bits, size);  <*ASSERT b*>
             EVAL Constant.Declare ("Size", IntegerExpr.New (Int.T, size),
                                    FALSE);
-            IF NOT p.signed THEN FixedWord.Define (p, p.name) END;
+            FixedWord.Define (p, p.name);
           Scope.Pop (zz);
         Scanner.Pop ();
       END;

@@ -7,7 +7,11 @@
    GenWordN.ig; the orders must match, or the version stamps won't).
    Calls compile inline, operating in the stack type of the fixed
    type and masking the result to its width.  m3core's WordN modules
-   wrap them, so they can also be used as procedure values. *)
+   wrap them, so they can also be used as procedure values.
+
+   Signed8 .. Signed64 offer only Wrap, Brand, Equal, Hash and Compare
+   (in the order of m3core's GenSignedN.ig).  Their Wrap sign-extends
+   the low N bits. *)
 
 INTERFACE FixedWord;
 

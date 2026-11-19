@@ -31,7 +31,8 @@ PROCEDURE Initialize ();
 
 PROCEDURE InitializeInterfaces ();
 (* Create the builtin interfaces Word8 .. Word64 and Signed8 ..
-   Signed64, each exporting T and Size.  Called from M3Front. *)
+   Signed64, each exporting T, Size and the procedures and constants
+   of FixedWord.Define.  Called from M3Front. *)
 
 PROCEDURE IsInterface (name: M3ID.T): BOOLEAN;
 (* Is 'name' one of the interfaces Word8 .. Signed64? *)
@@ -39,7 +40,9 @@ PROCEDURE IsInterface (name: M3ID.T): BOOLEAN;
 PROCEDURE HasNoUnit (name: M3ID.T): BOOLEAN;
 (* Is 'name' one of the interfaces Word8 .. Signed64 that m3core doesn't
    yet implement?  Nothing exports those, so the front end records no
-   version stamps for what they declare and links to no unit. *)
+   version stamps for what they declare and links to no unit.  (Since
+   Phase 5 m3core implements all eight, so this is always FALSE; it is
+   kept for a future builtin interface without a unit.) *)
 
 PROCEDURE Split (t: Type.T;  VAR info: Info): BOOLEAN;
 (* If 't', or the base type of 't' when 't' is a subrange or packed,

@@ -545,6 +545,7 @@ readonly proc p_test (group, uid, comment) is
   run_test ("_ptests", group, uid, comment, "run", cm3opts, runopts, "probeForTargetSpecificFiles")
 end
 
+p_test ("p3", "p305", "procedures of the builtin interfaces Signed8 .. Signed64")
 p_test ("p3", "p304", "SignedN overflow raises IntegerOverflow; just inside the range does not")
 p_test ("p3", "p303", "signed fixed-width integer types Signed8.T .. Signed64.T")
 p_test ("p3", "p302", "Wrap round trips and x + 1 > x at LAST for Word8 .. Word64")
@@ -919,6 +920,8 @@ readonly proc r_test (group, uid, comment) is
   run_test ("_rtests", group, uid, comment, "run", cm3opts, runopts, "probeForTargetSpecificFiles")
 end
 
+r_test ("r0", "r012", "an uncaught Signed8 * overflow")
+r_test ("r0", "r011", "an uncaught Signed64 + overflow")
 r_test ("r0", "r010", "VAL of a Word32.T above 255 to Word8.T")
 r_test ("r0", "r009", "VAL of a negative INTEGER to Word32.T")
 r_test ("r0", "r008", "VAL of a Word64.T above LAST (INTEGER) to INTEGER")

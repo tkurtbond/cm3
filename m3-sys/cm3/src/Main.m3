@@ -85,6 +85,8 @@ VAR defs: TextTextTbl.T;
            so that an older compiler (a bootstrap, say) can still build
            m3core; see m3-libs/m3core/src/word/m3makefile. *)
         Quake.Define(mach, "M3_FIXED_WIDTH_INTEGERS", "TRUE");
+        (* and, since Phase 5, Signed8 .. Signed64 *)
+        Quake.Define(mach, "M3_FIXED_WIDTH_SIGNED", "TRUE");
 
         (* define the site configuration *)
         Msg.Verbose ("EVAL (\"", config, "\")");

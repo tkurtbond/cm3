@@ -1,0 +1,11 @@
+The procedures of the builtin interfaces Signed8, Signed16, Signed32
+and Signed64 (this fork; see
+LLVM-IR-backend-docs/fixed-width-integer-types-plan.md, Phase 5):
+Wrap, Brand, Equal, Hash and Compare, through a generic module
+instantiated with each of them.  For each width the same results are
+printed three times: from inline calls, from constants the compiler
+folds, and from procedure values, which call m3core's SignedN
+modules.  Main then checks Wrap from the other integer types,
+including the reinterpretation of a WordN.T.  Every line of output
+should be the same with every backend and at every optimization
+level.

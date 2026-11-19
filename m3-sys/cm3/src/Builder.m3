@@ -2114,20 +2114,27 @@ PROCEDURE Pass0_CheckImports (s: State;  u: M3Unit.T;
   END Pass0_CheckImports;
 
 (* This fork: the front end predefines the interfaces Word8 .. Word64
-   (m3front's FixedType), and m3core's WordN.i3 imports WordNRep.i3,
-   which imports the builtin WordN for its type.  WordNRep's import
-   reads the builtin, so it mustn't make the driver compile or merge
-   m3core's WordN.i3 first: WordN.i3 needs WordNRep's exports. *)
+   and Signed8 .. Signed64 (m3front's FixedType), and m3core's WordN.i3
+   imports WordNRep.i3, which imports the builtin WordN for its type
+   (and the same for SignedN).  WordNRep's import reads the builtin, so
+   it mustn't make the driver compile or merge m3core's WordN.i3 first:
+   WordN.i3 needs WordNRep's exports. *)
 
-VAR fixedNames, repNames := ARRAY [0..3] OF M3ID.T { M3ID.NoID, .. };
+VAR fixedNames, repNames := ARRAY [0..7] OF M3ID.T { M3ID.NoID, .. };
 
 PROCEDURE ImportsBuiltinFixed (importer, name: M3ID.T): BOOLEAN =
-  CONST Widths = ARRAY [0..3] OF TEXT { "8", "16", "32", "64" };
+  CONST
+    Widths = ARRAY [0..3] OF TEXT { "8", "16", "32", "64" };
+    Families = ARRAY [0..1] OF TEXT { "Word", "Signed" };
+  VAR n: TEXT;
   BEGIN
     IF fixedNames[0] = M3ID.NoID THEN
-      FOR i := FIRST (Widths) TO LAST (Widths) DO
-        fixedNames[i] := M3ID.Add ("Word" & Widths[i]);
-        repNames[i]   := M3ID.Add ("Word" & Widths[i] & "Rep");
+      FOR f := FIRST (Families) TO LAST (Families) DO
+        FOR i := FIRST (Widths) TO LAST (Widths) DO
+          n := Families[f] & Widths[i];
+          fixedNames[4 * f + i] := M3ID.Add (n);
+          repNames[4 * f + i]   := M3ID.Add (n & "Rep");
+        END;
       END;
     END;
     FOR i := FIRST (fixedNames) TO LAST (fixedNames) DO

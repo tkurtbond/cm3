@@ -1,6 +1,7 @@
 (* See the file COPYRIGHT for a full description. *)
 
-(* This fork: the procedures of Word8 .. Word64.  See FixedWord.i3.
+(* This fork: the procedures of Word8 .. Word64, and the few of
+   Signed8 .. Signed64.  See FixedWord.i3.
 
    One set of methods serves all four widths: each finds the width
    from the signature of the procedure being called (the fixed type
@@ -147,7 +148,8 @@ PROCEDURE FoldCompare (ce: CallExpr.T;  op: CmpOp): Expr.T =
     IF NOT ConstInt (ce.args[0], x) OR NOT ConstInt (ce.args[1], y) THEN
       RETURN NIL;
     END;
-    (* both are values of the fixed type, so non-negative *)
+    (* both are values of the fixed type: in range, so TInt compares
+       them right whether it is signed or not *)
     CASE op OF
     | CmpOp.LT => b := TInt.LT (x, y);
     | CmpOp.LE => b := TInt.LE (x, y);
@@ -649,6 +651,13 @@ PROCEDURE Define (t: Type.T;  name: TEXT) =
     order := SubrangeType.New (TInt.MOne, TInt.One, Int.T, FALSE);
   BEGIN
     <*ASSERT b*>
+    IF info.signed THEN
+      (* WARNING: the order must be that of m3core's GenSignedN.ig, or
+         the version stamps won't match. *)
+      DefineWrap (t);
+      DefineCommon (t, name, order);
+      RETURN;
+    END;
     (* WARNING: as in builtinWord/Module.mg, the order must be that of
        m3core's GenWordN.ig, or the version stamps won't match. *)
     Binary ("Plus",   t, t, CompilePlus,   FoldPlus);
@@ -685,8 +694,7 @@ PROCEDURE Define (t: Type.T;  name: TEXT) =
          Check, CompileInsert, FoldInsert);
 
     (* GenWordN.ig *)
-    Def ("Wrap", ProcType.New (t, F ("x", 0, LInt.T)), 1,
-         CheckWrap, CompileWrap, FoldWrap);
+    DefineWrap (t);
     Def ("FromWord", ProcType.New (t, F ("w", 0, Int.T)), 1,
          Check, CompileWrap, FoldWrap);
     Def ("ToWord", ProcType.New (Int.T, F ("x", 0, t)), 1,
@@ -695,6 +703,21 @@ PROCEDURE Define (t: Type.T;  name: TEXT) =
          Check, CompileWrap, FoldWrap);
     Def ("ToLong", ProcType.New (LInt.T, F ("x", 0, t)), 1,
          Check, CompileToLong, FoldToLong);
+    DefineCommon (t, name, order);
+  END Define;
+
+PROCEDURE DefineWrap (t: Type.T) =
+  (* For SignedN, Mask and FixedType.Wrap sign-extend the low N bits. *)
+  BEGIN
+    Def ("Wrap", ProcType.New (t, F ("x", 0, LInt.T)), 1,
+         CheckWrap, CompileWrap, FoldWrap);
+  END DefineWrap;
+
+PROCEDURE DefineCommon (t: Type.T;  name: TEXT;  order: Type.T) =
+  (* Brand, Equal, Hash and Compare, the same for both families: the
+     compares and Hash work in the stack type, which holds a SignedN
+     sign-extended. *)
+  BEGIN
     EVAL Constant.Declare ("Brand", TextExpr.New8 (M3String.Add (name)),
                            FALSE);
     Def ("Equal", ProcType.New (Bool.T, F ("a", 0, t), F ("b", 1, t)), 2,
@@ -703,7 +726,7 @@ PROCEDURE Define (t: Type.T;  name: TEXT) =
          Check, CompileToWord, FoldToWord);
     Def ("Compare", ProcType.New (order, F ("a", 0, t), F ("b", 1, t)), 2,
          Check, CompileOrder, FoldOrder);
-  END Define;
+  END DefineCommon;
 
 BEGIN
 END FixedWord.

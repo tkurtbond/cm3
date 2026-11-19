@@ -1,0 +1,8 @@
+import ("libm3")
+generic_module ("Exercise")
+foreach n in [ "8", "16", "32", "64" ]
+  module ("Exercise" & n)
+end
+implementation ("Main")
+build_standalone ()
+include ("../../Test.common")
