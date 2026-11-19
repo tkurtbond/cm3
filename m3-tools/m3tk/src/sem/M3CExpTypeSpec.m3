@@ -150,6 +150,13 @@ PROCEDURE IRL(
         ELSE
           RETURN NIL;
         END;
+    | M3AST_AS.Fixed_type =>
+        (* This fork: arithmetic on a fixed-width type has that type. *)
+        IF intok THEN
+          RETURN ts;
+        ELSE
+          RETURN NIL;
+        END;
     ELSE
       RETURN NIL;
     END;
@@ -569,7 +576,10 @@ PROCEDURE InternalSet(
             M3AST_AS.In, M3AST_AS.And, M3AST_AS.Or =>
               ts := M3CStdTypes.Boolean();
           | M3AST_AS.Div =>
-              ts := M3CStdTypes.Integer();
+              (* This fork: DIV has the type of its operands (LONGINT or
+                 a fixed-width type), not always INTEGER. *)
+              ts := IRL(SetComponent(binary.as_exp1, map));
+              IF ts = NIL THEN ts := M3CStdTypes.Integer() END;
           | M3AST_AS.Textcat =>
               ts := M3CStdTypes.Text();
 

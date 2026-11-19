@@ -310,6 +310,17 @@ PROCEDURE ImportFromType(t: Type.T; importTbl: AtomRefTbl.T;
       WITH f = Type.FixedBase(sub) DO
         IF f # NIL THEN EVAL importTbl.put(f.name.intf, NIL) END;
       END;
+    | Type.Packed (p) =>
+      (* This fork: the same for a named "BITS n FOR" a fixed-width type
+         or a subrange of one. *)
+      TYPECASE p.base OF
+      | Type.Fixed (f) => EVAL importTbl.put(f.name.intf, NIL);
+      | Type.Subrange (sub) =>
+        WITH f = Type.FixedBase(sub) DO
+          IF f # NIL THEN EVAL importTbl.put(f.name.intf, NIL) END;
+        END;
+      ELSE
+      END;
     ELSE
     END;
     IF byName AND t.name # NIL THEN

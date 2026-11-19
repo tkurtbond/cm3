@@ -36,6 +36,7 @@ IMPORT M3Error, M3Assert, M3CTypeRelation, M3CTypesMisc, M3CStdProcs;
 IMPORT M3CStdTypes, M3CTypeChkUtil, M3CExpsMisc, M3COrdinal, M3CConcTypeSpec;
 IMPORT M3CNEWActualS, M3CStdActualS, M3CProcActualS, M3CConsActualS;
 IMPORT M3CBackEnd;
+IMPORT M3CFixedType; (* This fork *)
 
 
 REVEAL
@@ -147,6 +148,9 @@ PROCEDURE Binary(h: Handle; b: M3AST_AS.BINARY) RAISES {}=
     | M3AST_AS.Plus, M3AST_AS.Minus,
       M3AST_AS.Times, M3AST_AS.Rdiv =>
         TYPECASE type1 OF
+        | M3AST_AS.Fixed_type =>
+            (* This fork: both operands of the same fixed-width type. *)
+            ok := M3CFixedType.Same(type1, type2);
         | M3AST_AS.INT_TYPE, M3AST_AS.FLOAT_TYPE  =>
             ok := (TYPECODE(type1) = TYPECODE(type2));
         | M3AST_AS.Set_type =>
@@ -167,6 +171,10 @@ PROCEDURE Binary(h: Handle; b: M3AST_AS.BINARY) RAISES {}=
                    (ISTYPE(b, M3AST_AS.Mod) AND
                     ISTYPE(type1, M3AST_AS.FLOAT_TYPE))) AND
             (TYPECODE(type1) = TYPECODE(type2));
+        (* This fork: both operands of the same fixed-width type. *)
+        IF ok AND ISTYPE(type1, M3AST_AS.Fixed_type) THEN
+          ok := M3CFixedType.Same(type1, type2);
+        END;
     | M3AST_AS.Eq, M3AST_AS.Ne, M3AST_AS.Gt, M3AST_AS.Lt,
       M3AST_AS.Ge, M3AST_AS.Le =>
         IF ISTYPE(b, M3AST_AS.Eq) OR ISTYPE(b, M3AST_AS.Ne) THEN

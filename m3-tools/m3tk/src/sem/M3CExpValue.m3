@@ -268,6 +268,55 @@ PROCEDURE One(): M3AST_SM.Exp_value RAISES {}=
   END One;
 
 
+(* This fork: values of the fixed-width types are folded as LONGINTs.
+   Bring a folded result back into its type: a WordN.T (N < 64) result
+   wraps modulo 2^N, and a SignedN.T result out of range overflows, as
+   in the compiler.  m3tk can't represent Word64.T values of 2^63 and
+   above, so a Word64.T result outside [0 .. LAST (LONGINT)] can't be
+   evaluated. *)
+
+VAR mod_g: M3AST_AS.Mod := NIL;
+
+PROCEDURE FixFixed(
+    e: M3AST_AS.EXP;
+    VAR (* inout *) er: M3AST_SM.Exp_value)
+    : M3CBackEnd.NumStatus
+    RAISES {}=
+  VAR
+    low, high, one, modulus, r: M3AST_SM.Exp_value;
+    ns: M3CBackEnd.NumStatus;
+  BEGIN
+    IF er = NIL THEN RETURN M3CBackEnd.NumStatus.Valid END;
+    TYPECASE M3CTypesMisc.CheckedUnpack(e.sm_exp_type_spec) OF
+    | M3AST_AS.Fixed_type(f) =>
+        IF GetBounds(f, low, high) # M3CBackEnd.NumStatus.Valid OR
+           NOT M3CBackEnd.IsOrdinal(er) THEN
+          RETURN M3CBackEnd.NumStatus.Valid;
+        END;
+        IF M3CBackEnd.Compare(low, er) <= 0 AND
+           M3CBackEnd.Compare(er, high) <= 0 THEN
+          RETURN M3CBackEnd.NumStatus.Valid;
+        ELSIF f.fx_signed THEN
+          RETURN M3CBackEnd.NumStatus.Overflow;
+        ELSIF f.fx_bits >= 64 THEN
+          RETURN M3CBackEnd.NumStatus.Unknown;
+        END;
+        IF mod_g = NIL THEN mod_g := NEW(M3AST_AS.Mod).init() END;
+        ns := M3CBackEnd.ConvertOrdinal(One(), f, one);
+        IF ns = M3CBackEnd.NumStatus.Valid THEN
+          ns := M3CBackEnd.BinaryOp(Plus(), high, one, modulus);
+        END;
+        IF ns = M3CBackEnd.NumStatus.Valid THEN
+          ns := M3CBackEnd.BinaryOp(mod_g, er, modulus, r);
+        END;
+        IF ns = M3CBackEnd.NumStatus.Valid THEN er := r END;
+        RETURN ns;
+    ELSE
+      RETURN M3CBackEnd.NumStatus.Valid;
+    END;
+  END FixFixed;
+
+
 (* Constructing boolean results *)
 
 PROCEDURE NewBoolean(b: BOOLEAN): M3AST_SM.Exp_value RAISES {}=
@@ -1250,7 +1299,14 @@ PROCEDURE Eval(
                 ELSIF ISTYPE(b, M3AST_AS.Eq) OR ISTYPE(b, M3AST_AS.Ne) THEN
                   er := NewBoolean((ISTYPE(b, M3AST_AS.Eq)) = Equal(e1, e2));
                 ELSE
-                  ChkVal(e, M3CBackEnd.BinaryOp(b, ev1, ev2, er));
+                  (* This fork: FixFixed *)
+                  VAR ns := M3CBackEnd.BinaryOp(b, ev1, ev2, er);
+                  BEGIN
+                    IF ns = M3CBackEnd.NumStatus.Valid THEN
+                      ns := FixFixed(e, er);
+                    END;
+                    ChkVal(e, ns);
+                  END;
                 END; (* if *)
               END; (* if *)
             END; (* with *)
@@ -1260,7 +1316,14 @@ PROCEDURE Eval(
           ev := EvalComponent(unary.as_exp, mode);
         BEGIN
           IF ev # NIL AND NOT ISTYPE(unary, M3AST_AS.Deref) THEN
-            ChkVal(e, M3CBackEnd.UnaryOp(unary, ev, er));
+            (* This fork: FixFixed *)
+            VAR ns := M3CBackEnd.UnaryOp(unary, ev, er);
+            BEGIN
+              IF ns = M3CBackEnd.NumStatus.Valid THEN
+                ns := FixFixed(e, er);
+              END;
+              ChkVal(e, ns);
+            END;
           END; (* if *)
         END;
 

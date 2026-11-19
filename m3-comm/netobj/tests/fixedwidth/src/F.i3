@@ -6,6 +6,12 @@ TYPE
   SSub = [VAL(-100, Signed16.T) .. VAL(100, Signed16.T)];
   W64Sub = [VAL(0, Word64.T) .. VAL(16_ffffffffff, Word64.T)];
   Rec = RECORD a: Word8.T; b: Signed64.T; c: WSub END;
+  (* Bounds that m3tk must fold: arithmetic, and a WordN result that
+     wraps (200 + 100 is 44 in a Word8.T).  And packed types. *)
+  ASub = [LAST(Word32.T) - VAL(10, Word32.T) .. LAST(Word32.T)];
+  Wrapped = [VAL(0, Word8.T) .. VAL(200, Word8.T) + VAL(100, Word8.T)];
+  PByte = BITS 8 FOR Word8.T;
+  PWrapped = BITS 6 FOR Wrapped;
   T = NetObj.T OBJECT METHODS
     w8 (x: Word8.T): Word8.T RAISES {NetObj.Error, Thread.Alerted};
     w16 (x: Word16.T): Word16.T RAISES {NetObj.Error, Thread.Alerted};
@@ -21,5 +27,8 @@ TYPE
     swap (VAR a: Word64.T; VAR b: Signed8.T) RAISES {NetObj.Error, Thread.Alerted};
     rec (r: Rec): Rec RAISES {NetObj.Error, Thread.Alerted};
     s8wide (x: Signed16.T): Signed8.T RAISES {NetObj.Error, Thread.Alerted};
+    asub (x: ASub): ASub RAISES {NetObj.Error, Thread.Alerted};
+    wrapped (x: Wrapped): Wrapped RAISES {NetObj.Error, Thread.Alerted};
+    packed (x: PByte; y: PWrapped): PWrapped RAISES {NetObj.Error, Thread.Alerted};
   END;
 END F.

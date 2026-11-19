@@ -7,7 +7,7 @@
    the results, including that the server's unmarshaling rejects an
    out-of-range value.  The client prints "ok" or "WRONG" for each
    check and exits with status 1 if any is wrong.  The default port is
-   18878.  ../run-netobj-tests.sh runs both. *)
+   18878.  ../../run-netobj-tests.sh runs both. *)
 
 UNSAFE MODULE FixedWidthTest EXPORTS Main;
 IMPORT F, NetObj, TCPNetObj, IP, IO, Fmt, Params, Process, Scan, Text, Thread,
@@ -19,7 +19,7 @@ TYPE Impl = F.T OBJECT OVERRIDES
     w8 := W8; w16 := W16; w32 := W32; w64 := W64;
     s8 := S8; s16 := S16; s32 := S32; s64 := S64;
     wsub := WS; ssub := SS; w64sub := W64S; swap := Swap; rec := Rec;
-    s8wide := S8Wide END;
+    s8wide := S8Wide; asub := ASubM; wrapped := WrappedM; packed := PackedM END;
 (* Word results wrap; signed ones negate. *)
 PROCEDURE W8 (<*UNUSED*>s: Impl; x: Word8.T): Word8.T = BEGIN RETURN x + VAL(1, Word8.T) END W8;
 PROCEDURE W16 (<*UNUSED*>s: Impl; x: Word16.T): Word16.T = BEGIN RETURN x + VAL(1, Word16.T) END W16;
@@ -38,6 +38,10 @@ PROCEDURE Rec (<*UNUSED*>s: Impl; r: F.Rec): F.Rec =
   BEGIN RETURN F.Rec{r.a + VAL(1, Word8.T), -r.b, r.c} END Rec;
 PROCEDURE S8Wide (<*UNUSED*>s: Impl; x: Signed16.T): Signed8.T =
   BEGIN RETURN VAL(x, Signed8.T) END S8Wide;
+PROCEDURE ASubM (<*UNUSED*>s: Impl; x: F.ASub): F.ASub = BEGIN RETURN x END ASubM;
+PROCEDURE WrappedM (<*UNUSED*>s: Impl; x: F.Wrapped): F.Wrapped = BEGIN RETURN x END WrappedM;
+PROCEDURE PackedM (<*UNUSED*>s: Impl; x: F.PByte; y: F.PWrapped): F.PWrapped =
+  BEGIN RETURN y + x END PackedM;
 
 PROCEDURE Check (what: TEXT; got, want: LONGINT) =
   BEGIN
@@ -91,6 +95,15 @@ BEGIN
       END;
       (* A Signed16 argument narrowed by the server. *)
       Check("s8wide(-128)", VAL(t.s8wide(VAL(-128, Signed16.T)), LONGINT), -128L);
+      (* Bounds folded by m3tk; see F.i3. *)
+      Check("asub(LAST - 10)", VAL(t.asub(LAST(Word32.T) - VAL(10, Word32.T)), LONGINT), 16_fffffff5L);
+      Check("wrapped(44)", VAL(t.wrapped(VAL(44, Word8.T)), LONGINT), 44L);
+      TRY
+        EVAL t.wrapped(LOOPHOLE(VAL(45, Word8.T), F.Wrapped));
+        IO.Put("wrapped(45) NOT rejected WRONG\n"); INC(failures);
+      EXCEPT NetObj.Error => IO.Put("wrapped(45): rejected ok\n");
+      END;
+      Check("packed(4, 40)", VAL(t.packed(VAL(4, Word8.T), VAL(40, Word8.T)), LONGINT), 44L);
     END;
     IF failures > 0 THEN Process.Exit(1) END;
   END;
