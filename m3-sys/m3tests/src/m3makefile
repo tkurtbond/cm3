@@ -545,6 +545,7 @@ readonly proc p_test (group, uid, comment) is
   run_test ("_ptests", group, uid, comment, "run", cm3opts, runopts, "probeForTargetSpecificFiles")
 end
 
+p_test ("p3", "p306", "pickles convert fixed-width fields between packings")
 p_test ("p3", "p305", "procedures of the builtin interfaces Signed8 .. Signed64")
 p_test ("p3", "p304", "SignedN overflow raises IntegerOverflow; just inside the range does not")
 p_test ("p3", "p303", "signed fixed-width integer types Signed8.T .. Signed64.T")

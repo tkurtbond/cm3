@@ -893,6 +893,17 @@ Suggested order: bug 27 and a pickle round-trip test (small, also
 worth offering upstream); bug 28; then decide whether network
 objects need the new types at all before the `m3tk` work.
 
+Status (2026-11-18): bug 27 is fixed, with test p306, which converts
+record data of all eight types (and INTEGER, LONGINT and a wide
+LONGINT subrange) from each foreign packing and checks the values. It
+found bug 29, upstream: on AMD64_LINUX `RTPacking.Encode` encoded a
+max_align of 128 wrongly, so `ConvertPacking`'s cache gave 32-bit
+packings the 64-bit converters (the survey's check above ran under
+that bug), and pickles of ordinary records written by one process
+couldn't be read by another. That is fixed too. Bug 30 (a front-end
+crash on records with a `BITS FOR` field and an EXTENDED field) was
+found on the way and is open. Next: bug 28.
+
 ## Open questions
 
 - Is upstream interested? A language extension kept only in this fork

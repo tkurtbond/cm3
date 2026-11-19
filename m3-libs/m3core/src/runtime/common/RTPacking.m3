@@ -90,13 +90,23 @@ PROCEDURE Encode (READONLY t: T): INTEGER =
          so it will correctly decode values written by older Encode.  
          So we also encode 16 in the old way too, so older Decode will not 
          choke on Ts we write with 16-bit WIDECHAR. *) 
+    (* This fork: the four size fields have two bits each, which hold
+       8 .. 64.  A size of 128 (max_align, with a 128-bit EXTENDED) is
+       written as 64 there, so older Decodes read 64, and is flagged in
+       bits 15 .. 18, above the old fields, which older Decodes ignore.
+       BitSize(128) used to overflow into the next field, making, for
+       instance, 32- and 64-bit word sizes encode alike. *)
+    n := Word.Or (Word.Shift (n, 1), ORD (t.long_size = 128));
+    n := Word.Or (Word.Shift (n, 1), ORD (t.word_size = 128));
+    n := Word.Or (Word.Shift (n, 1), ORD (t.max_align = 128));
+    n := Word.Or (Word.Shift (n, 1), ORD (t.struct_align = 128));
     n := Word.Or (Word.Shift (n, 1), ORD (t.small_sets));
     n := Word.Or (Word.Shift (n, 2), wc );
     n := Word.Or (Word.Shift (n, 1), ORD (t.lazy_align));
-    n := Word.Or (Word.Shift (n, 2), BitSize (t.long_size));
-    n := Word.Or (Word.Shift (n, 2), BitSize (t.word_size));
-    n := Word.Or (Word.Shift (n, 2), BitSize (t.max_align));
-    n := Word.Or (Word.Shift (n, 2), BitSize (t.struct_align));
+    n := Word.Or (Word.Shift (n, 2), BitSize2 (t.long_size));
+    n := Word.Or (Word.Shift (n, 2), BitSize2 (t.word_size));
+    n := Word.Or (Word.Shift (n, 2), BitSize2 (t.max_align));
+    n := Word.Or (Word.Shift (n, 2), BitSize2 (t.struct_align));
     n := Word.Or (Word.Shift (n, 1), ORD (t.little_endian));
     n := Word.Or (Word.Shift (n, 2), ORD (t.float));
     RETURN n;
@@ -118,10 +128,21 @@ PROCEDURE Decode (i: INTEGER): T =
       t.widechar_size := 16 
     END; 
     t.small_sets    := VAL (Word.And (i, 1), BOOLEAN); i := Word.Shift (i, -1);
+    (* This fork: the flags for sizes of 128; see Encode. *)
+    IF Word.And (i, 1) # 0 THEN t.struct_align := 128 END; i := Word.Shift (i, -1);
+    IF Word.And (i, 1) # 0 THEN t.max_align := 128 END;    i := Word.Shift (i, -1);
+    IF Word.And (i, 1) # 0 THEN t.word_size := 128 END;    i := Word.Shift (i, -1);
+    IF Word.And (i, 1) # 0 THEN t.long_size := 128 END;    i := Word.Shift (i, -1);
     (* Ignore any remaining bits, in case we get a value from a later version
        that has additional properties. *) 
     RETURN t;
   END Decode;
+
+(* This fork: BitSize for a two-bit field; 128 becomes 64. *)
+PROCEDURE BitSize2 (n: CARDINAL): [0 .. 3] =
+  BEGIN
+    RETURN MIN (BitSize (n), 3);
+  END BitSize2;
 
 PROCEDURE BitSize (n: CARDINAL): [FIRST (Bits) .. LAST (Bits)]  =
   BEGIN

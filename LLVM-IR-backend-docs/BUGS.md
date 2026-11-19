@@ -11,7 +11,7 @@ is in upstream cm3 too, so the fix may be worth offering there. Where a
 claim comes from reading code rather than from a test, the entry says
 so.
 
-Bugs 1 to 10, 12, 14, 24 and 25 are fixed; 23 turned out not to be a bug; the
+Bugs 1 to 10, 12, 14, 24, 25, 27 and 29 are fixed; 23 turned out not to be a bug; the
 others are open.
 
 ## Bug 1: C back end: set and word operations give wrong results
@@ -381,7 +381,8 @@ every back end.
 
 - **Where:** upstream, `m3-libs/libm3/src/pickle/ver2/ConvertPacking.m3`
   (`BuildOrdinal`, the `Swap32to64` and `Swap64to32` cases).
-- **Status:** open. Found while surveying Phase 6 of
+- **Status:** fixed (marked "This fork" in the source), with test
+  `m3-sys/m3tests/src/p3/p306`. Found while surveying Phase 6 of
   [`fixed-width-integer-types-plan.md`](fixed-width-integer-types-plan.md),
   2026-11-18. Checked on AMD64_LINUX with a program that calls
   `ConvertPacking.New` for a record of one field, from a 32-bit
@@ -401,9 +402,16 @@ every back end.
 - **Effect:** a pickle with such a field, written on a 32-bit
   big-endian machine, can't be read on a 64-bit little-endian one, and
   the reverse.
-- **Fix (not done):** in both cases, when `fromTipe.size =
-  toTipe.size`, swap at that size (`addSwap64` for 64 bits), as the
-  `Swap` case does.
+- **Fix:** in both cases, a 64-bit source that stays 64 bits is
+  swapped at 64 bits (`addSwap64`), as the `Swap` case does. p306
+  feeds hand-made bytes in all four packings (32 or 64 bits, either
+  byte order) to `ConvertPacking` for records of one INTEGER, LONGINT,
+  `[0L..16_1ffffffffL]`, `Word8.T` .. `Word64.T` or `Signed8.T` ..
+  `Signed64.T` field, and checks the values: without the fix the three
+  32-bit big-endian cases above fail, with it all 44 pass. The
+  `Swap64to32` case can't be run on a 64-bit host. p306 also needed
+  bug 29 fixed: before that, the 32-bit packings got the 64-bit ones'
+  converters from the cache.
 
 ## Bug 28: `stubgen` emits `StubLib.InLongint` and `OutLongint`, which don't exist
 
@@ -423,3 +431,63 @@ every back end.
 - **Fix (not done):** add `InLongint` and `OutLongint` to `StubLib`,
   with byte-order handling for the `DataRep`, as `InInteger` and
   `OutInteger` have.
+
+## Bug 29: `RTPacking.Encode` overflows on a max_align of 128, so pickles misread records
+
+- **Where:** upstream, `m3-libs/m3core/src/runtime/common/RTPacking.m3`
+  (`Encode`, `Decode`), since 2b3c5a650 ("extend bits for packing
+  sizes", April 2026), which added 128 to `Bits` for the 128-bit
+  EXTENDED.
+- **Status:** fixed (marked "This fork" in the source). Found while
+  writing p306 for bug 27, 2026-11-18.
+- **Detail:** `Encode` packs each size (long, word, max_align,
+  struct_align) into two bits, which hold `BitSize` 0 .. 3 (8 .. 64).
+  On AMD64_LINUX `RTPacking.Local ().max_align` is 128, `BitSize (128)`
+  is 4, and the extra bit lands in the word-size field. So the max
+  alignment encodes as 8, and 32- and 64-bit word sizes encode alike.
+- **Effect:** checked on AMD64_LINUX with the installed (unfixed)
+  libraries:
+  - A pickle's header carries `Encode (Local ())`, so a reader decodes
+    a max_align of 8 and lays records out with byte-aligned words. A
+    pickle of `REF RECORD c: CHAR; i: INTEGER; s: [0..255]; l: LONGINT
+    END`, written to a file by one process, can't be read by another
+    ("Malformed pickle (wrong trailer)"). Read back in the same
+    process it works, by accident: `ConvertPacking`'s cache, keyed by
+    the same wrong codes, hands back the writer's identity converter.
+  - `ConvertPacking`'s cache, keyed by `Encode`, gives a 32-bit
+    packing the converter built for the 64-bit one with the same byte
+    order (p306 found this).
+- **Fix:** a size of 128 is written as 64 in its two-bit field, so an
+  older `Decode` reads 64, and flagged in bits 15 .. 18 (one per
+  size), above the old fields, which an older `Decode` ignores; the
+  header has 32 bits for the code. Checked with the program above
+  built against the old and the fixed libraries: pickles written by
+  the fixed library are read by both. Pickles written by the unfixed
+  library (headers saying max_align 8) are still unreadable, by
+  either. A record with an EXTENDED field, written by the fixed
+  library, can't be read by the old one, which takes the 128 as 64.
+  Not done: a heuristic in `Decode` to read such headers as 128 (no
+  real 64-bit target has a max_align of 8, but the overflow also
+  turns a 32-bit word size into 64, which can't be undone).
+
+## Bug 30: A record with a `BITS FOR` field and an EXTENDED field crashes the front end
+
+- **Where:** upstream, `m3-sys/m3front/src/exprs/QualifyExpr.m3`
+  (`<*ASSERT result MOD fieldTypeAlign = 0 *>`, line 312, from
+  fd4e37b369, 2021).
+- **Status:** open. Found while checking bug 29, 2026-11-18.
+  Reproduced on AMD64_LINUX with both back ends:
+
+  ```modula-3
+  MODULE Main;
+  TYPE R = RECORD x: EXTENDED; b: BITS 8 FOR [0..255] END;
+  VAR r: R;
+  BEGIN r.x := 1.5x0; END Main.
+  ```
+
+  The compiler prints "INTERNAL CG ERROR *** unaligned partial-word
+  store_indirect, type=XReel s/a=128/64" and then fails the
+  assertion. The `BITS FOR` field can come before or after `x`;
+  without it, or when only `r.b` is used, the program builds.
+- **Detail (not investigated):** the record seems to get a 64-bit
+  alignment when it has a packed field, less than EXTENDED's 128.

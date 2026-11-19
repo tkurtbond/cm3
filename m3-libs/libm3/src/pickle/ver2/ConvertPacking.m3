@@ -1920,7 +1920,12 @@ PROCEDURE BuildOrdinal(self: T; fromTipe: RTTipe.T;
           <* ASSERT toTipe.size = 64 *> 
           self.addSwap32to64(32, signed);
         END;
-      | 64 => RAISE Error("Should not get here: 1");
+      | 64 =>
+        (* This fork: a subrange (or fixed-width type) sized 64 by its
+           bounds is 64 bits under every packing; see bug 27 in
+           LLVM-IR-backend-docs/BUGS.md. *)
+        <* ASSERT toTipe.size = 64 *>
+        self.addSwap64(64);
       ELSE
         RAISE Error("Should not get here: 3");
       END;
@@ -1929,7 +1934,15 @@ PROCEDURE BuildOrdinal(self: T; fromTipe: RTTipe.T;
       | 8 => <* ASSERT toTipe.size = 8 *> self.addCopy(8);
       | 16 => <* ASSERT toTipe.size = 16 *> self.addSwap16(16);
       | 32 => <* ASSERT toTipe.size = 32 *> self.addSwap32(32);
-      | 64 => <* ASSERT toTipe.size = 32 *> self.addSwap64to32(64, signed);
+      | 64 =>
+        IF toTipe.size = 64 THEN
+          (* This fork: a 64-bit subrange; see bug 27 in
+             LLVM-IR-backend-docs/BUGS.md. *)
+          self.addSwap64(64);
+        ELSE
+          <* ASSERT toTipe.size = 32 *>
+          self.addSwap64to32(64, signed);
+        END;
       ELSE
         RAISE Error("Should not get here: 4");
       END;

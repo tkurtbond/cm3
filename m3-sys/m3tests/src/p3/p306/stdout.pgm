@@ -1,0 +1,49 @@
+BE32:
+  INTEGER    ok
+  LONGINT    ok
+  [0L..2^33) ok
+  Word8      ok
+  Word16     ok
+  Word32     ok
+  Word64     ok
+  Signed8    ok
+  Signed16   ok
+  Signed32   ok
+  Signed64   ok
+LE32:
+  INTEGER    ok
+  LONGINT    ok
+  [0L..2^33) ok
+  Word8      ok
+  Word16     ok
+  Word32     ok
+  Word64     ok
+  Signed8    ok
+  Signed16   ok
+  Signed32   ok
+  Signed64   ok
+BE64:
+  INTEGER    ok
+  LONGINT    ok
+  [0L..2^33) ok
+  Word8      ok
+  Word16     ok
+  Word32     ok
+  Word64     ok
+  Signed8    ok
+  Signed16   ok
+  Signed32   ok
+  Signed64   ok
+LE64:
+  INTEGER    ok
+  LONGINT    ok
+  [0L..2^33) ok
+  Word8      ok
+  Word16     ok
+  Word32     ok
+  Word64     ok
+  Signed8    ok
+  Signed16   ok
+  Signed32   ok
+  Signed64   ok
+all conversions ok

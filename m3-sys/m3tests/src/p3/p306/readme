@@ -1,0 +1,17 @@
+Pickles convert fixed-width and other ordinal fields between packings.
+
+ConvertPacking builds a program that converts a value from the memory
+layout of the packing a pickle was written with to the local one.  For
+records of one ordinal field, each line feeds it hand-made bytes in a
+foreign layout (32- or 64-bit words, either byte order) and checks the
+value that arrives.  A field sized 64 by its bounds (Word64.T,
+Signed64.T, a wide LONGINT subrange) is 64 bits under every packing,
+and a 32-bit big-endian packing used to fail on it with "Should not
+get here: 1".  See LLVM-IR-backend-docs/BUGS.md, bug 27.  The
+reverse direction (64-bit big-endian read on a 32-bit host) can't be
+run on a 64-bit host.
+
+The 32- and 64-bit packings must also get different converters: on a
+host whose max_align is 128, RTPacking.Encode used to encode them
+alike, so ConvertPacking's cache handed one the other's converter
+(bug 29).
