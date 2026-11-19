@@ -553,10 +553,9 @@ was built, and where it departs from the bullets above:
   integrated x86 back end already handles 64-bit word operations for
   LONGINT.
 
-Status (2026-11-18): `Word32` done, uncommitted at the time of
-writing; `Word8`, `Word16` and `Word64` need only their `m3core`
-files (below). How it was built, and where it departs from the
-bullets above:
+Status (2026-11-18): done, `Word32` first (ad1f23913), then `Word8`,
+`Word16` and `Word64`. How it was built, and where it departs from
+the bullets above:
 
 - **Front end.** Not `builtinWord`'s generics: `GenWord.mg` computes
   in INTEGER or LONGINT and doesn't know about the mask a narrower
@@ -573,28 +572,35 @@ bullets above:
   zero-extend, `Compare` returns `[-1 .. 1]` and `Brand` is the
   interface's name.
 - **`m3core`.** `src/word/GenWordN.ig` and `GenWordN.mg` (generic in
-  `Rep`), `Word32Rep.i3` (`T = Word32.T`, `Brand`), `Word32.i3 =
-  GenWordN(Word32Rep)` and `Word32.m3 = GenWordN(Word32)`. Each
+  `Rep`), and for each width `N`: `WordNRep.i3` (`T = WordN.T`,
+  `Brand`), `WordN.i3 = GenWordN(WordNRep)` and `WordN.m3 =
+  GenWordN(WordN)`. Each
   procedure of the module calls the builtin one, so calls inline and
   the module exists only for procedure values and version stamps.
   The declaration order of `GenWordN.ig` and of `FixedWord.Define`
   must match, or the stamps don't.
-- **Which widths have a unit.** `FixedType.hasUnit` (only `Word32`
-  for now). `FixedType.HasNoUnit` replaces `IsInterface` in `Value`
+- **Which widths have a unit.** `FixedType.hasUnit`, now `TRUE` for
+  all four. `FixedType.HasNoUnit` replaces `IsInterface` in `Value`
   and `External`, so stamps and link records are made only for
-  widths with a unit.
+  widths with a unit. It stays for the signed family (Phase 5),
+  whose interfaces may also start without units.
 - **Driver.** `Word32Rep.i3` imports the builtin `Word32` for its
   type, and `cm3`'s builder followed that import to `m3core`'s
   `Word32.i3`, compiling and merging it before `Word32Rep.i3`
   ("missing export: Word32Rep.T"). `Builder.ImportsBuiltinFixed`
   makes `Pass0_CheckImports` and `CheckImp` skip exactly that edge,
-  from `WordNRep` to `WordN`.
+  from `WordNRep` to `WordN`. (Skipping every import of `WordN`
+  also skipped merging the library's `WordN.i3` into client
+  programs, which then failed to link.)
 - **Tests.** `p299` calls every `Word32` procedure inline, with
   constant arguments, and as a procedure value through `m3core`.
-  `r007` checks that `Word32.LeftShift (x, 32)` fails at run time.
-- **To add another width** (`N` = 8, 16, 64): `WordNRep.i3`,
-  `WordN.i3` and `WordN.m3` as for 32, the lines in
-  `m3core/src/word/m3makefile`, and `TRUE` in `FixedType.hasUnit`.
+  `p300` instantiates a generic module with each of `Word8` to
+  `Word64` and prints every procedure's result three times: from
+  inline calls, from constants (which must fold, or the `CONST`
+  declarations are rejected) and from procedure values. Its
+  expected output was computed separately, by a Python model of
+  the operations. `r007` checks that `Word32.LeftShift (x, 32)`
+  fails at run time.
 
 ### Phase 4: First user, and tests
 

@@ -545,6 +545,7 @@ readonly proc p_test (group, uid, comment) is
   run_test ("_ptests", group, uid, comment, "run", cm3opts, runopts, "probeForTargetSpecificFiles")
 end
 
+p_test ("p3", "p300", "procedures of the builtin interfaces Word8 .. Word64")
 p_test ("p2", "p299", "procedures of the builtin interface Word32")
 p_test ("p2", "p298", "unsigned fixed-width integer types Word8.T .. Word64.T")
 p_test ("p2", "p297", "RTTipe sizes subranges the way the compiler does")

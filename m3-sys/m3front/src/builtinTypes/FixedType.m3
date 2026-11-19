@@ -33,7 +33,7 @@ VAR
   names : ARRAY [0..3] OF M3ID.T;
 
 CONST
-  hasUnit = ARRAY [0..3] OF BOOLEAN { FALSE, FALSE, TRUE, FALSE };
+  hasUnit = ARRAY [0..3] OF BOOLEAN { TRUE, TRUE, TRUE, TRUE };
   (* which of all[] m3core implements, in src/word *)
 
 PROCEDURE New (bits: INTEGER;  READONLY rep: Target.Int_type;

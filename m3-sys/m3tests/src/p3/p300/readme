@@ -1,0 +1,8 @@
+The procedures of the builtin interfaces Word8, Word16, Word32 and
+Word64 (this fork; see
+LLVM-IR-backend-docs/fixed-width-integer-types-plan.md), through a
+generic module instantiated with each of them.  For each width the
+same results are printed three times: from inline calls, from
+constants the compiler folds, and from procedure values, which call
+m3core's WordN modules.  Every line of output should be the same
+with every backend and at every optimization level.
