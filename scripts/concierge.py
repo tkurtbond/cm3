@@ -285,6 +285,13 @@ class Error(Exception):
     pass
 
 
+# This fork: a quake comment that UpgradeCommand._install_config writes
+# into cm3.cfg while an upgrade builds with another backend than the one
+# it is installing (the LlvmIR upgrade's first pass, with C), so that if
+# the upgrade fails there, Cm3._installed_backend still picks the one it
+# was installing.  Later passes rewrite cm3.cfg without it.
+UPGRADING_TO = "% concierge: upgrading to backend "
+
 MIN_CLANG_VERSION = 18      # the LlvmIR backend's minimum LLVM version
 
 
@@ -604,13 +611,24 @@ class Cm3:
     def _installed_backend(self):
         """This fork: the backend to use when none is given: "llvmir" if
         the installation's cm3.cfg (as concierge writes it) selects
-        LlvmIR, or, before any cm3.cfg exists, if the cm3 was built from
-        a bootstrap of LLVM IR, which installs share/cm3/bootstrap-backend;
-        otherwise "c", as before."""
+        LlvmIR, or says that an upgrade to LlvmIR was interrupted (see
+        UPGRADING_TO), or, before any cm3.cfg exists, if the cm3 was
+        built from a bootstrap of LLVM IR, which installs
+        share/cm3/bootstrap-backend; otherwise "c", as before."""
         try:
             cfg = self.install("bin", "cm3.cfg")
             if cfg.is_file():
-                if 'M3_BACKEND_MODE = "LlvmIR"' in cfg.read_text(errors="ignore"):
+                text = cfg.read_text(errors="ignore")
+                for line in text.splitlines():
+                    if line.startswith(UPGRADING_TO):
+                        backend = line[len(UPGRADING_TO):].strip()
+                        if backend not in ["c", "gcc", "integrated",
+                                           "llvm", "llvmir"]:
+                            break
+                        print(f"backend {backend}, as {cfg} says an "
+                              "upgrade to it did not finish")
+                        return backend
+                if 'M3_BACKEND_MODE = "LlvmIR"' in text:
                     return "llvmir"
                 return "c"
             marker = self.install("share", "cm3", "bootstrap-backend")
@@ -1595,7 +1613,7 @@ class UpgradeCommand(ConciergeCommand):
         # LlvmIR built in.  Then build everything with LlvmIR, twice:
         # the second pass uses the LlvmIR-built cm3 (self-hosting).
         self.set_backend("c")
-        self._install_config()
+        self._install_config(upgrading_to="llvmir")
         self._run_pass(base_packages)
 
         self.set_backend("llvmir")
@@ -1675,8 +1693,10 @@ include(path() & SL & "config" & SL & TARGET)
                 item = item.with_suffix(".pdb")
                 self.cp(item, dst)
 
-    def _install_config(self):
-        "Copy config for distribution"
+    def _install_config(self, upgrading_to=None):
+        """Copy config for distribution.  This fork: upgrading_to names
+        the backend the upgrade is installing, when it differs from the
+        one this pass builds with (see UPGRADING_TO)."""
 
         src = Path(self.source("m3-sys/cminstall/src/config"))
         dst = self.install("bin/config")
@@ -1713,8 +1733,12 @@ include(path() & SL & "config" & SL & TARGET)
         if self.config() == "I386_LINUX":
             cross_compile = 'SYSTEM_CC = SYSTEM_CC & " -I/usr/i686-linux-gnu/include"\n'
 
+        upgrading = ''
+        if upgrading_to and upgrading_to != self.cm3().backend():
+            upgrading = f"{UPGRADING_TO}{upgrading_to}\n"
+
         self.install("bin/cm3.cfg").write_text(
-            f"""{backend}if not defined("SL") SL = "/" end
+            f"""{upgrading}{backend}if not defined("SL") SL = "/" end
 if not defined("HOST") HOST = "{self.config()}" end
 if not defined("TARGET") TARGET = HOST end
 INSTALL_ROOT = (path() & SL & "..")
