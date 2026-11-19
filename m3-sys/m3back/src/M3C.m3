@@ -4743,12 +4743,23 @@ BEGIN
     HelperFunctions_helper_with_boolean_and_array(self, self.data.pos, text);
 END HelperFunctions_pos;
 
+(* Plain C "/" and "%" are used only when they can't trap or round the
+   wrong way: for unsigned types, or when both operands are known to be
+   non-negative.  Two negative operands go through the helpers, because
+   FIRST(T) / -1 traps on x86. *)
+PROCEDURE DivModIsPlain(type: IType; a, b: Sign): BOOLEAN =
+BEGIN
+    RETURN cgtypeIsUnsignedInt[type] OR (a = Sign.Positive AND b = Sign.Positive);
+END DivModIsPlain;
+
 PROCEDURE HelperFunctions_div(self: HelperFunctions_t; type: IType; a, b: Sign) =
 CONST text = ARRAY OF TEXT{
 "#define m3_div_T(T) static T __stdcall m3_div_##T(T a, T b) \\",
 "{ \\",
 "  int aneg = (a < 0); \\",
 "  int bneg = (b < 0); \\",
+"  if (b == -1) /* FIRST(T) / -1 traps; negate, wrapping */ \\",
+"    return (T)-(U##T)a; \\",
 "  if (aneg == bneg || a == 0 || b == 0) \\",
 "    return (a / b); \\",
 "  else \\",
@@ -4762,7 +4773,7 @@ CONST text = ARRAY OF TEXT{
 "}"
 };
 BEGIN
-    IF NOT (((a = b) AND (a # Sign.Unknown)) OR cgtypeIsUnsignedInt[type]) THEN
+    IF NOT DivModIsPlain(type, a, b) THEN
         HelperFunctions_pos(self);
         HelperFunctions_helper_with_type_and_array(self, "div", type, self.data.div, text);
     END;
@@ -4774,6 +4785,8 @@ CONST text = ARRAY OF TEXT{
 "{ \\",
 "  int aneg = (a < 0); \\",
 "  int bneg = (b < 0); \\",
+"  if (b == -1) /* FIRST(T) % -1 traps; x MOD -1 is 0 */ \\",
+"    return 0; \\",
 "  if (aneg == bneg || a == 0 || b == 0) \\",
 "    return (a % b); \\",
 "  else \\",
@@ -4786,7 +4799,7 @@ CONST text = ARRAY OF TEXT{
 "}"
 };
 BEGIN
-    IF NOT (((a = b) AND (a # Sign.Unknown)) OR cgtypeIsUnsignedInt[type]) THEN
+    IF NOT DivModIsPlain(type, a, b) THEN
         HelperFunctions_pos(self);
         HelperFunctions_helper_with_type_and_array(self, "mod", type, self.data.mod, text);
     END;
@@ -6999,7 +7012,7 @@ BEGIN
       self.comment("div");
     END;
     pop(self, 2);
-    IF ((a = b) AND (a # Sign.Unknown)) OR cgtypeIsUnsignedInt[type] THEN
+    IF DivModIsPlain(type, a, b) THEN
         push(self, type, cast(CTextToExpr(s1.CText() & "/" & s0.CText()), type));
     ELSE
         push(self, type, cast(CTextToExpr("m3_div_" & cgtypeToText[type] & "(\n " & s1.CText() & ",\n " & s0.CText() & ")"), type));
@@ -7015,7 +7028,7 @@ BEGIN
       self.comment("mod");
     END;
     pop(self, 2);
-    IF ((a = b) AND (a # Sign.Unknown)) OR cgtypeIsUnsignedInt[type] THEN
+    IF DivModIsPlain(type, a, b) THEN
         push(self, type, cast(CTextToExpr(s1.CText() & "%" & s0.CText()), type));
     ELSE
         push(self, type, cast(CTextToExpr("m3_mod_" & cgtypeToText[type] & "(\n " & s1.CText() & ",\n " & s0.CText() & ")"), type));

@@ -1,0 +1,7 @@
+DIV and MOD by -1 of FIRST (INTEGER) and FIRST (LONGINT), and DIV and
+MOD over every combination of signs.
+
+The C back end used C's "/" and "%" for these, and on x86
+FIRST (INTEGER) DIV -1 and MOD -1 killed the program with SIGFPE.
+MOD -1 is 0; DIV -1 overflows and wraps to FIRST, as unary minus
+does.
